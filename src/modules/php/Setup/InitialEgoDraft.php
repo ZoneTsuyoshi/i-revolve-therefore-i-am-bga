@@ -57,7 +57,21 @@ final class InitialEgoDraft
     }
 
     /**
-     * 乱数で選んだ候補（zombie 用）。
+     * ID 昇順で先頭の候補（zombie 用。仕様書 006 §10: 決定的に選ぶ）。
+     */
+    public function firstCandidate(): string
+    {
+        $candidates = $this->candidates();
+        if ($candidates === []) {
+            throw new \LogicException('the initial ego pack is empty');
+        }
+        sort($candidates, SORT_STRING);
+
+        return $candidates[0];
+    }
+
+    /**
+     * 乱数で選んだ候補。
      */
     public function randomCandidate(): string
     {

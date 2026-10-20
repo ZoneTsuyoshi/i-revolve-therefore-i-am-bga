@@ -188,6 +188,13 @@ final class InitialEgoDraftTest extends TestCase
         self::assertSame([['player_id' => 11, 'ego_id' => 'I01']], $notice->args['egos']);
     }
 
+    public function testFirstCandidateIsTheSmallestIdInThePack(): void
+    {
+        $candidates = $this->draft->candidates();
+        sort($candidates, SORT_STRING);
+        self::assertSame($candidates[0], $this->draft->firstCandidate());
+    }
+
     public function testRandomCandidateIsAlwaysInThePack(): void
     {
         for ($seed = 1; $seed <= 20; $seed++) {

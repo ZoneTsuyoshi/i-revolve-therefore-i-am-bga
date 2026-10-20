@@ -73,10 +73,10 @@ class SetupEgoPick extends GameState
     }
 
     /**
-     * 候補からランダムに 1 枚選ぶ（作者の指示。006 §10 の「ID 昇順の先頭」から変更）。
+     * 候補の ID 昇順の先頭を選ぶ（仕様書 006 §10。決定的）。
      */
     public function zombie(int $playerId): string
     {
-        return $this->actPickInitialEgo($this->game->irEgoDraft()->randomCandidate(), $playerId);
+        return $this->actPickInitialEgo($this->game->irEgoDraft()->firstCandidate(), $playerId);
     }
 }
