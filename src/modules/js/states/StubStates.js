@@ -1,7 +1,7 @@
 /**
  * 状態機械の骨格（I-03）を Studio で回すための仮の状態クラス。
- * 移動（31 Move）と自己構成フェイズ（60 Construct）に、そのまま次へ進めるボタンだけを出す。
- * 本物の操作 UI（経路の計画、自己構成・精神分析）は U-3〜U-5 と I-06・I-07 で置き換える。
+ * 初期自我のドラフト（21）・人格の配置（24）・移動（31）・自己構成フェイズ（60）に、操作を進めるだけのボタンを出す。
+ * 本物の操作 UI（カードの選択、回廊での配置、経路の計画、自己構成・精神分析）は U-3〜U-5 と I-06・I-07 で置き換える。
  * © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
  */
 
@@ -45,12 +45,60 @@ class StubState {
     }
 }
 
+/** args からボタンを作る版（ドラフト・配置用）。ボタンの文言はカード ID・位置で、翻訳しない */
+class DynamicStubState {
+    /**
+     * @param {Bga} bga
+     * @param {(args: unknown) => StubButton[]} build
+     */
+    constructor(bga, build) {
+        this.bga = bga;
+        this.build = build;
+    }
+
+    /**
+     * @param {unknown} args
+     * @param {boolean} isCurrentPlayerActive
+     */
+    onEnteringState(args, isCurrentPlayerActive) {
+        if (!isCurrentPlayerActive) {
+            return;
+        }
+        for (const button of this.build(args)) {
+            this.bga.statusBar.addActionButton(button.label, () => {
+                this.bga.actions.performAction(button.action, button.args ?? {});
+            });
+        }
+    }
+
+    /**
+     * @param {unknown} _args
+     * @param {boolean} _isCurrentPlayerActive
+     */
+    onLeavingState(_args, _isCurrentPlayerActive) {
+    }
+}
+
 /**
  * 仮の状態クラスを登録する。
  *
  * @param {Bga} bga
  */
 export function registerStubStates(bga) {
+    // 21: 候補は本人だけに _private で届く（受け取り方が args._private か args._private[自分] かは Studio で確認する）
+    bga.states.register('SetupEgoPick', new DynamicStubState(bga, (args) => {
+        /** @type {any} */
+        const priv = /** @type {any} */ (args)?._private ?? {};
+        /** @type {string[]} */
+        const candidates = priv.candidates ?? Object.values(priv)[0]?.candidates ?? [];
+        return candidates.map((egoId) => ({ label: egoId, action: 'actPickInitialEgo', args: { egoId } }));
+    }));
+    // 24: 空いている四隅（位置 1・4・7・10）
+    bga.states.register('SetupMeeplePlace', new DynamicStubState(bga, (args) => {
+        /** @type {number[]} */
+        const corners = /** @type {any} */ (args)?.freeCorners ?? [];
+        return corners.map((pos) => ({ label: `Room ${pos}`, action: 'actPlaceMeeple', args: { pos } }));
+    }));
     // actMove の経路は I-06 まで検証しないので、空の経路で次へ進む
     bga.states.register('Move', new StubState(bga, [
         { label: 'Move (placeholder)', action: 'actMove', args: { plan: JSON.stringify([]) } },

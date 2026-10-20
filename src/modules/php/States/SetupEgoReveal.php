@@ -11,6 +11,7 @@ namespace Bga\Games\IRevolveThereforeIAm\States;
 
 use Bga\GameFramework\StateType;
 use Bga\GameFramework\States\GameState;
+use Bga\Games\IRevolveThereforeIAm\Flow\Notification;
 use Bga\Games\IRevolveThereforeIAm\Flow\StateId;
 use Bga\Games\IRevolveThereforeIAm\Flow\Transition;
 use Bga\Games\IRevolveThereforeIAm\Game;
@@ -35,7 +36,9 @@ class SetupEgoReveal extends GameState
 
     public function onEnteringState(): string
     {
-        // TODO(I-04): PICKED を OWNED にして N02 initialEgosRevealed で一斉公開し、PACK の最後の 1 枚を OUT にする
+        $revealed = $this->game->irEgoDraft()->reveal($this->game->irSeatOrder());
+        $this->game->irSend(Notification::initialEgosRevealed($revealed));
+
         return Transition::DONE;
     }
 }
