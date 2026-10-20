@@ -96,6 +96,19 @@ jobs:
         if: ${{ !cancelled() }}
         run: npm run test:lint
 
+      # 生成物（Material/ と src/img/）の整合。原本（card.csv・data/）なしで動く。check:sprites は image-size を使う
+      - name: Install dependencies
+        if: ${{ !cancelled() }}
+        run: npm ci
+
+      - name: Card data consistency (002)
+        if: ${{ !cancelled() }}
+        run: npm run check:cards
+
+      - name: Sprite consistency (009)
+        if: ${{ !cancelled() }}
+        run: npm run check:sprites
+
   gate:
     name: Lint gate
     if: ${{ always() }}

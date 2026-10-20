@@ -12,7 +12,9 @@
     "lint:repo": "node scripts/lint/check-repo.mjs",
     "test:lint": "node --test \"scripts/lint/*.test.mjs\"",
     "build:sprites": "node scripts/build-sprites.mjs",
-    "check:sprites": "node scripts/check-sprites.mjs"
+    "check:sprites": "node scripts/check-sprites.mjs",
+    "build:cards": "node scripts/build-card-data.mjs",
+    "check:cards": "node scripts/check-card-data.mjs"
   },
   "devDependencies": {
     "image-size": "2.0.4",
