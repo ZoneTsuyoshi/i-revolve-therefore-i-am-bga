@@ -23,8 +23,8 @@
 - **【提案】** 本書の提案。
 - **【未確認】** 確認できなかった事項。「未確定事項」に挙げる。
 - MJ・PE の「実装」は 2026-10-20 時点の次の実ファイルを指す。仕様書と実装に差がある点は実装を正とする。
-  - MJ: `/Users/zone/Developments/minimum-journey-bga` の `docs/specs/005-bga-sync.md`、`.github/workflows/bga-sync.yml`、`scripts/bga-sync/sync.sh`、`scripts/bga-sync/remote-delete.txt`
-  - PE: `/Users/zone/Developments/project-edgeworth-bga` の `docs/specs/006-bga-sync.md`、`.github/workflows/bga-sync.yml`、`scripts/bga-sync/sync.sh`、`scripts/bga-sync/remote-delete.txt`
+  - MJ: `../minimum-journey-bga` の `docs/specs/005-bga-sync.md`、`.github/workflows/bga-sync.yml`、`scripts/bga-sync/sync.sh`、`scripts/bga-sync/remote-delete.txt`
+  - PE: `../project-edgeworth-bga` の `docs/specs/006-bga-sync.md`、`.github/workflows/bga-sync.yml`、`scripts/bga-sync/sync.sh`、`scripts/bga-sync/remote-delete.txt`
 
 公式ドキュメントの確認（2026-10-20、WebFetch。本文を要約して返すツールのため要約を介した確認）:
 
