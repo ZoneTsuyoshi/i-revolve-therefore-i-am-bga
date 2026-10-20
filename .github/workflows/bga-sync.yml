@@ -1,15 +1,15 @@
 # BGA Studio への自動同期。仕様書: docs/specs/005-bga-sync.md
-# 導入の段階 1: workflow_dispatch のみ。mode は test（接続テスト）と dry-run（転送予定の表示）。
-# どちらも Studio へ書き込まない。sync・push トリガー・lint 連携は段階 2・3 で追加する。
+# 導入の段階 2: workflow_dispatch のみ。mode は test（接続テスト）・dry-run（転送予定の表示）・sync（転送と削除リスト）。
+# test と dry-run は Studio へ書き込まない。sync は lint の成功後にだけ動く。push トリガーは段階 3 で追加する。
 name: BGA sync
 
 on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'test = 接続して ls のみ / dry-run = 転送せず予定を表示'
+        description: 'test = 接続して ls のみ / dry-run = 転送せず予定を表示 / sync = 転送して削除リストを実行'
         type: choice
-        options: [test, dry-run]
+        options: [test, dry-run, sync]
         default: test
 
 permissions:
@@ -21,8 +21,16 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  lint:
+    name: Lint
+    uses: ./.github/workflows/lint.yml
+    permissions:
+      contents: read
+      pull-requests: read # lint.yml の gitleaks が必要とする（読み取りのみ）
+
   sync:
     name: Sync (${{ inputs.mode }})
+    needs: lint
     # main 限定（PR ブランチからは実行しない）
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest

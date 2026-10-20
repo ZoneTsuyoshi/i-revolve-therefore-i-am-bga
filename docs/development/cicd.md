@@ -1,6 +1,6 @@
 # CI/CD の方針
 
-> ステータス: lint（T-004）は**第 1 段階を導入**（markdownlint、lychee、gitleaks、`check-repo`、`Lint gate`。第 2 段階以降は `src/` ができてから）。設計は [../specs/004-ci-lint.md](../specs/004-ci-lint.md) を参照。同期（T-005）は**段階 1 を導入**（`workflow_dispatch` の `test` / `dry-run` のみ。`sync` と `main` への push トリガーは段階 2・3 で追加）。設計は [../specs/005-bga-sync.md](../specs/005-bga-sync.md) を参照。
+> ステータス: lint（T-004）は**第 1 段階を導入**（markdownlint、lychee、gitleaks、`check-repo`、`Lint gate`。第 2 段階以降は `src/` ができてから）。設計は [../specs/004-ci-lint.md](../specs/004-ci-lint.md) を参照。同期（T-005）は**段階 2 を導入**（`workflow_dispatch` の `test` / `dry-run` / `sync`。`sync` は lint 成功後に転送し、`remote-delete.txt` を実行する。`main` への push トリガーは段階 3 で追加）。設計は [../specs/005-bga-sync.md](../specs/005-bga-sync.md) を参照。
 >
 > 姉妹プロジェクト [minimum-journey-bga](https://github.com/ZoneTsuyoshi/minimum-journey-bga) で同じ構成の lint と同期が稼働しています（同プロジェクトの仕様書 004 / 005、`.github/workflows/lint.yml`・`bga-sync.yml`）。仕様書では、それを土台にこのリポジトリ向けの差分（プロジェクト名、パス、アセットの扱いなど）を決めます。
 
