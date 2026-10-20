@@ -33,7 +33,21 @@ use Bga\Games\IRevolveThereforeIAm\Data\PlayerValues;
 use Bga\Games\IRevolveThereforeIAm\Data\PublicView;
 use Bga\Games\IRevolveThereforeIAm\Data\RoomRepository;
 use Bga\Games\IRevolveThereforeIAm\Data\SpiritRepository;
+use Bga\Games\IRevolveThereforeIAm\Data\StoredGameView;
+use Bga\Games\IRevolveThereforeIAm\Effects\Catalog\CatalogSpecSource;
+use Bga\Games\IRevolveThereforeIAm\Effects\Condition\ConditionEvaluator;
+use Bga\Games\IRevolveThereforeIAm\Effects\Context\GameEvent;
+use Bga\Games\IRevolveThereforeIAm\Effects\Context\GameView;
+use Bga\Games\IRevolveThereforeIAm\Effects\Query\ActiveSpecs;
+use Bga\Games\IRevolveThereforeIAm\Effects\Query\KeyViewQuery;
+use Bga\Games\IRevolveThereforeIAm\Effects\Query\LightScheduleQuery;
+use Bga\Games\IRevolveThereforeIAm\Effects\Query\MovePaymentQuery;
 use Bga\Games\IRevolveThereforeIAm\Flow\GameProgress;
+use Bga\Games\IRevolveThereforeIAm\Flow\HandLimit;
+use Bga\Games\IRevolveThereforeIAm\Flow\MoveBoardReader;
+use Bga\Games\IRevolveThereforeIAm\Flow\MoveExecutor;
+use Bga\Games\IRevolveThereforeIAm\Flow\MovePhase;
+use Bga\Games\IRevolveThereforeIAm\Flow\MovePlanner;
 use Bga\Games\IRevolveThereforeIAm\Flow\Notice;
 use Bga\Games\IRevolveThereforeIAm\Flow\Notification;
 use Bga\Games\IRevolveThereforeIAm\Flow\StateId;
@@ -272,6 +286,58 @@ class Game extends \Bga\GameFramework\Table
     public function irPersonaPlacement(): PersonaPlacement
     {
         return new PersonaPlacement($this->irPlayerValues(), $this->irRooms(), $this->irGlobals());
+    }
+
+    /**
+     * 効果エンジンが状態を読む口の本番の実装（DB の読み取り。仕様書 008 §11.1）。
+     */
+    public function irGameView(): GameView
+    {
+        return new StoredGameView(
+            $this->irMemoryCards(),
+            $this->irEgos(),
+            $this->irPlayerValues(),
+            $this->irGlobals(),
+        );
+    }
+
+    /**
+     * 手札上限（仕様書 006 §8）。
+     */
+    public function irHandLimit(): HandLimit
+    {
+        return new HandLimit($this->irMemoryCards(), $this->irPlayerValues(), $this->irEffectStack());
+    }
+
+    /**
+     * 移動フェイズ（状態 31。仕様書 006 §5.1、008 §6.2）。
+     */
+    public function irMovePhase(): MovePhase
+    {
+        $active = new ActiveSpecs($this->irGameView(), new CatalogSpecSource(), new ConditionEvaluator($this->irGameView()));
+        $light = new LightScheduleQuery($active);
+        $payments = new MovePaymentQuery($active, new KeyViewQuery($active), $light);
+
+        return new MovePhase(
+            new MoveBoardReader($this->irMemoryCards(), $this->irRooms(), $this->irPlayerValues(), $this->irGlobals()),
+            new MovePlanner($payments, $light),
+            new MoveExecutor($this->irMemoryCards(), $this->irPlayerValues(), $this->irGlobals(), new CatalogSpecSource()),
+            $this->irHandLimit(),
+            $payments,
+            $light,
+        );
+    }
+
+    /**
+     * 効果解決スタックにイベント（EV-01〜EV-08。仕様書 008 §4.1）の誘発を積む口。
+     *
+     * @param list<GameEvent> $events
+     */
+    public function irEmitEvents(array $events): void
+    {
+        // TODO(I-09): EffectCatalog から、ターンプレイヤーの自己構成済みカード・自我カードのうちこのイベントに反応する
+        //  TRIGGER を集め（008 §4.2）、条件を評価して SPEC_RUN の frame を積む（複数あれば §6.3 の順序づけ）。
+        //  EV-02（M061・M067・M069・I06）、EV-03（I04.2）、EV-04（I07）が移動から来る。
     }
 
     /**

@@ -11,6 +11,7 @@ namespace Bga\Games\IRevolveThereforeIAm\States;
 
 use Bga\GameFramework\StateType;
 use Bga\GameFramework\States\GameState;
+use Bga\Games\IRevolveThereforeIAm\Data\EffectFrame;
 use Bga\Games\IRevolveThereforeIAm\Flow\StateId;
 use Bga\Games\IRevolveThereforeIAm\Flow\Transition;
 use Bga\Games\IRevolveThereforeIAm\Game;
@@ -54,9 +55,19 @@ class EffectResolve extends GameState
         // TODO(I-05/I-07/I-09): 006 §7.2 のループ。スタックの先頭の frame を種類ごとに解決する
         //  （自動で済む効果はループ内で解決、選択が要る所は changeActivePlayer して CHOICE、COMPOSE / ANALYSIS / HAND_LIMIT）。
         //  1 回の入場で処理する frame は 500 件まで
-        $head = $this->game->irEffectStack()->peek();
-        if ($head !== null) {
-            throw new \LogicException("effect frame is not supported yet: {$head->kind}");
+        $stack = $this->game->irEffectStack();
+        while (($head = $stack->peek()) !== null) {
+            if ($head->kind !== EffectFrame::KIND_HAND_LIMIT_CHECK || $head->id === null) {
+                throw new \LogicException("effect frame is not supported yet: {$head->kind}");
+            }
+            // 手札上限の確認（006 §8）。超過した人がいれば 72 へ。捨て終えて戻ってきたら、もう一度確認する
+            $over = $this->game->irHandLimit()->firstOver($globals->turnPlayer());
+            if ($over !== null) {
+                $this->game->gamestate->changeActivePlayer($over);
+
+                return Transition::HAND_LIMIT;
+            }
+            $stack->complete($head->id);
         }
 
         $this->game->gamestate->changeActivePlayer($globals->turnPlayer());
