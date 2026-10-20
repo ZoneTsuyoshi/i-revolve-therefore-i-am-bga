@@ -13,21 +13,25 @@ use Bga\GameFramework\Actions\Types\IntArrayParam;
 use Bga\GameFramework\StateType;
 use Bga\GameFramework\States\GameState;
 use Bga\GameFramework\States\PossibleAction;
+use Bga\GameFramework\UserException;
 use Bga\Games\IRevolveThereforeIAm\Data\MemoryLocation;
+use Bga\Games\IRevolveThereforeIAm\Effects\EffectViolation;
 use Bga\Games\IRevolveThereforeIAm\Flow\FreeActions;
+use Bga\Games\IRevolveThereforeIAm\Flow\HandLimit;
 use Bga\Games\IRevolveThereforeIAm\Flow\StateId;
 use Bga\Games\IRevolveThereforeIAm\Flow\Transition;
 use Bga\Games\IRevolveThereforeIAm\Game;
 
 /**
- * 72: 手札上限（8 枚）を超えたプレイヤーが、超過分を捨てる（006 §8）。骨格では 70 が入れないので入らない。
+ * 72: 手札上限（8 枚）を超えたプレイヤーが、超過分を捨てる（006 §8）。70 が `HAND_LIMIT_CHECK` の frame を処理して入る。
+ * 移動中の I07 のドローで超えた手札は、移動フェイズ全体の後にここで捨てる（Q-41）。
  */
 class HandLimitDiscard extends GameState
 {
     use FreeActions;
 
     /** 手札の上限（001 §12）。 */
-    public const HAND_LIMIT = 8;
+    public const HAND_LIMIT = HandLimit::LIMIT;
 
     public function __construct(
         protected Game $game,
@@ -68,7 +72,18 @@ class HandLimitDiscard extends GameState
     #[PossibleAction]
     public function actDiscardExcess(#[IntArrayParam] array $cardIds, int $activePlayerId): string
     {
-        // TODO(I-07): 枚数が超過分ちょうどで、すべて本人の手札であることを検査し、各レベルの捨札へ移す。N15 cardsDiscarded を送る
+        try {
+            $notice = $this->game->irHandLimit()->discardExcess(
+                $activePlayerId,
+                $this->game->getPlayerNameById($activePlayerId),
+                $cardIds,
+            );
+        } catch (EffectViolation) {
+            throw new UserException(clienttranslate('You must discard exactly the excess cards from your hand'));
+        }
+        $this->game->irSend($notice);
+
+        // 70 に戻り、他にも超過した人がいればその人を 72 に送る
         return Transition::DISCARDED;
     }
 
@@ -77,7 +92,6 @@ class HandLimitDiscard extends GameState
      */
     public function zombie(int $playerId): string
     {
-        // TODO(I-07): 捨てるカードを決めて actDiscardExcess と同じ処理を行う
-        return $this->actDiscardExcess([], $playerId);
+        return $this->actDiscardExcess($this->game->irHandLimit()->zombieChoice($playerId), $playerId);
     }
 }

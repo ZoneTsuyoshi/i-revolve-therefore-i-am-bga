@@ -18,6 +18,9 @@ final class EffectFrame
     public const READY = 'READY';
     public const WAITING = 'WAITING';
 
+    /** 手札上限の確認（006 §7.1）。unit の終わりに積み、70 が超過したプレイヤーを 72 へ送る。 */
+    public const KIND_HAND_LIMIT_CHECK = 'HAND_LIMIT_CHECK';
+
     /**
      * @param array<string, mixed>|null $params
      * @param array<string, mixed>|null $payload

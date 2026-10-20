@@ -13,7 +13,7 @@ use Bga\Games\IRevolveThereforeIAm\Data\GamePhase;
 
 /**
  * 通知の組み立て（仕様書 007 §10.2）。ログ文言（英語原文）はここに集める（翻訳の抽出のため）。
- * 今は N01〜N05 と N31 `gameEnded` だけ。残りは後続のタスクで足す。
+ * 今は N01〜N07、N15〜N17、N31 `gameEnded` と、移動できなかったときの `moveBlocked` だけ。残りは後続のタスクで足す。
  */
 final class Notification
 {
@@ -69,6 +69,169 @@ final class Notification
             'player_id' => $playerId,
             'player_name' => $playerName,
             'turn_no' => $turnNo,
+        ]);
+    }
+
+    /**
+     * N06: 部屋に入室した。支払った資源の変化は N15〜N17 が先に続く（006 §5.1 の流れ）。
+     *
+     * @param array{tapped: list<int>, discarded: list<array{id: int, type: int}>, light: int, wild_tokens: int, granted_keys: int} $payment
+     *        `light` は払った心光の個数、`wild_tokens` は裏返した万能移動鍵トークンの数、`granted_keys` は MD-06 の万能鍵の数
+     */
+    public static function roomEntered(
+        int $playerId,
+        string $playerName,
+        int $fromPos,
+        int $pos,
+        string $roomName,
+        int $step,
+        array $payment,
+        int $enteredCount,
+    ): Notice {
+        return new Notice('roomEntered', clienttranslate('${player_name} enters ${room_name}'), [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'from_pos' => $fromPos,
+            'pos' => $pos,
+            'room_name' => $roomName,
+            'step' => $step,
+            'payment' => $payment,
+            'entered_count' => $enteredCount,
+            'i18n' => ['room_name'],
+        ]);
+    }
+
+    /**
+     * N07: レベル 2 の部屋をスキップした。周遊ボーナスは N16 が続く。
+     */
+    public static function roomSkipped(int $playerId, string $playerName, int $pos, string $roomName): Notice
+    {
+        return new Notice('roomSkipped', clienttranslate('${player_name} skips ${room_name}'), [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'pos' => $pos,
+            'room_name' => $roomName,
+            'i18n' => ['room_name'],
+        ]);
+    }
+
+    /**
+     * 払える移動が 1 つも無く、移動せずに想起フェイズへ進む（Q-38）。007 の通知一覧に無い通知（ログだけ）。
+     */
+    public static function moveBlocked(int $playerId, string $playerName, int $pos, string $roomName): Notice
+    {
+        return new Notice('moveBlocked', clienttranslate('${player_name} cannot pay to move and stays in ${room_name}'), [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'pos' => $pos,
+            'room_name' => $roomName,
+            'i18n' => ['room_name'],
+        ]);
+    }
+
+    /**
+     * N15: 手札から捨札へ。ID と種類を公開する（捨札は表向き。Q-23）。`COST` はログに出さない（N06 のログで足りる）。
+     *
+     * @param list<array{id: int, type: int}> $cards
+     * @param array{1: int, 2: int} $pileCounts
+     */
+    public static function cardsDiscarded(
+        int $playerId,
+        string $playerName,
+        array $cards,
+        string $reason,
+        array $pileCounts,
+        int $handCount,
+    ): Notice {
+        $message = match ($reason) {
+            'LIGHT' => clienttranslate('${player_name} discards ${count} memory card(s) for inner light'),
+            'HAND_LIMIT' => clienttranslate('${player_name} discards ${count} memory card(s) (hand limit)'),
+            'EFFECT', 'FLOOR' => clienttranslate('${player_name} discards ${count} memory card(s)'),
+            default => '',
+        };
+
+        return new Notice('cardsDiscarded', $message, [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'cards' => $cards,
+            'count' => count($cards),
+            'reason' => $reason,
+            'pile_counts' => ['1' => $pileCounts[1], '2' => $pileCounts[2]],
+            'hand_count' => $handCount,
+        ]);
+    }
+
+    /**
+     * N16: トークンの増減。`$delta` と `$totals` のキーは `light` / `wild_up` / `wild_used` / `compose` / `analysis`。
+     * `$tokenName` が null ならログに出さない（`PAYMENT` など）。
+     *
+     * @param array<string, int> $delta 0 でないものだけ
+     * @param array<string, int> $totals 変更後の同じキーの値
+     */
+    public static function tokensChanged(
+        int $playerId,
+        string $playerName,
+        array $delta,
+        array $totals,
+        string $reason,
+        ?string $origin = null,
+        ?string $tokenName = null,
+        int $amount = 0,
+        bool $gain = true,
+    ): Notice {
+        $message = '';
+        if ($tokenName !== null) {
+            $message = $gain
+                ? clienttranslate('${player_name} gains ${amount} ${token_name}')
+                : clienttranslate('${player_name} spends ${amount} ${token_name}');
+        }
+        $args = [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'delta' => $delta,
+            'totals' => $totals,
+            'reason' => $reason,
+        ];
+        if ($origin !== null) {
+            $args['origin'] = $origin;
+        }
+        if ($tokenName !== null) {
+            $args['token_name'] = $tokenName;
+            $args['amount'] = $amount;
+            $args['i18n'] = ['token_name'];
+        }
+
+        return new Notice('tokensChanged', $message, $args);
+    }
+
+    /**
+     * トークンの名前（N16 の `token_name`。翻訳対象の英語原文）。
+     *
+     * @param string $key `light` / `wild_up` / `compose` / `analysis`
+     */
+    public static function tokenName(string $key): string
+    {
+        return match ($key) {
+            'light' => clienttranslate('inner light'),
+            'wild_up' => clienttranslate('wild move key'),
+            'compose' => clienttranslate('compose token'),
+            'analysis' => clienttranslate('analysis token'),
+            default => throw new \InvalidArgumentException("unknown token key: $key"),
+        };
+    }
+
+    /**
+     * N17: 自己構成済みカードを横向きにする / 戻す（支払い）。ログには出さない。
+     *
+     * @param list<int> $cardIds
+     */
+    public static function cardsTapped(int $playerId, string $playerName, array $cardIds, bool $tapped): Notice
+    {
+        return new Notice('cardsTapped', '', [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'card_ids' => $cardIds,
+            'tapped' => $tapped,
         ]);
     }
 
