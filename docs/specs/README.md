@@ -15,3 +15,4 @@
 | 003 | BGA プロジェクト構成・技術方針 | Approved | T-003 |
 | 004 | CI（lint チェック） | Approved | T-004 |
 | 005 | BGA Studio への自動同期 | Approved | T-005 |
+| 006 | 状態遷移 | Approved | T-006 |
