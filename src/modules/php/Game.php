@@ -12,85 +12,71 @@
  * Game.php
  *
  * 『我廻る、故に我あり』のメインクラス（薄い入口。仕様書 003 §4.2）。独自メソッドの名前は ir で始める（仕様書 003 §4.3）。
- * 状態機械とセットアップは I-03 で実装する。いまは Studio の雛形のサンプル（PlayerTurn → NextPlayer → EndScore）を残している。
+ * フレームワークが要求するメソッド、依存の組み立て、通知送信の共通ヘルパー、debug_ メソッドだけを持つ。
+ * 状態の中身は States/、ルール計算は Flow/、DB は Data/、セットアップは Setup/。
  */
 
 declare(strict_types=1);
 
 namespace Bga\Games\IRevolveThereforeIAm;
 
-use Bga\GameFramework\Components\Counters\PlayerCounter;
 use Bga\Games\IRevolveThereforeIAm\Data\BgaDatabase;
 use Bga\Games\IRevolveThereforeIAm\Data\Database;
+use Bga\Games\IRevolveThereforeIAm\Data\EffectStack;
+use Bga\Games\IRevolveThereforeIAm\Data\EgoRepository;
+use Bga\Games\IRevolveThereforeIAm\Data\GamePhase;
 use Bga\Games\IRevolveThereforeIAm\Data\GlobalValues;
+use Bga\Games\IRevolveThereforeIAm\Data\MemoryCardRepository;
+use Bga\Games\IRevolveThereforeIAm\Data\MemoryLocation;
+use Bga\Games\IRevolveThereforeIAm\Data\ObjectiveRepository;
 use Bga\Games\IRevolveThereforeIAm\Data\PlayerValues;
-use Bga\Games\IRevolveThereforeIAm\States\PlayerTurn;
+use Bga\Games\IRevolveThereforeIAm\Data\PublicView;
+use Bga\Games\IRevolveThereforeIAm\Data\RoomRepository;
+use Bga\Games\IRevolveThereforeIAm\Data\SpiritRepository;
+use Bga\Games\IRevolveThereforeIAm\Flow\GameProgress;
+use Bga\Games\IRevolveThereforeIAm\Flow\Notice;
+use Bga\Games\IRevolveThereforeIAm\Flow\Notification;
+use Bga\Games\IRevolveThereforeIAm\Flow\StateId;
+use Bga\Games\IRevolveThereforeIAm\Setup\GameSetup;
+use Bga\Games\IRevolveThereforeIAm\Setup\SetupPlanner;
+use Bga\Games\IRevolveThereforeIAm\States\SetupEgoDraftNext;
 
 class Game extends \Bga\GameFramework\Table
 {
-    public static array $CARD_TYPES;
-
-    public PlayerCounter $playerEnergy;
+    /** ゲームオプション 100「回廊の配置」（仕様書 003 §7.2、007 §5.1）。 */
+    public const OPTION_FLOOR_LAYOUT = 100;
 
     private ?Database $irDb = null;
 
     private ?GlobalValues $irGlobalValues = null;
 
-    /**
-     * Your global variables labels:
-     *
-     * Here, you can assign labels to global variables you are using for this game. You can use any number of global
-     * variables with IDs between 10 and 99. If you want to store any type instead of int, use $this->globals instead.
-     *
-     * NOTE: afterward, you can get/set the global variables with `getGameStateValue`, `setGameStateInitialValue` or
-     * `setGameStateValue` functions.
-     */
     public function __construct()
     {
         parent::__construct();
-
-        $this->playerEnergy = $this->bga->counterFactory->createPlayerCounter('energy');
-
-        self::$CARD_TYPES = [
-            1 => [
-                "card_name" => clienttranslate('Troll'), // ...
-            ],
-            2 => [
-                "card_name" => clienttranslate('Goblin'), // ...
-            ],
-            // ...
-        ];
-
-        /* example of notification decorator.
-        // automatically complete notification args when needed
-        $this->bga->notify->addDecorator(function(string $message, array $args) {
-            if (isset($args['player_id']) && !isset($args['player_name']) && str_contains($message, '${player_name}')) {
-                $args['player_name'] = $this->getPlayerNameById($args['player_id']);
-            }
-
-            if (isset($args['card_id']) && !isset($args['card_name']) && str_contains($message, '${card_name}')) {
-                $args['card_name'] = self::$CARD_TYPES[$args['card_id']]['card_name'];
-                $args['i18n'][] = ['card_name'];
-            }
-
-            return $args;
-        });*/
     }
 
     /**
-     * Compute and return the current game progression.
-     *
-     * The number returned must be an integer between 0 and 100.
-     *
-     * This method is called each time we are in a game state with the "updateGameProgression" property set to true.
-     *
-     * @return int
+     * 進行度（0〜99。仕様書 006 §11）。82 NextTurn に入るたびに呼ばれる。最大値を保って単調増加にする。
      */
     public function getGameProgression(): int
     {
-        // TODO: compute and return the game progression
+        $view = $this->irPublicView();
+        $rows = $view->results($this->irPlayerValues()->playerIds());
+        $globals = $this->irGlobals();
+        $memory = $this->irMemoryCards();
 
-        return 0;
+        $progress = GameProgress::calculate(
+            maxTier: $rows === [] ? 0 : max(array_column($rows, 'tier')),
+            maxScore: $rows === [] ? 0 : max(array_column($rows, 'total')),
+            deck1Left: $memory->count(MemoryLocation::Deck1),
+            deck1Initial: $globals->deckInitial(1),
+            deck2Left: $memory->count(MemoryLocation::Deck2),
+            deck2Initial: $globals->deckInitial(2),
+            highWater: $globals->progressHighWater(),
+        );
+        $globals->setProgressHighWater($progress);
+
+        return $progress;
     }
 
     /**
@@ -124,46 +110,30 @@ class Game extends \Bga\GameFramework\Table
     }
 
     /*
-     * Gather all information about current game situation (visible by the current player).
-     *
-     * The method is called each time the game interface is displayed to a player, i.e.:
-     *
-     * - when the game starts
-     * - when a player refreshes the game page (F5)
+     * 現在の盤面を閲覧者の視点で返す（仕様書 007 §8）。ページの表示・再読み込みのたびに呼ばれる。
+     * 非公開情報（他人の手札、部屋の裏向きのカードの種類、山札の中身、強化自我の山）は含めない。PublicView が出し分ける。
      */
     protected function getAllDatas(int $currentPlayerId): array
     {
+        // キー players はフレームワーク用に予約されている。独自の値は PublicView が playerData に入れる
         $result = [];
-        // WARNING: We must only return information visible by the current player (using $currentPlayerId).
-
-        // Get information about players.
-        // NOTE: you can retrieve some extra field you added for "player" table in `dbmodel.sql` if you need it.
         $result["players"] = $this->getCollectionFromDb(
             "SELECT `player_id` AS `id`, `player_score` AS `score` FROM `player`"
         );
-        $this->playerEnergy->fillResult($result);
 
-        // TODO: Gather all information about current game situation (visible by player $currentPlayerId).
-
-        return $result;
+        return $result + $this->irPublicView()->allDatas($currentPlayerId);
     }
 
     /**
-     * This method is called only once, when a new game is launched. In this method, you must setup the game
-     *  according to the game rules, so that the game is ready to be played.
+     * 新しいゲームの開始時に一度だけ呼ばれる。ルールどおりに初期状態を作る（仕様書 001 §4、007 §13）。
      */
     protected function setupNewGame($players, $options = [])
     {
-        $this->playerEnergy->initDb(array_keys($players), initialValue: 2);
-
-        // Set the colors of the players with HTML color code. The default below is red/green/blue/orange/brown. The
-        // number of colors defined here must correspond to the maximum number of players allowed for the gams.
         $gameinfos = $this->getGameinfos();
         $default_colors = $gameinfos['player_colors'];
 
         $query_values = [];
         foreach ($players as $player_id => $player) {
-            // Now you can access both $player_id and $player array
             $query_values[] = vsprintf("(%s, '%s', '%s')", [
                 $player_id,
                 array_shift($default_colors),
@@ -171,10 +141,6 @@ class Game extends \Bga\GameFramework\Table
             ]);
         }
 
-        // Create players based on generic information.
-        //
-        // NOTE: You can add extra field on player table in the database (see dbmodel.sql) and initialize
-        // additional fields directly here.
         static::DbQuery(
             sprintf(
                 "INSERT INTO `player` (`player_id`, `player_color`, `player_name`) VALUES %s",
@@ -185,31 +151,20 @@ class Game extends \Bga\GameFramework\Table
         $this->reattributeColorsBasedOnPreferences($players, $gameinfos["player_colors"]);
         $this->reloadPlayersBasicInfos();
 
-        // Init global values with their initial values.
-        // TODO(I-03): 仕様書 007 §13 のセットアップ（Setup/GameSetup。グローバル値は GlobalValues::initialize）に置き換える。
+        // 手番順は席順（player_no の昇順。Q-18、007 §7.1 T-8）。スタートプレイヤーは 25 SetupFinish で 1 番手にする
+        $layout = $this->bga->tableOptions->get(self::OPTION_FLOOR_LAYOUT) ?? SetupPlanner::LAYOUT_FIXED;
+        $this->irGameSetup()->run($this->irPlayerValues()->playerIds(), $layout);
 
-        // Init game statistics.
-        //
-        // NOTE: statistics used in this file must be defined in your `stats.inc.php` file.
+        // TODO(I-11): 統計の初期化（stats.jsonc。007 §14）
 
-        // Dummy content.
-        // $this->tableStats->init('table_teststat1', 0);
-        // $this->playerStats->init('player_teststat1', 0);
-
-        // TODO: Setup the initial game situation here.
-
-        // Activate first player once everything has been initialized and ready.
-        $this->activeNextPlayer();
-
-        return PlayerTurn::class;
+        // 最初の状態は GAME 状態の初期自我のドラフト（006 §3.2）
+        return SetupEgoDraftNext::class;
     }
 
     /**
-     * Example of debug function.
-     * Here, jump to a state you want to test (by default, jump to next player state)
-     * You can trigger it on Studio using the Debug button on the right of the top bar.
+     * デバッグ用: 指定した状態へ飛ぶ（Studio の Debug ボタンから）。
      */
-    public function debug_goToState(int $state = 3)
+    public function debug_goToState(int $state = StateId::TURN_START)
     {
         $this->gamestate->jumpToState($state);
     }
@@ -238,13 +193,103 @@ class Game extends \Bga\GameFramework\Table
         return new PlayerValues($this->irDatabase());
     }
 
-    /*
-    Another example of debug function, to easily create situations you want to test.
-    Here, put a card you want to test in your hand (assuming you use the Deck component).
-
-    public function debug_setCardInHand(int $cardType, int $playerId) {
-        $card = array_values($this->cards->getCardsOfType($cardType))[0];
-        $this->cards->moveCard($card['id'], 'hand', $playerId);
+    public function irMemoryCards(): MemoryCardRepository
+    {
+        return new MemoryCardRepository($this->irDatabase());
     }
-    */
+
+    public function irRooms(): RoomRepository
+    {
+        return new RoomRepository($this->irDatabase());
+    }
+
+    public function irSpirits(): SpiritRepository
+    {
+        return new SpiritRepository($this->irDatabase());
+    }
+
+    public function irEgos(): EgoRepository
+    {
+        return new EgoRepository($this->irDatabase());
+    }
+
+    public function irObjectives(): ObjectiveRepository
+    {
+        return new ObjectiveRepository($this->irDatabase());
+    }
+
+    /**
+     * 効果解決スタック（仕様書 007 §6）。
+     */
+    public function irEffectStack(): EffectStack
+    {
+        return new EffectStack($this->irDatabase());
+    }
+
+    /**
+     * getAllDatas と getArgs の公開部分を作る唯一の入口（仕様書 007 §8）。
+     */
+    public function irPublicView(): PublicView
+    {
+        return new PublicView(
+            $this->irMemoryCards(),
+            $this->irRooms(),
+            $this->irSpirits(),
+            $this->irEgos(),
+            $this->irObjectives(),
+            $this->irPlayerValues(),
+            $this->irGlobals(),
+        );
+    }
+
+    /**
+     * 席順（player_no の昇順 = 手番順）のプレイヤー ID。
+     *
+     * @return list<int>
+     */
+    public function irSeatOrder(): array
+    {
+        return $this->irPlayerValues()->playerIds();
+    }
+
+    /**
+     * フェイズを切り替える。ログに出すフェイズ（移動・想起・床アクション・自己構成・クリーンアップ）は、変わったときだけ通知する。
+     * 70 を経由して同じ状態に戻ってきたとき（60 など）に何度も通知しないため。
+     */
+    public function irEnterPhase(GamePhase $phase): void
+    {
+        $globals = $this->irGlobals();
+        $changed = $globals->phase() !== $phase;
+        $globals->setPhase($phase);
+        if ($changed && Notification::isLoggedPhase($phase)) {
+            $this->irSend(Notification::phaseStarted($phase));
+        }
+    }
+
+    /**
+     * 通知を全員（と観戦者）へ送る。
+     */
+    public function irSend(Notice ...$notices): void
+    {
+        foreach ($notices as $notice) {
+            $this->bga->notify->all($notice->type, $notice->message, $notice->args);
+        }
+    }
+
+    /**
+     * セットアップの組み立て（仕様書 007 §13）。乱数は random_int（仕様書 003 §4.4）。
+     */
+    private function irGameSetup(): GameSetup
+    {
+        return new GameSetup(
+            new SetupPlanner(static fn(int $min, int $max): int => random_int($min, $max)),
+            $this->irMemoryCards(),
+            $this->irRooms(),
+            $this->irSpirits(),
+            $this->irEgos(),
+            $this->irObjectives(),
+            $this->irPlayerValues(),
+            $this->irGlobals(),
+        );
+    }
 }
