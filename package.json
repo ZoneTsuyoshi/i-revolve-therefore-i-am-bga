@@ -17,6 +17,7 @@
     "lint:types": "node scripts/lint/check-types.mjs",
     "lint:assets": "node scripts/lint/check-assets.mjs",
     "test:lint": "node --test \"scripts/lint/*.test.mjs\"",
+    "test:js": "node --test \"tests/js/*.test.mjs\"",
     "test:unit": "bash tests/run-unit.sh",
     "build:sprites": "node scripts/build-sprites.mjs",
     "check:sprites": "node scripts/check-sprites.mjs",

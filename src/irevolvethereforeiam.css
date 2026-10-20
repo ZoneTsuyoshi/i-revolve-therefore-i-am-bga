@@ -9,12 +9,383 @@
  */
 
 /*
- * ゲーム画面のスタイル（仕様書 003 §6.3）。1 ファイルで、クラス名と CSS 変数は ir- を付ける。
+ * ゲーム画面のスタイル（仕様書 003 §6.3、009 §2・§10・§12・§15）。1 ファイルで、クラス名と CSS 変数は ir- を付ける。
  * 本番ではこのファイルは圧縮されコメントは消えるので、コメントは必要なだけ書く。
  * 注意: @import は使えない。
+ * 構成: 1. 変数（寸法・色・ダークモード） 2. ルートと盤面の配置（wide / medium / narrow） 3. 器（スロット）
+ *       4. 回廊 5. 共通の領域 6. プレイヤーの領域 7. カード（スプライト・bga-cards の寸法の上書き・キャプション）
  */
 
-/* 画面の実装（UI タスク）で、カードの大きさなどの変数をここに足す。 */
+/* ---- 1. 変数 ---- */
+
+/*
+ * 寸法の変数は JS（ui/Layout.js）が :root に px で上書きする（幅 Wc から計算。仕様書 009 §2.4）。
+ * アニメーション中のカードは body 直下の animation-surface へ移るため、:root に置く（003 §6.2）。
+ * ここの値は JS が動く前の既定値（wide・Wc = 1100 の値）。
+ */
 :root {
-    --ir-placeholder: 0;
+    --ir-gap: 8px;
+    --ir-room-w: 171px;
+    --ir-w: 102px;
+    --ir-c: 119px;
+    --ir-room-card-w: 85.5px;
+
+    /* 高さはスプライトのセルの縦横比から求める: 想い出 280:390、横長 400:287 */
+    --ir-h: calc(var(--ir-w) * 390 / 280);
+    --ir-ch: calc(var(--ir-c) * 287 / 400);
+    --ir-room-floor-h: calc(var(--ir-room-w) * 287 / 400);
+    --ir-room-card-h: calc(var(--ir-room-card-w) * 390 / 280);
+    --ir-room-h: calc(var(--ir-room-w) * 287 / 400 + var(--ir-room-w) * 0.3);
+
+    /* 色（背景・枠・空き枠・パネル・文字。カード画像は共通） */
+    --ir-text: #222;
+    --ir-text-muted: #555;
+    --ir-panel-bg: rgb(255 255 255 / 70%);
+    --ir-panel-border: #b8b2a6;
+    --ir-slot-bg: rgb(0 0 0 / 4%);
+    --ir-slot-border: #9a948a;
+    --ir-turn-border: #c0392b;
+}
+
+/* BGA のダークモードは html の data-theme="dark"（@media (prefers-color-scheme) は BGA の切り替えを無視するので使わない。009 §12.2） */
+html[data-theme="dark"] {
+    --ir-text: #e8e6e1;
+    --ir-text-muted: #b5b1a8;
+    --ir-panel-bg: rgb(30 30 34 / 80%);
+    --ir-panel-border: #5c5a55;
+    --ir-slot-bg: rgb(255 255 255 / 6%);
+    --ir-slot-border: #7a776f;
+    --ir-turn-border: #ff7b6b;
+}
+
+/* ---- 2. ルートと盤面の配置 ---- */
+
+.ir-root {
+    box-sizing: border-box;
+    width: 100%;
+    color: var(--ir-text);
+    display: flex;
+    flex-direction: column;
+    gap: var(--ir-gap);
+}
+
+.ir-root *,
+.ir-root *::before,
+.ir-root *::after {
+    box-sizing: border-box;
+}
+
+/* wide: 左に環、右に共通の列。medium・narrow: 環の下に共通の領域 */
+.ir-board {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ir-gap);
+}
+
+.ir-root[data-layout="wide"] .ir-board {
+    flex-direction: row;
+    align-items: flex-start;
+}
+
+.ir-main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ir-gap);
+    flex: none;
+}
+
+.ir-slot-host:empty {
+    display: none;
+}
+
+/* ---- 3. 器（スロット） ---- */
+
+.ir-slot {
+    flex: none;
+    border: 1px dashed var(--ir-slot-border);
+    border-radius: 4px;
+    background: var(--ir-slot-bg);
+}
+
+.ir-slot-m {
+    width: var(--ir-w);
+    height: var(--ir-h);
+}
+
+.ir-slot-l {
+    width: var(--ir-c);
+    height: var(--ir-ch);
+}
+
+/* 山札・捨札: 横 1 列（wide・medium の環の上）、narrow は環の中央に 2 × 2 */
+.ir-piles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ir-gap);
+}
+
+.ir-root[data-layout="narrow"] .ir-piles {
+    display: grid;
+    grid-template-columns: repeat(2, var(--ir-w));
+    place-content: center center;
+    height: 100%;
+}
+
+/* 場札: 3 列 × 2 行 */
+.ir-open {
+    display: grid;
+    grid-template-columns: repeat(3, var(--ir-w));
+    gap: var(--ir-gap);
+    place-content: center center;
+}
+
+.ir-root[data-layout="narrow"] .ir-open {
+    justify-content: start;
+}
+
+/* ---- 4. 回廊 ---- */
+
+.ir-cloister {
+    display: grid;
+    grid-template-columns: repeat(4, var(--ir-room-w));
+    grid-template-rows: repeat(4, var(--ir-room-h));
+    gap: var(--ir-gap);
+}
+
+/* 環の内側（列 2〜3、行 2〜3） */
+.ir-cloister-center {
+    grid-column: 2 / 4;
+    grid-row: 2 / 4;
+    min-width: 0;
+}
+
+/* 部屋: 床カードが下端、裏向きの想い出カードが上端の水平中央（009 §3.1） */
+.ir-room {
+    position: relative;
+    width: var(--ir-room-w);
+    height: var(--ir-room-h);
+}
+
+.ir-room-floor {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: var(--ir-room-w);
+    height: var(--ir-room-floor-h);
+}
+
+.ir-slot-room-card {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    z-index: 1;
+    width: var(--ir-room-card-w);
+    height: var(--ir-room-card-h);
+    transform: translateX(-50%);
+    border: 1px dashed var(--ir-slot-border);
+    border-radius: 4px;
+}
+
+/* ミープルは左右の余白（U-3）。器だけ置く */
+.ir-room-meeples {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+}
+
+/* ---- 5. 共通の領域 ---- */
+
+.ir-common {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ir-gap);
+    flex: none;
+}
+
+.ir-common-spirit {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--ir-gap);
+}
+
+/* medium: 精神トラックと目標カードを横に並べる。narrow: 積む */
+.ir-root[data-layout="medium"] .ir-common {
+    flex-flow: row wrap;
+    align-items: flex-start;
+}
+
+.ir-spirit-track {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ir-gap);
+    width: calc(var(--ir-c) * 2 + var(--ir-gap));
+}
+
+.ir-spirit-tier {
+    display: flex;
+    justify-content: center;
+    gap: var(--ir-gap);
+}
+
+.ir-goals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ir-gap);
+    min-height: var(--ir-ch);
+    min-width: var(--ir-c);
+}
+
+/* 想起中だけ表示（U-7）。hidden 属性で隠す */
+.ir-recall-panel[hidden] {
+    display: none;
+}
+
+.ir-recall-panel {
+    padding: var(--ir-gap);
+    border: 1px solid var(--ir-panel-border);
+    border-radius: 4px;
+    background: var(--ir-panel-bg);
+}
+
+/* ---- 6. プレイヤーの領域 ---- */
+
+.ir-players {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ir-gap);
+}
+
+.ir-player-area {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ir-gap);
+    padding: var(--ir-gap);
+    border: 1px solid var(--ir-panel-border);
+    border-radius: 4px;
+    background: var(--ir-panel-bg);
+    color: var(--ir-text);
+}
+
+/* 手番プレイヤーの領域は枠を太くする（色だけに頼らない。U-5 が .ir-turn を付ける） */
+.ir-player-area.ir-turn {
+    border: 3px solid var(--ir-turn-border);
+}
+
+.ir-player-name {
+    font-weight: bold;
+    color: var(--ir-text);
+    border-left: 6px solid var(--ir-player-color, var(--ir-panel-border));
+    padding-left: 6px;
+}
+
+.ir-player-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--ir-gap);
+}
+
+.ir-tokens {
+    min-width: var(--ir-w);
+}
+
+.ir-owned-goals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ir-gap);
+}
+
+/* 手札・自己構成済みエリア: 折り返す。折りたたみや横スクロールは作らない（003 §6.3） */
+.ir-hand,
+.ir-composed {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ir-gap);
+    min-height: var(--ir-h);
+}
+
+/* ---- 7. カード ---- */
+
+/*
+ * スプライトの面。background-image / -size / -position は JS（cards/card-face.js）がパーセントで入れる。
+ * 角丸の透過は画像側にあるので border-radius で切り直さない（白い縁が出る。009 §1）。
+ */
+.ir-face {
+    width: 100%;
+    height: 100%;
+    background-repeat: no-repeat;
+}
+
+.ir-ui-sprite {
+    background-repeat: no-repeat;
+}
+
+/* スプライトに無いキー: 空の面（破線だけ見える） */
+.ir-sprite-missing {
+    outline: 1px dashed var(--ir-slot-border);
+    outline-offset: -1px;
+}
+
+/*
+ * bga-cards 1.x は、カードの面の大きさを --bga-cards_card-width / -height（CardManager の cardWidth・cardHeight）から決める。
+ * 実寸は :root の --ir-w / --ir-c から求める。インラインより強い !important で上書きし、読み込み順に頼らない（009 §6.2、姉妹 MJ #36・#40・#43）。
+ * カード（.ir-m / .ir-l）は移動中に .ir-root の外（animation-surface）へ出るので、.ir-root を前置しない。
+ * 山札・列・スロットの枠は、同じ変数を使うので、器（.ir-slot-m / .ir-stock-m など）にも当てる。
+ * 山札の枠（--width / --height）も同様に上書きする。
+ */
+.ir-m,
+.ir-slot-m,
+.ir-stock-m {
+    /* stylelint-disable-next-line custom-property-pattern -- bga-cards の変数名 */
+    --bga-cards_card-width: var(--ir-w) !important;
+
+    /* stylelint-disable-next-line custom-property-pattern -- bga-cards の変数名 */
+    --bga-cards_card-height: var(--ir-h) !important;
+    --width: var(--ir-w) !important;
+    --height: var(--ir-h) !important;
+}
+
+.ir-l,
+.ir-slot-l,
+.ir-stock-l {
+    /* stylelint-disable-next-line custom-property-pattern -- bga-cards の変数名 */
+    --bga-cards_card-width: var(--ir-c) !important;
+
+    /* stylelint-disable-next-line custom-property-pattern -- bga-cards の変数名 */
+    --bga-cards_card-height: var(--ir-ch) !important;
+    --width: var(--ir-c) !important;
+    --height: var(--ir-ch) !important;
+}
+
+/* 部屋の裏向きの想い出カードだけ幅 0.5 W（詳細度を上げて .ir-m に勝つ。アニメーション中は標準幅に戻る） */
+.ir-slot-room-card,
+.ir-slot-room-card .ir-m {
+    /* stylelint-disable-next-line custom-property-pattern -- bga-cards の変数名 */
+    --bga-cards_card-width: var(--ir-room-card-w) !important;
+
+    /* stylelint-disable-next-line custom-property-pattern -- bga-cards の変数名 */
+    --bga-cards_card-height: var(--ir-room-card-h) !important;
+    --width: var(--ir-room-card-w) !important;
+    --height: var(--ir-room-card-h) !important;
+}
+
+/* カードの下の英語名（プレイヤー設定 100 Card captions。cssPref のクラスが html または body に付く。009 §8.7） */
+.ir-caption {
+    display: none;
+}
+
+.ir-captions-on .ir-caption {
+    display: block;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    overflow: hidden;
+    font-size: 11px;
+    line-height: 1.2;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ir-text);
 }

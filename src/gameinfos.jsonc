@@ -85,7 +85,7 @@
     "game_interface_width": {
         // Smallest logical width at which the game remains usable.
         // Values below 320 are treated as 320. Default: 740.
-        "min": 740
+        "min": 360
     },
 
     // Trigger an exception when PHP detect warnings.

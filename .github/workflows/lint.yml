@@ -188,6 +188,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: npm run lint:css
 
+      - name: JS unit tests (node:test)
+        if: ${{ !cancelled() && hashFiles('tests/js/**/*.mjs') != '' }}
+        run: npm run test:js
+
   # PHPStan と tsc は BGA の開発用スタブ（再配布不可でコミットしない）が必要。
   # Studio から SFTP で取得して実行する。Secrets / Variables が無いとき（フォークの PR、
   # Dependabot の PR、Secrets を渡さない workflow_call 経由）は警告つきでスキップして成功する。
