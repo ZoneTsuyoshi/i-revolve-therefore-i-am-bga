@@ -7,7 +7,7 @@
 ## 全体像
 
 ```text
-PR 作成・更新 ──▶ CI: lint ──▶（通過 + ユーザー承認）──▶ squash merge
+PR 作成・更新 ──▶ CI: lint ──▶（通過 + レビュー）──▶ squash merge
                                                               │
 main への push ──▶ CD: src/ を BGA Studio へ SFTP 同期 ◀──────┘
 ```
