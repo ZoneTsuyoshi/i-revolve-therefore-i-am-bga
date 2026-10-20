@@ -98,6 +98,46 @@ class FakeStock {
     this.cards = [];
     /** @type {Map<unknown, FakeElement>} */
     this.elements = new Map();
+    this.selectionMode = 'none';
+    /** @type {any[]} */
+    this.selectable = [];
+    /** @type {any[]} */
+    this.selected = [];
+    /** @type {((selection: any[], last: any) => void) | undefined} */
+    this.onSelectionChange = undefined;
+  }
+
+  // ---- 選択（bga-cards の setSelectionMode 相当の最小実装）----
+  setSelectionMode(/** @type {string} */ mode, /** @type {any[] | undefined} */ cards) {
+    this.selectionMode = mode;
+    this.selectable = cards ?? this.cards;
+    if (mode === 'none') {
+      this.selected = [];
+    }
+  }
+
+  getSelection() {
+    return this.selected;
+  }
+
+  /** クリックの代わり。選べないカードは無視 */
+  selectCard(/** @type {any} */ card) {
+    if (this.selectionMode === 'none' || !this.selectable.some((c) => c.id === card.id)) {
+      return;
+    }
+    this.selected = this.selectionMode === 'single' ? [card] : [...this.selected, card];
+    this.onSelectionChange?.(this.selected, card);
+  }
+
+  unselectCard(/** @type {any} */ card, /** @type {boolean} */ silent = false) {
+    this.selected = this.selected.filter((c) => c.id !== card.id);
+    if (!silent) {
+      this.onSelectionChange?.(this.selected, card);
+    }
+  }
+
+  unselectAll() {
+    this.selected = [];
   }
 
   getElement() {
@@ -126,6 +166,7 @@ class FakeStock {
   }
 
   dropCard(/** @type {any} */ card) {
+    this.selected = this.selected.filter((c) => c.id !== card.id);
     this.cards = this.cards.filter((c) => c.id !== card.id);
     this.elements.get(card.id)?.remove();
     this.elements.delete(card.id);

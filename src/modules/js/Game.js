@@ -12,8 +12,10 @@
  */
 import { buildBoard, placeFloating } from './board/Board.js';
 import { CommonArea } from './board/CommonArea.js';
+import { PlayerAreas } from './board/PlayerAreas.js';
 import { createCardManagers } from './cards/managers.js';
 import { CommonNotifications } from './notifications.js';
+import { PlayerNotifications } from './player-notifications.js';
 import { registerStubStates } from './states/StubStates.js';
 import { Layout } from './ui/Layout.js';
 import { int } from './ui/dom.js';
@@ -35,6 +37,8 @@ export class Game {
         this.layout = null;
         /** @type {CommonArea | null} */
         this.common = null;
+        /** @type {PlayerAreas | null} */
+        this.playerAreas = null;
 
         // Studio の雛形の状態（サーバー側 States/PlayerTurn.php）。サーバー側の置き換え後に状態ごとのクラスへ差し替える
         registerStubStates(bga);
@@ -65,6 +69,16 @@ export class Game {
             me: spectator ? null : int(this.bga.players.getCurrentPlayerId()),
         });
         this.board = board;
+        // プレイヤーの領域（手札・自己構成済み・自我・トークン・獲得した目標。U-5）。自我と目標は共通の領域の通知からも使う
+        const playerAreas = new PlayerAreas({
+            refs: board,
+            cards: this.cards,
+            BgaCards,
+            imgUrl: (file) => this.bga.images.getImgUrl(file),
+            animationsActive: () => this.bga.gameui.bgaAnimationsActive(),
+            me: spectator ? null : int(this.bga.players.getCurrentPlayerId()),
+        });
+        this.playerAreas = playerAreas;
         // 共通の領域（回廊・場札・山札・精神トラック・強化自我・目標。U-4）。中身は gamedatas から描く
         this.common = new CommonArea({
             refs: board,
@@ -72,9 +86,11 @@ export class Game {
             BgaCards,
             imgUrl: (file) => this.bga.images.getImgUrl(file),
             animationsActive: () => this.bga.gameui.bgaAnimationsActive(),
+            playerAreas,
             players: gamedatas?.players ?? {},
         });
         this.common.setup(gamedatas);
+        playerAreas.setup(gamedatas);
         // 幅を測って data-layout と CSS 変数を入れ、以後は ResizeObserver で追従する。layout が変わるたびに piles と open の置き場所を替える
         this.layout = new Layout(board.root, (layout) => placeFloating(board, layout));
 
@@ -83,7 +99,8 @@ export class Game {
 
     setupNotifications() {
         // notif_xxx という名前のメソッドを通知名に対応させて自動で購読する（共通の領域の通知は CommonNotifications）
-        const handlers = this.common === null ? [] : [new CommonNotifications(this.common)];
+        const players = this.playerAreas === null ? null : new PlayerNotifications(this.playerAreas);
+        const handlers = this.common === null ? [] : [new CommonNotifications(this.common, players), ...(players === null ? [] : [players])];
         this.bga.notifications.setupPromiseNotifications({ handlers });
     }
 }

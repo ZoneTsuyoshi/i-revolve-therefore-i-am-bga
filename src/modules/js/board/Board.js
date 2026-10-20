@@ -57,6 +57,8 @@ const OPEN_SLOTS = 6;
  * @property {HTMLElement} ownedGoals 獲得した目標カード
  * @property {HTMLElement | null} hand 自分の領域だけ（他は枚数チップ）
  * @property {HTMLElement | null} handCount 他プレイヤー・観戦時の手札の枚数
+ * @property {HTMLElement | null} handInfo 自分の領域だけ。手札の枚数と上限（Hand: N / 8）
+ * @property {HTMLElement | null} under 自分の領域だけ。I08 の下のカード（中身）
  * @property {HTMLElement} composed 自己構成済みエリア
  */
 
@@ -166,6 +168,8 @@ function buildPlayerArea(playerId, player, mine) {
     const ownedGoals = el('div', { class: 'ir-owned-goals ir-stock-l' });
     const hand = mine ? el('div', { class: 'ir-hand ir-stock-m', attrs: { 'aria-label': _('Your hand') } }) : null;
     const handCount = mine ? null : el('div', { class: 'ir-hand-count' });
+    const handInfo = mine ? el('div', { class: 'ir-hand-info' }) : null;
+    const under = mine ? el('div', { class: 'ir-under ir-stock-m', attrs: { 'aria-label': _('Cards under a composed card') } }) : null;
     const composed = el('div', { class: 'ir-composed ir-stock-m', attrs: { 'aria-label': _('Composed cards') } });
     const name = el('span', { class: 'ir-player-name' }, [player.name ?? '']);
     if (typeof player.color === 'string' && /^[0-9a-fA-F]{6}$/.test(player.color)) {
@@ -178,11 +182,13 @@ function buildPlayerArea(playerId, player, mine) {
     }, [
         el('header', { class: 'ir-player-header' }, [name]),
         el('div', { class: 'ir-player-top' }, [ego, enhEgo, tokens, ownedGoals]),
+        ...(handInfo === null ? [] : [handInfo]),
         ...(hand === null ? [] : [hand]),
         ...(handCount === null ? [] : [handCount]),
         composed,
+        ...(under === null ? [] : [under]),
     ]);
-    return { area, ego, enhEgo, tokens, ownedGoals, hand, handCount, composed };
+    return { area, ego, enhEgo, tokens, ownedGoals, hand, handCount, handInfo, under, composed };
 }
 
 /**

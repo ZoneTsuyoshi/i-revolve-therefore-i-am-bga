@@ -3,13 +3,13 @@
  * （心光・キューブ）、強化自我の山、目標カードを、U-2 の器（`board/Board.js`）に bga-cards の Stock で描き、通知で更新する。
  * 表示の元になる値の変換は `view-model.js`（純粋関数）にある。このクラスは DOM と Stock を持つ。
  * カード ID: 想い出カードは card_id（整数）、横長カードはスプライトのキー（`F01`・`R1A`・`O001`・`I05`・`E02`）を文字列の ID にする。
- * 自分の手札・自己構成済み・トークン（U-5）、プレイヤーパネル（U-6）、移動の計画（U-3）はここでは扱わない。
+ * プレイヤーの領域（手札・自己構成済み・自我・トークン・獲得した目標。U-5）は `PlayerAreas`、プレイヤーパネル（U-6）、移動の計画（U-3）はここでは扱わない。
  * © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
  */
 import { paintUiSprite } from '../cards/card-face.js';
 import { el } from '../ui/dom.js';
 import {
-    colorName, cubeSprite, decksModel, discardModel, egoCard, faceUpMemory, faceUpRefs,
+    colorName, cubeSprite, decksModel, discardModel, faceUpMemory, faceUpRefs,
     levelTable, meepleSlot, meepleSprite, objectivesModel, objectiveStatusMap, openModel, personaPositions, roomsModel,
     spiritModel, toInt, OPEN_SLOT_COUNT,
 } from './view-model.js';
@@ -27,6 +27,7 @@ const COUNTER = { show: true, position: 'bottom', extraClasses: 'ir-count' };
  * @property {any} BgaCards `importEsmLib('bga-cards', '1.x')`
  * @property {import('../cards/card-face.js').ImgUrl} imgUrl
  * @property {() => boolean} animationsActive
+ * @property {import('./PlayerAreas.js').PlayerAreas} playerAreas プレイヤーの領域（自我・獲得した目標の置き場）
  * @property {Record<string, { name?: string, color?: string }>} players `gamedatas.players`
  */
 
@@ -41,6 +42,7 @@ export class CommonArea {
         this.imgUrl = deps.imgUrl;
         this.animationsActive = deps.animationsActive;
         this.players = deps.players;
+        this.playerAreas = deps.playerAreas;
         this.lib = deps.BgaCards;
         /** @type {Map<number, any>} 位置 → 床カードの Stock */
         this.floorStocks = new Map();
@@ -71,8 +73,6 @@ export class CommonArea {
         this.cubes = new Map();
         /** @type {Map<number, HTMLElement>} */
         this.meeples = new Map();
-        /** @type {Map<number, { ego: any, enhEgo: any, owned: any }>} プレイヤーの領域の自我・目標の Stock（最小限。U-5 が引き取る） */
-        this.playerStocks = new Map();
         /** @type {Map<number, number>} 想い出カードの種類 → レベル */
         this.levels = new Map();
         /** @type {Map<string, { x: number, points: number }>} */
@@ -92,9 +92,7 @@ export class CommonArea {
         this.setupPiles(decksModel(gamedatas?.decks), gamedatas?.discards);
         this.setupSpirit(spiritModel(gamedatas?.spirit, gamedatas?.playerData, this.seatOrder), gamedatas?.playerData);
         this.setupEnhDeck(toInt(gamedatas?.enhDeckCount));
-        this.setupPlayerStocks();
         this.setupObjectives(objectivesModel(gamedatas?.objectives));
-        this.setupPlayerCards(gamedatas?.playerData, objectivesModel(gamedatas?.objectives));
         this.setupPersonas(personaPositions(gamedatas?.playerData));
         this.setObjectiveStatus(objectiveStatusMap(gamedatas?.myObjectiveStatus));
     }
@@ -210,16 +208,6 @@ export class CommonArea {
         });
     }
 
-    setupPlayerStocks() {
-        for (const [playerId, area] of this.refs.playerAreas) {
-            this.playerStocks.set(playerId, {
-                ego: new this.lib.LineStock(this.cards.land, area.ego, { gap: '0' }),
-                enhEgo: new this.lib.LineStock(this.cards.land, area.enhEgo, { gap: '0' }),
-                owned: new this.lib.LineStock(this.cards.land, area.ownedGoals, { gap: 'var(--ir-gap)' }),
-            });
-        }
-    }
-
     /** @param {import('./view-model.js').ObjectivesModel} model */
     setupObjectives(model) {
         const count = Math.max(model.slotCount, 0);
@@ -231,28 +219,6 @@ export class CommonArea {
         });
         for (const entry of model.common) {
             this.goalStock.addCard({ ...entry.card, slot: entry.slot });
-        }
-    }
-
-    /**
-     * 公開済みの初期自我・強化自我と、獲得済みの目標カード（プレイヤーの領域）。
-     * @param {Record<string, any> | undefined} playerData
-     * @param {import('./view-model.js').ObjectivesModel} objectives
-     */
-    setupPlayerCards(playerData, objectives) {
-        for (const [id, data] of Object.entries(playerData ?? {})) {
-            const stocks = this.playerStocks.get(toInt(id));
-            const ego = egoCard(data?.initialEgo);
-            const enh = egoCard(data?.enhancedEgo);
-            if (ego !== null) {
-                stocks?.ego.addCard(ego);
-            }
-            if (enh !== null) {
-                stocks?.enhEgo.addCard(enh);
-            }
-        }
-        for (const entry of objectives.owned) {
-            this.playerStocks.get(entry.owner)?.owned.addCard(entry.card);
         }
     }
 
@@ -577,26 +543,22 @@ export class CommonArea {
      * @returns {Promise<void>}
      */
     async showEgo(playerId, kind, egoId, from) {
-        const card = egoCard(egoId);
-        const stock = this.playerStocks.get(playerId)?.[kind];
-        if (card !== null && stock !== undefined) {
-            await stock.addCard(card, from === undefined ? undefined : { fromElement: from });
-        }
+        await this.playerAreas.showEgo(playerId, kind, egoId, from);
     }
 
     /**
      * 目標カードを獲得者の領域へ移す（N22）。共通の場のスロットは空き枠のまま残る。
      * @param {unknown} objectiveKeyText `O001`
      * @param {number} playerId
+     * @param {unknown} [points] 獲得した目標カードの得点（「+N」バッジ）
      * @returns {Promise<void>}
      */
-    async claimObjective(objectiveKeyText, playerId) {
-        const owned = this.playerStocks.get(playerId)?.owned;
-        if (typeof objectiveKeyText !== 'string' || owned === undefined) {
+    async claimObjective(objectiveKeyText, playerId, points) {
+        if (typeof objectiveKeyText !== 'string') {
             return;
         }
         this.objectiveStatus.delete(objectiveKeyText);
-        await owned.addCard({ id: objectiveKeyText, key: objectiveKeyText });
+        await this.playerAreas.addOwnedGoal(objectiveKeyText, playerId, points);
         this.refreshObjectiveBadges();
     }
 

@@ -286,10 +286,6 @@ html[data-theme="dark"] {
     gap: var(--ir-gap);
 }
 
-.ir-tokens {
-    min-width: var(--ir-w);
-}
-
 .ir-owned-goals {
     display: flex;
     flex-wrap: wrap;
@@ -303,6 +299,205 @@ html[data-theme="dark"] {
     flex-wrap: wrap;
     gap: var(--ir-gap);
     min-height: var(--ir-h);
+}
+
+/* 手札の枚数（本人: 上限との比。超えたら印と文言も出す。他人: 枚数チップ。009 §3.10・§3.11） */
+.ir-hand-info,
+.ir-hand-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.ir-hand-info.ir-over-limit {
+    color: var(--ir-turn-border);
+}
+
+.ir-hand-info.ir-over-limit::before {
+    content: "!";
+    display: inline-block;
+    width: 1.3em;
+    border: 2px solid var(--ir-turn-border);
+    border-radius: 50%;
+    text-align: center;
+    line-height: 1.1;
+}
+
+/* カードの束のアイコン（CSS だけで描く） */
+.ir-hand-icon {
+    position: relative;
+    display: inline-block;
+    width: 14px;
+    height: 20px;
+    border: 1px solid var(--ir-text);
+    border-radius: 2px;
+    background: var(--ir-panel-bg);
+    box-shadow: 3px -3px 0 -1px var(--ir-panel-bg), 3px -3px 0 0 var(--ir-text);
+}
+
+/* トークン: 種類ごとに「画像 + 個数」。0 個は薄く出して行の位置を固定する（009 §3.8） */
+.ir-tokens {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
+}
+
+.ir-token {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.ir-token.ir-zero {
+    opacity: 0.4;
+}
+
+.ir-token-icon {
+    display: inline-block;
+    width: 28px;
+}
+
+.ir-token-count {
+    min-width: 1.2em;
+    font-size: 13px;
+    font-weight: bold;
+    color: var(--ir-text);
+}
+
+.ir-token.ir-token-flip .ir-token-icon {
+    animation: ir-token-flip 0.4s ease-in-out;
+}
+
+@keyframes ir-token-flip {
+    from {
+        transform: rotateY(180deg);
+    }
+
+    to {
+        transform: rotateY(0);
+    }
+}
+
+/* 獲得した目標カードの「+N」（右上） */
+.ir-goal-points {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 1px 5px;
+    background: var(--ir-panel-bg);
+    border: 1px solid var(--ir-panel-border);
+    color: var(--ir-text);
+    font-size: 12px;
+    font-weight: bold;
+}
+
+/* I08 の下のカード（本人の中身の欄は空なら出さない） */
+.ir-under {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ir-gap);
+}
+
+.ir-under:empty {
+    display: none;
+}
+
+.ir-under-badge {
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding: 1px 4px;
+    background: var(--ir-panel-bg);
+    border: 1px solid var(--ir-panel-border);
+    color: var(--ir-text);
+    font-size: 11px;
+    font-weight: bold;
+}
+
+/* 手札の現在のエネルギー（M098 などで印刷と違うとき） */
+.ir-energy-badge {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    padding: 1px 4px;
+    background: var(--ir-panel-bg);
+    border: 1px solid var(--ir-panel-border);
+    color: var(--ir-text);
+    font-size: 11px;
+    font-weight: bold;
+}
+
+/*
+ * 横向き（使用済み。009 §4.2）: 90 度回して 0.718（= 280 / 390）に縮め、スロットに収める。「Used」の帯を重ねる（色だけにしない）。
+ * 移動のアニメーションが card 要素の transform を使うので、回すのは中の面（.bga-cards_card-sides）にする。
+ */
+.ir-card.ir-tapped [class*="card-sides"] {
+    transform: rotate(90deg) scale(0.718);
+    transition: transform 0.4s;
+}
+
+.ir-used-band {
+    position: absolute;
+    right: 0;
+    bottom: 40%;
+    left: 0;
+    z-index: 1;
+    padding: 1px 0;
+    background: var(--ir-panel-bg);
+    border-top: 1px solid var(--ir-panel-border);
+    border-bottom: 1px solid var(--ir-panel-border);
+    color: var(--ir-text);
+    font-size: 11px;
+    font-weight: bold;
+    text-align: center;
+}
+
+/*
+ * 選択（009 §4.3、003 §6.2）: 選べる = 枠 2px + 左上の印、選択中 = 枠 3px + 右上のチェック。選べないカードは暗くしない（クラスを付けない）。
+ * クラスは cards/selection.js が 1 か所で付け外しし、状態を出るときに clear() で全部外す。
+ */
+.ir-card.ir-selectable {
+    outline: 2px solid var(--ir-text);
+    outline-offset: -2px;
+    cursor: pointer;
+}
+
+.ir-card.ir-selectable::before {
+    content: "\25CB";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    z-index: 2;
+    width: 1.4em;
+    border-radius: 50%;
+    background: var(--ir-panel-bg);
+    color: var(--ir-text);
+    font-size: 12px;
+    text-align: center;
+}
+
+.ir-card.ir-selected {
+    outline: 3px solid var(--ir-turn-border);
+    outline-offset: -3px;
+    cursor: pointer;
+}
+
+.ir-card.ir-selected::after {
+    content: "\2713";
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    z-index: 2;
+    width: 1.4em;
+    border-radius: 50%;
+    background: var(--ir-turn-border);
+    color: #fff;
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
 }
 
 /* ---- 7. カード ---- */

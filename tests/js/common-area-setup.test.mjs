@@ -5,6 +5,7 @@ import { FakeBgaAnimations, FakeBgaCards, FakeElement, FakeStock, installFakeDom
 
 installFakeDom();
 const { buildBoard } = await import('../../src/modules/js/board/Board.js');
+const { PlayerAreas } = await import('../../src/modules/js/board/PlayerAreas.js');
 const { CommonArea } = await import('../../src/modules/js/board/CommonArea.js');
 const { createCardManagers } = await import('../../src/modules/js/cards/managers.js');
 const { CommonNotifications } = await import('../../src/modules/js/notifications.js');
@@ -46,8 +47,12 @@ function build(data) {
   const host = new FakeElement('div');
   const board = buildBoard(/** @type {any} */ (host), { players: data.players ?? players, playerOrder: [P1, P2], me: P1 });
   const cards = createCardManagers({ BgaCards: FakeBgaCards, BgaAnimations: FakeBgaAnimations, imgUrl: (f) => `img/${f}`, animationsActive: () => true });
-  const common = new CommonArea({ refs: board, cards, BgaCards: FakeBgaCards, imgUrl: (f) => `img/${f}`, animationsActive: () => true, players });
-  return { board, common };
+  const playerAreas = new PlayerAreas({ refs: board, cards, BgaCards: FakeBgaCards, imgUrl: (f) => `img/${f}`, animationsActive: () => true, me: P1 });
+  const common = new CommonArea({ refs: board, cards, BgaCards: FakeBgaCards, imgUrl: (f) => `img/${f}`, animationsActive: () => true, playerAreas, players });
+  const setup = common.setup.bind(common);
+  // 共通の領域の setup のあとにプレイヤーの領域の setup を続ける（Game.js と同じ順）
+  common.setup = (/** @type {any} */ gd) => { setup(gd); playerAreas.setup(gd); };
+  return { board, common, playerAreas };
 }
 
 const keysIn = (/** @type {FakeElement} */ el) => el.querySelectorAll('.ir-card').map((c) => c.dataset.key);

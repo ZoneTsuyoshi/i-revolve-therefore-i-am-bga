@@ -2,6 +2,8 @@
  * 共通の領域に関わる通知の受け取り（仕様書 007 §10.2、009 §3）。メソッド名 `notif_<通知名>` を BGA が購読する
  * （`bga.notifications.setupPromiseNotifications({ handlers: [このクラス] })`）。args のキーは snake_case。
  * 戻り値の Promise が終わるまで次の通知は処理されない。引数の形が欠けていても例外を出さない。
+ * プレイヤーの領域（手札・自己構成済み・トークンなど。U-5）にも関わる通知は、同名のメソッドを 2 つのクラスに分けられないので、
+ * こちらから `PlayerNotifications` のフック（`on…`）を呼ぶ。
  * 扱う通知: N02 N03 N06 N08 N09 N12 N13 N14 N15 N22 N23 N24 N25 N26 N27 N28 N29 N32（画面を更新するもの）。
  * © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
  */
@@ -12,9 +14,12 @@ import { cleanupRefills, faceDownMemory, faceUpMemory, faceUpRefs, levelOfPositi
 export class CommonNotifications {
     /**
      * @param {import('./board/CommonArea.js').CommonArea} common
+     * @param {import('./player-notifications.js').PlayerNotifications | null} [players]
      */
-    constructor(common) {
+    constructor(common, players = null) {
         this.common = common;
+        /** @type {import('./player-notifications.js').PlayerNotifications | null} */
+        this.players = players;
     }
 
     /** N02: 初期自我の一斉公開 */
@@ -48,13 +53,16 @@ export class CommonNotifications {
         }
     }
 
-    /** N12: 山札から引く（公開部分は山の同期だけ。手札は U-5） */
+    /** N12: 山札から引く（山の同期と、手札・他人の手札の枚数） */
     async notif_cardsDrawn(/** @type {Args} */ args) {
         this.common.syncDecks(args?.decks);
+        await this.players?.onCardsDrawn(args, this.common.deckElement(toInt(args?.level)));
     }
 
     /** N13: 場札を手札へ（床の下からは何も動かない） */
     async notif_cardsGained(/** @type {Args} */ args) {
+        const room = args?.source === 'UNDER_FLOOR' ? this.common.refs.rooms.get(toInt(args?.pos)) : undefined;
+        await this.players?.onCardsGained(args, room);
         if (args?.source === 'OPEN') {
             await this.common.removeFromOpen(args?.cards, this.common.areaOf(toInt(args?.player_id)));
         }
@@ -62,17 +70,19 @@ export class CommonNotifications {
 
     /** N14: 想起の獲得。部屋のカードが手札へ（部屋は空く） */
     async notif_roomCardAcquired(/** @type {Args} */ args) {
+        await this.players?.onRoomCardAcquired(args);
         await this.common.removeRoomCard(toInt(args?.pos), this.common.areaOf(toInt(args?.player_id)));
     }
 
     /** N15: 手札から捨札へ */
     async notif_cardsDiscarded(/** @type {Args} */ args) {
         await this.common.discardCards(args?.cards, args?.pile_counts, toInt(args?.player_id));
+        await this.players?.onCardsDiscarded(args);
     }
 
     /** N22: 目標カードの獲得。共通の場から獲得者の領域へ */
     async notif_objectiveClaimed(/** @type {Args} */ args) {
-        await this.common.claimObjective(objectiveKey(args?.obj_id), toInt(args?.player_id));
+        await this.common.claimObjective(objectiveKey(args?.obj_id), toInt(args?.player_id), args?.points);
     }
 
     /** N23: 目標の現在の X と得点（本人だけに届く） */
@@ -94,6 +104,7 @@ export class CommonNotifications {
 
     /** N26: 手札と場札の交換（HAND_OPEN）。場札から取り、手札から出たカードを同じ枠に置く */
     async notif_cardsExchanged(/** @type {Args} */ args) {
+        await this.players?.onCardsExchanged(args);
         if (args?.kind !== 'HAND_OPEN') {
             return;
         }
@@ -113,6 +124,7 @@ export class CommonNotifications {
     /** N27: I05。部屋のカードが手札へ、手札のカードが裏向きで部屋へ */
     async notif_roomCardSwappedWithHand(/** @type {Args} */ args) {
         const pos = toInt(args?.pos);
+        await this.players?.onRoomCardSwappedWithHand(args);
         const area = this.common.areaOf(toInt(args?.player_id));
         await this.common.setRoomCard(pos, faceDownMemory(args?.hand_card_id, args?.back), area);
     }
@@ -126,6 +138,7 @@ export class CommonNotifications {
     /** N29: クリーンアップ。部屋と場札の補充（山から飛んでくる） */
     async notif_cleanup(/** @type {Args} */ args) {
         this.common.syncDecks(args?.decks);
+        this.players?.onCleanup(args);
         const { rooms, open } = cleanupRefills(args);
         const moves = rooms.map((room) => this.common.setRoomCard(room.pos, room.card, this.common.deckElement(levelOfPosition(room.pos))));
         await Promise.all(moves);
