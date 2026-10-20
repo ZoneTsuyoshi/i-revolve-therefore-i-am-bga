@@ -1,0 +1,19 @@
+{
+  "name": "i-revolve-therefore-i-am-bga",
+  "private": true,
+  "description": "『我廻る、故に我あり』の Board Game Arena 実装（開発用ツール。src/ には含めない）",
+  "engines": {
+    "node": "^22.13.0 || >=24"
+  },
+  "scripts": {
+    "lint": "npm run lint:md && npm run lint:repo",
+    "lint:md": "markdownlint-cli2",
+    "lint:links": "lychee --config lychee.toml \"./**/*.md\"",
+    "lint:repo": "node scripts/lint/check-repo.mjs",
+    "test:lint": "node --test \"scripts/lint/*.test.mjs\""
+  },
+  "devDependencies": {
+    "markdownlint-cli2": "^0.23.3"
+  },
+  "type": "module"
+}

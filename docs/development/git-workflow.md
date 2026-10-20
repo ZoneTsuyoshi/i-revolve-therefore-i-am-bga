@@ -60,7 +60,8 @@ gh pr create --base main --head <type>/<slug> --title "<コミットと同じ形
 
 - タイトルは Conventional Commits 形式（squash merge 時のコミットメッセージになる）。
 - 本文には、目的・変更内容・確認方法・関連する仕様書 / タスク ID を書く。
-- CI（lint）が通っていること。
+- PR を作る前にローカルで `npm run lint` を実行する（初回は `npm ci`）。
+- CI（`Lint gate`）が通っていること。マージ前に `gh pr checks <番号>` で確認する（branch protection は設定しない）。
 - **マージはメインエージェントが判断して行う**（作者の方針、2026-10-20）。差分のレビューと CI（導入後）の通過を確認してからマージする。マージ方法は squash merge。
 - ルールの不明点（[rule-questions.md](rule-questions.md)）が残る PR は、作者の回答（または暫定案での了承）が出るまでマージしない。
 - 仕様書の PR と実装の PR は分ける。実装の PR は、対応する仕様書がマージ済みであること。
