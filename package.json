@@ -10,10 +10,14 @@
     "lint:md": "markdownlint-cli2",
     "lint:links": "lychee --config lychee.toml \"./**/*.md\"",
     "lint:repo": "node scripts/lint/check-repo.mjs",
-    "test:lint": "node --test \"scripts/lint/*.test.mjs\""
+    "test:lint": "node --test \"scripts/lint/*.test.mjs\"",
+    "build:sprites": "node scripts/build-sprites.mjs",
+    "check:sprites": "node scripts/check-sprites.mjs"
   },
   "devDependencies": {
-    "markdownlint-cli2": "^0.23.3"
+    "image-size": "2.0.4",
+    "markdownlint-cli2": "^0.23.3",
+    "sharp": "0.35.5"
   },
   "type": "module"
 }
