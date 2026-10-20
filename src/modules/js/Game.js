@@ -7,200 +7,68 @@
  * See http://en.boardgamearena.com/#!doc/Studio for more information.
  * -----
  *
- * In this file, you are describing the logic of your user interface, in Javascript language.
- *
+ * クライアントの入口（仕様書 003 §6.1、009 §15）。Game.js は setup、状態クラスの登録、通知の購読だけを持つ。
+ * 盤面の枠は board/、カード表示は cards/、レイアウトの計算は ui/ にある。
  */
+import { buildBoard, placeFloating } from './board/Board.js';
+import { createCardManagers } from './cards/managers.js';
+import { PlaceholderState } from './states/PlaceholderState.js';
+import { Layout } from './ui/Layout.js';
+import { int } from './ui/dom.js';
 
-/**
- * We create one State class per declared state on the PHP side, to handle all state specific code here.
- * onEnteringState, onLeavingState and onPlayerActivationChange are predefined names that will be called by the framework.
- * When executing code in this state, you can access the args using this.args
- */
-class PlayerTurn {
-    /**
-     * @param {Game} game
-     * @param {Bga} bga
-     */
-    constructor(game, bga) {
-        this.game = game;
-        this.bga = bga;
-    }
-
-    /**
-     * This method is called each time we are entering the game state. You can use this method to perform some user interface changes at this moment.
-     *
-     * @param {{playableCardsIds: number[]}} args
-     * @param {boolean} isCurrentPlayerActive
-     */
-    onEnteringState(args, isCurrentPlayerActive) {
-        this.bga.statusBar.setTitle(isCurrentPlayerActive ?
-            _('${you} must play a card or pass') :
-            _('${actplayer} must play a card or pass')
-        );
-
-        if (isCurrentPlayerActive) {
-            const playableCardsIds = args.playableCardsIds; // returned by the PlayerTurn::getArgs
-
-            // Add test action buttons in the action status bar, simulating a card click:
-            playableCardsIds.forEach(
-                cardId => this.bga.statusBar.addActionButton(_('Play card with id ${card_id}').replace('${card_id}', `${cardId}`), () => this.onCardClick(cardId))
-            );
-
-            this.bga.statusBar.addActionButton(_('Pass'), () => this.bga.actions.performAction("actPass"), { color: 'secondary' });
-        }
-    }
-
-    /**
-     * This method is called each time we are leaving the game state. You can use this method to perform some user interface changes at this moment.
-     *
-     * @param {{playableCardsIds: number[]}} _args
-     * @param {boolean} _isCurrentPlayerActive
-     */
-    onLeavingState(_args, _isCurrentPlayerActive) {
-    }
-
-    /**
-     * This method is called each time the current player becomes active or inactive in a MULTIPLE_ACTIVE_PLAYER state. You can use this method to perform some user interface changes at this moment.
-     * on MULTIPLE_ACTIVE_PLAYER states, you may want to call this function in onEnteringState using `this.onPlayerActivationChange(args, isCurrentPlayerActive)` at the end of onEnteringState.
-     * If your state is not a MULTIPLE_ACTIVE_PLAYER one, you can delete this function.
-     *
-     * @param {{playableCardsIds: number[]}} _args
-     * @param {boolean} _isCurrentPlayerActive
-     */
-    onPlayerActivationChange(_args, _isCurrentPlayerActive) {
-    }
-
-    /**
-     * @param {number} card_id
-     */
-    onCardClick(card_id) {
-        console.log('onCardClick', card_id);
-
-        this.bga.actions.performAction("actPlayCard", {
-            card_id,
-        }).then(() =>  {
-            // What to do after the server call if it succeeded
-            // (most of the time, nothing, as the game will react to notifs / change of state instead, so you can delete the `then`)
-        });
-    }
-}
+const BgaAnimations = await importEsmLib('bga-animations', '1.x');
+const BgaCards = await importEsmLib('bga-cards', '1.x');
 
 export class Game {
     /**
      * @param {Bga} bga
      */
     constructor(bga) {
-        console.log('irevolvethereforeiam constructor');
         this.bga = bga;
+        /** @type {import('./board/Board.js').BoardRefs | null} */
+        this.board = null;
+        /** @type {import('./cards/managers.js').Managers | null} */
+        this.cards = null;
+        /** @type {Layout | null} */
+        this.layout = null;
 
-        // Declare the State classes
-        this.playerTurn = new PlayerTurn(this, bga);
-        this.bga.states.register('PlayerTurn', this.playerTurn);
-
-        // Uncomment the next line to show debug informations about state changes in the console. Remove before going to production!
-        // this.bga.states.logger = console.log;
-
-        // Here, you can init the global variables of your user interface
-        // Example:
-        // this.myGlobalValue = 0;
+        // Studio の雛形の状態（サーバー側 States/PlayerTurn.php）。サーバー側の置き換え後に状態ごとのクラスへ差し替える
+        this.bga.states.register('PlayerTurn', new PlaceholderState(this, bga));
     }
-
-    /*
-        setup:
-
-        This method must set up the game user interface according to current game situation specified
-        in parameters.
-
-        The method is called each time the game interface is displayed to a player, ie:
-        _ when the game starts
-        _ when a player refreshes the game page (F5)
-
-        "gamedatas" argument contains all datas retrieved by your "getAllDatas" PHP method.
-    */
 
     /**
-     * @param {Gamedatas<Player & { energy: number }>} gamedatas
+     * 画面を組み立てる。ページを開くたび（F5 を含む）に呼ばれる。gamedatas は getAllDatas の戻り値（仕様書 007 §8）。
+     * 中身が無い（空の gamedatas）でも例外を出さない。
+     *
+     * @param {Gamedatas} gamedatas
      */
     setup(gamedatas) {
-        console.log("Starting game setup", gamedatas);
         this.gamedatas = gamedatas;
+        // 拡大表示用のシートは使うまで読み込まない（009 §10.1）
+        this.bga.images.dontPreloadImages([1, 2, 3].map((n) => `ir_mem_zoom_${n}.webp`).concat(['ir_land_zoom_1.webp', 'ir_land_zoom_2.webp']));
 
-        // Example to add a div on the game area
-        this.bga.gameArea.getElement().insertAdjacentHTML('beforeend', `
-            <div id="player-tables"></div>
-        `);
-
-        // Setting up player boards
-        Object.values(gamedatas.players).forEach(player => {
-            // example of setting up players boards
-            this.bga.playerPanels.getElement(Number(player.id)).insertAdjacentHTML('beforeend', `
-                <span id="energy-player-counter-${player.id}"></span> Energy
-            `);
-            const counter = new ebg.counter();
-            counter.create(`energy-player-counter-${player.id}`, {
-                value: player.energy,
-                playerCounter: 'energy',
-                playerId: Number(player.id)
-            });
-
-            // example of adding a div for each player
-            document.getElementById('player-tables')?.insertAdjacentHTML('beforeend', `
-                <div id="player-table-${player.id}">
-                    <strong>${player.name}</strong>
-                    <div>Player zone content goes here</div>
-                </div>
-            `);
+        this.cards = createCardManagers({
+            BgaCards,
+            BgaAnimations,
+            imgUrl: (file) => this.bga.images.getImgUrl(file),
+            animationsActive: () => this.bga.gameui.bgaAnimationsActive(),
         });
 
-        // TODO: Set up your game interface here, according to "gamedatas"
+        const spectator = this.bga.players.isCurrentPlayerSpectator();
+        const board = buildBoard(this.bga.gameArea.getElement(), {
+            players: gamedatas?.players ?? {},
+            playerOrder: gamedatas?.playerorder,
+            me: spectator ? null : int(this.bga.players.getCurrentPlayerId()),
+        });
+        this.board = board;
+        // 幅を測って data-layout と CSS 変数を入れ、以後は ResizeObserver で追従する。layout が変わるたびに piles と open の置き場所を替える
+        this.layout = new Layout(board.root, (layout) => placeFloating(board, layout));
 
-
-        // Setup game notifications to handle (see "setupNotifications" method below)
         this.setupNotifications();
-
-        console.log( "Ending game setup" );
     }
 
-    ///////////////////////////////////////////////////
-    //// Utility methods
-
-    /*
-
-        Here, you can defines some utility methods that you can use everywhere in your javascrip
-        script. Typically, functions that are used in multiple state classes or outside a state class.
-
-    */
-
-
-    ///////////////////////////////////////////////////
-    //// Reaction to cometD notifications
-
-    /*
-        setupNotifications:
-
-        In this method, you associate each of your game notifications with your local method to handle it.
-
-        Note: game notification names correspond to "bga->notify->all" calls in your Game.php file.
-
-    */
     setupNotifications() {
-        console.log( 'notifications subscriptions setup' );
-
-        // automatically listen to the notifications, based on the `notif_xxx` function on this class.
-        // Uncomment the logger param to see debug information in the console about notifications.
-        this.bga.notifications.setupPromiseNotifications({
-            // logger: console.log
-        });
+        // notif_xxx という名前のメソッドを通知名に対応させて自動で購読する
+        this.bga.notifications.setupPromiseNotifications({});
     }
-
-    // TODO: from this point and below, you can write your game notifications handling methods
-
-    /*
-    Example:
-    async notif_cardPlayed( args ) {
-        // Note: args contains the arguments specified during you "notifyAllPlayers" / "notifyPlayer" PHP call
-
-        // TODO: play the card in the user interface.
-    }
-    */
 }
