@@ -11,7 +11,9 @@
  * 盤面の枠は board/、カード表示は cards/、レイアウトの計算は ui/ にある。
  */
 import { buildBoard, placeFloating } from './board/Board.js';
+import { CommonArea } from './board/CommonArea.js';
 import { createCardManagers } from './cards/managers.js';
+import { CommonNotifications } from './notifications.js';
 import { registerStubStates } from './states/StubStates.js';
 import { Layout } from './ui/Layout.js';
 import { int } from './ui/dom.js';
@@ -31,6 +33,8 @@ export class Game {
         this.cards = null;
         /** @type {Layout | null} */
         this.layout = null;
+        /** @type {CommonArea | null} */
+        this.common = null;
 
         // Studio の雛形の状態（サーバー側 States/PlayerTurn.php）。サーバー側の置き換え後に状態ごとのクラスへ差し替える
         registerStubStates(bga);
@@ -61,6 +65,16 @@ export class Game {
             me: spectator ? null : int(this.bga.players.getCurrentPlayerId()),
         });
         this.board = board;
+        // 共通の領域（回廊・場札・山札・精神トラック・強化自我・目標。U-4）。中身は gamedatas から描く
+        this.common = new CommonArea({
+            refs: board,
+            cards: this.cards,
+            BgaCards,
+            imgUrl: (file) => this.bga.images.getImgUrl(file),
+            animationsActive: () => this.bga.gameui.bgaAnimationsActive(),
+            players: gamedatas?.players ?? {},
+        });
+        this.common.setup(gamedatas);
         // 幅を測って data-layout と CSS 変数を入れ、以後は ResizeObserver で追従する。layout が変わるたびに piles と open の置き場所を替える
         this.layout = new Layout(board.root, (layout) => placeFloating(board, layout));
 
@@ -68,7 +82,8 @@ export class Game {
     }
 
     setupNotifications() {
-        // notif_xxx という名前のメソッドを通知名に対応させて自動で購読する
-        this.bga.notifications.setupPromiseNotifications({});
+        // notif_xxx という名前のメソッドを通知名に対応させて自動で購読する（共通の領域の通知は CommonNotifications）
+        const handlers = this.common === null ? [] : [new CommonNotifications(this.common)];
+        this.bga.notifications.setupPromiseNotifications({ handlers });
     }
 }
