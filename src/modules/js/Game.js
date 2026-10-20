@@ -12,7 +12,7 @@
  */
 import { buildBoard, placeFloating } from './board/Board.js';
 import { createCardManagers } from './cards/managers.js';
-import { PlaceholderState } from './states/PlaceholderState.js';
+import { registerStubStates } from './states/StubStates.js';
 import { Layout } from './ui/Layout.js';
 import { int } from './ui/dom.js';
 
@@ -33,7 +33,7 @@ export class Game {
         this.layout = null;
 
         // Studio の雛形の状態（サーバー側 States/PlayerTurn.php）。サーバー側の置き換え後に状態ごとのクラスへ差し替える
-        this.bga.states.register('PlayerTurn', new PlaceholderState(this, bga));
+        registerStubStates(bga);
     }
 
     /**

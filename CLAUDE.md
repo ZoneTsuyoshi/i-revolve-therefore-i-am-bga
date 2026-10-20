@@ -131,7 +131,7 @@ git fetch --prune && git pull --ff-only origin main
 
 ## CI/CD
 
-方針は [docs/development/cicd.md](docs/development/cicd.md)、仕様は 004（lint）と 005（同期）。lint は第 1 段階（Markdown・リンク・gitleaks・リポジトリ規則・カードデータとスプライトの整合）、同期は段階 3（`main` へのマージで自動同期）まで導入済み。マージ前に `gh pr checks <番号>` で `Lint gate` が pass であることを確認する。
+方針は [docs/development/cicd.md](docs/development/cicd.md)、仕様は 004（lint）と 005（同期）。lint は第 1〜3 段階（Markdown・リンク・gitleaks・リポジトリ規則・カードデータとスプライトの整合・PHP 構文と PHPCS・`strict_types`・`ir` 接頭辞・ESLint・Stylelint・PHPStan・`tsc --checkJs`・画像の上限・JS の単体テスト）と PHPUnit（別ワークフロー）、同期は段階 3（`main` へのマージで自動同期）まで導入済み。リポジトリは公開（2026-10-20 に作り直し。Actions の課金枠のため）。マージ前に `gh pr checks <番号>` で `Lint gate` が pass であることを確認する。
 
 - CI: PR ごとに lint（PHP / JS / CSS / Markdown など）を実行し、通らない PR はマージしない。
 - CD: `main` へのマージをトリガーに `src/` を BGA Studio へ SFTP で自動同期する。
