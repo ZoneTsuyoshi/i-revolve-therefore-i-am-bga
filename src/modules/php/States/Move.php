@@ -85,6 +85,17 @@ class Move extends GameState
     }
 
     /**
+     * 仮の操作（U-3 の移動の計画 UI ができるまで）: zombie と同じ自動計画で 1 部屋だけ移動する。
+     * TODO(U-3): 計画 UI の導入時に、このアクションとクライアントの仮のボタンを削除する。
+     */
+    #[PossibleAction]
+    public function actMoveAuto(int $activePlayerId): string
+    {
+        // 自動計画は手札を捨てないので、手札でしか払えないときに止まれるよう zombie と同じく「移動しない」入力を許す
+        return $this->irSubmit($this->game->irMovePhase()->zombiePlan($activePlayerId), $activePlayerId, true);
+    }
+
+    /**
      * 万能移動鍵トークン → 自己構成済みカードの鍵 → 心光の順で、次の部屋まで 1 部屋だけ払えるなら移動する。
      * 払えなければ移動しない（手札は捨てない。006 §10）。
      */

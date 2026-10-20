@@ -99,9 +99,9 @@ export function registerStubStates(bga) {
         const corners = /** @type {any} */ (args)?.freeCorners ?? [];
         return corners.map((pos) => ({ label: `Room ${pos}`, action: 'actPlaceMeeple', args: { pos } }));
     }));
-    // actMove の経路は I-06 まで検証しないので、空の経路で次へ進む
+    // 移動の計画 UI（U-3）ができるまで、サーバーの自動計画（zombie と同じ）で 1 部屋だけ移動する
     bga.states.register('Move', new StubState(bga, [
-        { label: 'Move (placeholder)', action: 'actMove', args: { plan: JSON.stringify([]) } },
+        { label: 'Move automatically (placeholder)', action: 'actMoveAuto' },
     ]));
     bga.states.register('Construct', new StubState(bga, [
         { label: 'End compose phase', action: 'actEndConstruct' },
