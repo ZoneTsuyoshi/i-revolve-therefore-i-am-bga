@@ -25,7 +25,7 @@
   - **心理の極致**: 精神トラックの第五階層に到達する
 - 想い出の山札が切れた場合は全員の敗北
 
-正式なルールはルールブック（ローカルの `data/rulebook/rulebook_web.pdf`）と公式サイトの [FAQ](https://danjiri-concerto.github.io/i-revolve-therefore-i-am/faq.html) を参照してください。
+正式なルールはルールブック（ローカルの `data/rulebook/rulebook_web.pdf`）と公式サイトの [FAQ](https://danjiri-concerto.github.io/i-revolve-therefore-i-am/faq.html) を参照してください。FAQ とカードデータの原本はサイト側のリポジトリ（`danjiri-concerto.github.io` の `i-revolve-therefore-i-am/data/`）にあり、新しい裁定はそちらに追加します。
 
 ## リポジトリ構成
 
@@ -42,7 +42,7 @@
 │   └── rulebook/      #   ルールブック PDF
 ├── docs/              # 開発用ドキュメント
 │   ├── specs/         #   仕様書（実装前に必ず作成）
-│   ├── development/   #   開発ルール（Git 運用・タスクの進め方・CI/CD）
+│   ├── development/   #   開発ルール（Git 運用・タスクの進め方・CI/CD・作者への質問・FAQ の起票）
 │   └── tasks.md       #   タスク一覧
 ├── src/               # BGA Studio のプロジェクトに同期するゲーム本体（今後作成）
 └── .worktrees/        # タスクごとの作業用ワークツリー（Git 管理外）

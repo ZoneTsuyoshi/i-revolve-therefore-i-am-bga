@@ -52,5 +52,5 @@ BGA Studio はゲームのソースを SFTP で受け取ります。`main` へ�
 CD の導入前に、リポジトリオーナー側で以下が必要です。
 
 1. ~~BGA Studio の開発者アカウントを取得する~~（済。姉妹プロジェクトと共通）
-2. BGA Studio でこのゲームのプロジェクトを作成する（プロジェクト名 `i_revolve_therefore_i_am`。作成後に変更できない）
+2. ~~BGA Studio でこのゲームのプロジェクトを作成する~~（済、2026-10-20。プロジェクト名: `irevolvethereforeiam`）
 3. SSH 鍵を BGA Studio に登録し、Secrets / Variables を GitHub に登録する

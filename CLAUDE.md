@@ -3,7 +3,7 @@
 自作ボードゲーム『我廻る、故に我あり』（I Revolve, Therefore I Am）を Board Game Arena（BGA）に実装するリポジトリ。
 ユーザーとのやり取り、ドキュメント、コミットメッセージ、PR は日本語で書く。
 
-姉妹プロジェクト [minimum-journey-bga](https://github.com/ZoneTsuyoshi/minimum-journey-bga)（MINIMUM JOURNEY の BGA 実装。ローカルでは `../minimum-journey-bga`）と同じ運用ルールで進める。仕様書・CI 設定・BGA 実装の書き方で迷ったら、まず姉妹プロジェクトの該当箇所を参考にする（ただし内容はこのゲーム用に読み替え、そのままコピーしない）。
+姉妹プロジェクト [minimum-journey-bga](https://github.com/ZoneTsuyoshi/minimum-journey-bga)（MINIMUM JOURNEY の BGA 実装。ローカルでは `../minimum-journey-bga`）と同じ運用ルールで進める。作者への質問とサイト側 FAQ との連携は、`../project-edgeworth-bga`（PROJECT EDGEWORTH の BGA 実装）の運用に合わせる。仕様書・CI 設定・BGA 実装の書き方で迷ったら、まず姉妹プロジェクトの該当箇所を参考にする（ただし内容はこのゲーム用に読み替え、そのままコピーしない）。
 
 ## 絶対に守るルール
 
@@ -14,6 +14,8 @@
 5. **PR マージ後は、該当のワークツリー・ローカルブランチ・リモートブランチを削除する。**
 6. **`data/` は原本。編集・移動・削除しない。Git にも上げない（`.gitignore` 済み）。** 加工が必要なら `src/` 側に生成物を作り、生成物のほうをコミットする。
 7. **認証情報をコミットしない。** BGA Studio の認証情報（SSH 秘密鍵とユーザー名）は GitHub Secrets のみに置く。ホスト・ポート・リモートパス・known_hosts のような公開情報は GitHub Variables に置いてよい。
+8. **ルールの不明点は推測で埋めない。** ルールブック・FAQ で決められない点（効果の処理順、同時処理、アナログ特有の意思表示の BGA での表現など）は作者に質問して決める（[docs/development/rule-questions.md](docs/development/rule-questions.md)）。
+9. **FAQ とカードデータの原本はサイト側。** 新しい裁定やカードデータの訂正は、このリポジトリではなく `../danjiri-concerto.github.io/i-revolve-therefore-i-am/data/` の `faq.csv` / `card.csv` に追加・改修し、BGA 実装を追従させる（[docs/development/faq-workflow.md](docs/development/faq-workflow.md)）。
 
 ## タスクの進め方（要約）
 
@@ -53,7 +55,13 @@ git fetch --prune && git pull --ff-only origin main
 - 開発用ドキュメントはすべて `docs/` で管理する。索引は [docs/README.md](docs/README.md)。
 - 仕様書は `docs/specs/NNN-<slug>.md`（3 桁連番）。[docs/specs/_template.md](docs/specs/_template.md) から作成し、[docs/specs/README.md](docs/specs/README.md) の一覧に追記する。
 - タスク一覧は [docs/tasks.md](docs/tasks.md)。タスクの着手・完了時に更新する。
-- ルールの一次情報は `data/rulebook/rulebook_web.pdf` とカード画像 `data/cards/`、補助として公式サイトの [FAQ](https://danjiri-concerto.github.io/i-revolve-therefore-i-am/faq.html)。仕様書とルールブックが食い違う場合はルールブックを正とし、ルールブックに書かれていない点は推測で埋めずユーザー（作者）に確認する。
+- ルールの一次情報（上ほど優先）:
+  1. 印刷物（ルールブック `data/rulebook/rulebook_web.pdf`、カード画像 `data/cards/`）
+  2. FAQ: `../danjiri-concerto.github.io/i-revolve-therefore-i-am/data/faq.csv`（公開版 <https://danjiri-concerto.github.io/i-revolve-therefore-i-am/faq.html>）
+  3. カードデータ: `../danjiri-concerto.github.io/i-revolve-therefore-i-am/data/card.csv`（全カードの枚数・レベル・鍵・コスト・スコア・効果文。印刷物と突き合わせて使う）
+  4. 仕様書 `docs/specs/`
+- 仕様書と印刷物・FAQ が食い違う場合は印刷物・FAQ を正とする。どれにも書かれていない点は推測で埋めず作者に確認する。
+- 作者への質問と回答の記録は [docs/development/rule-questions.md](docs/development/rule-questions.md)。FAQ・カードデータの起票・改修の手順は [docs/development/faq-workflow.md](docs/development/faq-workflow.md)。
 - ルールブック PDF は日本語フォントが CID のまま埋め込まれており、`pypdf` ではテキストが化ける。テキストを抽出するときは `pdfminer.six`（`pdf2txt.py`）を使う。それでも `(cid:13673)`（廻）、`(cid:20276)`（鍵）などが残るので、前後の文脈やページ画像で補う。
 
 ## ゲームの用語
@@ -116,7 +124,7 @@ git fetch --prune && git pull --ff-only origin main
 
 - BGA Studio に同期するゲーム本体は `src/` 配下に置き、`src/` の中身が BGA 側プロジェクトフォルダと 1 対 1 に対応するようにする。`docs/` や `data/` は同期しない。
 - BGA フレームワークの構成（ファイル構成、状態クラス、通知、PHP バージョンなど）は更新が速い。記憶に頼らず、仕様書作成時に [BGA Studio の公式ドキュメント](https://en.doc.boardgamearena.com/Studio) で最新を確認する。
-- BGA Studio のプロジェクト名は **`i_revolve_therefore_i_am`**（リポジトリ名から `-bga` を除き、ハイフンをアンダースコアにしたもの）。未作成。作成画面でアンダースコアを使えなかった場合は `irevolvethereforeiam` とし、ここを書き換える。作成後は変更できない。BGA のファイル名・クラス名・名前空間はこの名前に従う。
+- BGA Studio のプロジェクト名は **`irevolvethereforeiam`**（作成済み・変更不可。BGA のプロジェクト名には英字しか使えない。rule-questions Q-01）。BGA のファイル名・クラス名・名前空間はこの名前に従う。
 - UI 文言は英語を原文とし、BGA の翻訳機構で日本語化する（BGA の標準作法）。
 - BGA のフレームワークのクラス（`Table`、`GameState` など）を継承するクラスに独自のメソッドを足すときは、名前にこのゲーム固有の接頭辞を付ける（接頭辞は仕様書 003 で決める）。フレームワークに同名のメソッドがあると Studio で致命的エラーになり、開発用スタブ（`_ide_helper.php`）が古いため PHPStan では検出できない（姉妹プロジェクトで 2026-10-15 に `sendNotifications` で発生）。
 

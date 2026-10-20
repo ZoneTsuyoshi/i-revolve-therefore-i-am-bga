@@ -11,12 +11,16 @@
 | [development/git-workflow.md](development/git-workflow.md) | Git 運用ルール（ブランチ・ワークツリー・コミット・PR・後始末） |
 | [development/task-workflow.md](development/task-workflow.md) | タスクの進め方とサブエージェントへの委託方法 |
 | [development/cicd.md](development/cicd.md) | CI（lint）と BGA Studio への自動同期の方針 |
+| [development/rule-questions.md](development/rule-questions.md) | 作者への質問と回答の記録 |
+| [development/faq-workflow.md](development/faq-workflow.md) | FAQ・カードデータ（サイト側の `faq.csv` / `card.csv`）の起票・改修と同期の手順 |
 
 ## 一次情報
 
 - ルールブック: `data/rulebook/rulebook_web.pdf`
 - カード画像: `data/cards/`
-- 公式サイト: <https://danjiri-concerto.github.io/i-revolve-therefore-i-am/index.html>（FAQ: <https://danjiri-concerto.github.io/i-revolve-therefore-i-am/faq.html>）
+- FAQ: <https://danjiri-concerto.github.io/i-revolve-therefore-i-am/faq.html>（原本は `../danjiri-concerto.github.io/i-revolve-therefore-i-am/data/faq.csv`）
+- カードデータ: `../danjiri-concerto.github.io/i-revolve-therefore-i-am/data/card.csv`
+- 公式サイト: <https://danjiri-concerto.github.io/i-revolve-therefore-i-am/index.html>
 - BGA Studio 公式ドキュメント: <https://en.doc.boardgamearena.com/Studio>
 
 `data/` は Git 管理外で、メインの作業ツリーにだけあります。ワークツリーからの参照方法は [../CLAUDE.md](../CLAUDE.md) の「画像ファイル名」を参照してください。
@@ -28,5 +32,5 @@
 ## ドキュメントを書くときのルール
 
 - 日本語で書く。
-- 仕様書とルールブックが食い違う場合はルールブックが正。ルールブックに記載のない点は「未確定事項」として明記し、作者に確認する。
+- 仕様書と印刷物・FAQ が食い違う場合は印刷物・FAQ が正。どれにも記載のない点は「未確定事項」として明記し、作者に確認する（[development/rule-questions.md](development/rule-questions.md)）。
 - BGA フレームワークに関する記述には、確認した公式ドキュメントの URL を添える。
