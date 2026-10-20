@@ -38,6 +38,8 @@ use Bga\Games\IRevolveThereforeIAm\Flow\Notice;
 use Bga\Games\IRevolveThereforeIAm\Flow\Notification;
 use Bga\Games\IRevolveThereforeIAm\Flow\StateId;
 use Bga\Games\IRevolveThereforeIAm\Setup\GameSetup;
+use Bga\Games\IRevolveThereforeIAm\Setup\InitialEgoDraft;
+use Bga\Games\IRevolveThereforeIAm\Setup\PersonaPlacement;
 use Bga\Games\IRevolveThereforeIAm\Setup\SetupPlanner;
 use Bga\Games\IRevolveThereforeIAm\States\SetupEgoDraftNext;
 
@@ -250,6 +252,26 @@ class Game extends \Bga\GameFramework\Table
     public function irSeatOrder(): array
     {
         return $this->irPlayerValues()->playerIds();
+    }
+
+    /**
+     * 初期自我の秘密ドラフト（状態 20〜22）。zombie の選択だけ乱数（003 §4.4）。
+     */
+    public function irEgoDraft(): InitialEgoDraft
+    {
+        return new InitialEgoDraft(
+            $this->irEgos(),
+            $this->irGlobals(),
+            static fn(int $min, int $max): int => random_int($min, $max),
+        );
+    }
+
+    /**
+     * 人格の配置（状態 23・24）。
+     */
+    public function irPersonaPlacement(): PersonaPlacement
+    {
+        return new PersonaPlacement($this->irPlayerValues(), $this->irRooms(), $this->irGlobals());
     }
 
     /**

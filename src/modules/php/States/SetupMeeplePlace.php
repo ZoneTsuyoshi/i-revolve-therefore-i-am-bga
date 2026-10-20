@@ -12,14 +12,14 @@ namespace Bga\Games\IRevolveThereforeIAm\States;
 use Bga\GameFramework\StateType;
 use Bga\GameFramework\States\GameState;
 use Bga\GameFramework\States\PossibleAction;
-use Bga\Games\IRevolveThereforeIAm\Data\RoomRepository;
+use Bga\GameFramework\UserException;
+use Bga\Games\IRevolveThereforeIAm\Flow\Notification;
 use Bga\Games\IRevolveThereforeIAm\Flow\StateId;
 use Bga\Games\IRevolveThereforeIAm\Flow\Transition;
 use Bga\Games\IRevolveThereforeIAm\Game;
 
 /**
  * 24: まだミープルがいない四隅（レベル 2 の部屋）から 1 つ選んで置く（001 §4 手順 14）。
- * 骨格では 23 が DONE へ直行するので入らない。
  */
 class SetupMeeplePlace extends GameState
 {
@@ -43,20 +43,27 @@ class SetupMeeplePlace extends GameState
      */
     public function getArgs(): array
     {
-        $taken = [];
-        foreach ($this->game->irSeatOrder() as $playerId) {
-            $taken[] = $this->game->irPlayerValues()->persona($playerId);
-        }
-
         return [
-            'freeCorners' => array_values(array_diff(RoomRepository::LEVEL2_POSITIONS, $taken)),
+            'freeCorners' => $this->game->irPersonaPlacement()->freeCorners($this->game->irSeatOrder()),
         ];
     }
 
     #[PossibleAction]
     public function actPlaceMeeple(int $pos, int $activePlayerId): string
     {
-        // TODO(I-04): pos が空いている四隅であることを検査し、人格を置く。N03 personaPlaced を送る
+        $seats = $this->game->irSeatOrder();
+        $placement = $this->game->irPersonaPlacement();
+        if (!in_array($pos, $placement->freeCorners($seats), true)) {
+            throw new UserException(clienttranslate('You cannot place your persona there'));
+        }
+        $roomName = $placement->place($seats, $activePlayerId, $pos);
+        $this->game->irSend(Notification::personaPlaced(
+            $activePlayerId,
+            $this->game->getPlayerNameById($activePlayerId),
+            $pos,
+            $roomName,
+        ));
+
         return Transition::PLACED;
     }
 

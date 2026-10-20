@@ -13,12 +13,51 @@ use Bga\Games\IRevolveThereforeIAm\Data\GamePhase;
 
 /**
  * 通知の組み立て（仕様書 007 §10.2）。ログ文言（英語原文）はここに集める（翻訳の抽出のため）。
- * 今は骨格に必要な N04 `turnStarted`・N05 `phaseStarted`・N31 `gameEnded` だけ。残りは後続のタスクで足す。
+ * 今は N01〜N05 と N31 `gameEnded` だけ。残りは後続のタスクで足す。
  */
 final class Notification
 {
     private function __construct()
     {
+    }
+
+    /**
+     * N01: 初期自我を 1 枚選んだ。公開部分は山の残り枚数だけ。選んだカードは本人の `_private` にだけ入れる。
+     */
+    public static function initialEgoPicked(int $playerId, string $playerName, int $packSize, string $egoId): Notice
+    {
+        return new Notice('initialEgoPicked', clienttranslate('${player_name} chooses an initial ego card'), [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'pack_size' => $packSize,
+            '_private' => [$playerId => ['ego_id' => $egoId]],
+        ]);
+    }
+
+    /**
+     * N02: 全員の初期自我を一斉に公開する。
+     *
+     * @param list<array{player_id: int, ego_id: string}> $egos
+     */
+    public static function initialEgosRevealed(array $egos): Notice
+    {
+        return new Notice('initialEgosRevealed', clienttranslate('All players reveal their initial ego cards'), [
+            'egos' => $egos,
+        ]);
+    }
+
+    /**
+     * N03: 人格を四隅の部屋に置いた。
+     */
+    public static function personaPlaced(int $playerId, string $playerName, int $pos, string $roomName): Notice
+    {
+        return new Notice('personaPlaced', clienttranslate('${player_name} places their persona in ${room_name}'), [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'pos' => $pos,
+            'room_name' => $roomName,
+            'i18n' => ['room_name'],
+        ]);
     }
 
     /**

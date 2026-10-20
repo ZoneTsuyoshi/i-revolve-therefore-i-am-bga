@@ -17,7 +17,7 @@ use Bga\Games\IRevolveThereforeIAm\Game;
 
 /**
  * 20: 初期自我のドラフト（001 §4 手順 13）。逆順（手番順の最後 → 1 番手）で次に選ぶ人を決め、全員選び終えたら 22 へ。
- * 骨格では誰も選ばずに公開（22）へ進む。
+ * 進み具合は setup_step（選び終えた人数）。
  */
 class SetupEgoDraftNext extends GameState
 {
@@ -37,8 +37,12 @@ class SetupEgoDraftNext extends GameState
 
     public function onEnteringState(): string
     {
-        // TODO(I-04): setup_step から次の選択者を逆順（SeatOrder::reversed）で決め、changeActivePlayer して PICK を返す。
-        //  全員が選び終えたら REVEAL
-        return Transition::REVEAL;
+        $picker = $this->game->irEgoDraft()->nextPicker($this->game->irSeatOrder());
+        if ($picker === null) {
+            return Transition::REVEAL;
+        }
+        $this->game->gamestate->changeActivePlayer($picker);
+
+        return Transition::PICK;
     }
 }
