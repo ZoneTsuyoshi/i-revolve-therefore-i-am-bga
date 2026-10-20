@@ -33,6 +33,7 @@
 
 | 項目 | 必要になる時期 | 状態 |
 | --- | --- | --- |
+| BGG へのゲーム登録（手順と紹介文は [publishing/game-description.md](publishing/game-description.md)。承認後に BGG_ID をエージェントに伝え、`src/gameinfos.jsonc` に設定する） | 公開の準備まで（承認に数週間かかるため早めに） | 未着手 |
 | BGA Studio の開発者アカウント取得 | T-005 まで | 済（姉妹プロジェクトと共通） |
 | BGA Studio でのプロジェクト作成（プロジェクト名 `irevolvethereforeiam`） | T-003 まで | 済（2026-10-20） |
 | SSH 鍵の BGA Studio への登録、GitHub への Secrets / Variables の登録 | T-005 の導入時 | 未着手 |

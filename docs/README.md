@@ -13,6 +13,7 @@
 | [development/cicd.md](development/cicd.md) | CI（lint）と BGA Studio への自動同期の方針 |
 | [development/rule-questions.md](development/rule-questions.md) | 作者への質問と回答の記録 |
 | [development/faq-workflow.md](development/faq-workflow.md) | FAQ・カードデータ（サイト側の `faq.csv` / `card.csv`）の起票・改修と同期の手順 |
+| [publishing/game-description.md](publishing/game-description.md) | 英語のゲーム紹介文と BGG 登録の手順 |
 
 ## 一次情報
 
