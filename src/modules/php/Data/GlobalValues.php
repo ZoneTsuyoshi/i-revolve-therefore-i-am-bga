@@ -154,7 +154,7 @@ final class GlobalValues
      */
     public function setDeckOut(array $levels): void
     {
-        $this->globals->set('deck_out', array_values($levels));
+        $this->globals->set('deck_out', $levels);
     }
 
     /**

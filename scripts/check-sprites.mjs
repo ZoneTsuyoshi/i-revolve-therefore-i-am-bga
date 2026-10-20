@@ -22,7 +22,7 @@ export async function checkSprites({
 } = {}) {
   const errors = [];
   const warnings = [];
-  let entries = [];
+  let entries;
   try {
     entries = await readdir(imgDir, { withFileTypes: true });
   } catch {
@@ -82,7 +82,7 @@ export async function checkSprites({
     }
     const table = buildTable(uiSizes);
     if (renderTable(table) !== text) errors.push('sprites.js が配置規則からの再計算結果と一致しません');
-    for (const [id, sh] of Object.entries(table.sheets)) {
+    for (const sh of Object.values(table.sheets)) {
       const dim = actual[sh.file];
       if (dim && (dim.width !== sh.w || dim.height !== sh.h)) {
         errors.push(`${sh.file} の実寸 ${dim.width}x${dim.height} が配置表 ${sh.w}x${sh.h} と不一致`);

@@ -40,6 +40,8 @@ class NextPlayer extends \Bga\GameFramework\States\GameState
 
         // Go to another gamestate
         $gameEnd = false; // Here, we would detect if the game is over to make the appropriate transition
+        // 雛形の仮実装（常に false）。I-03 以降で本物の終了判定に置き換える
+        // @phpstan-ignore if.alwaysFalse
         if ($gameEnd) {
             return EndScore::class;
         } else {

@@ -1,4 +1,5 @@
 <?php
+
 /**
  *------
  * BGA framework: Gregory Isabelli & Emmanuel Colin & BoardGameArena
@@ -83,9 +84,9 @@ class Game extends \Bga\GameFramework\Table
      *
      * This method is called each time we are in a game state with the "updateGameProgression" property set to true.
      *
-     * @return in
+     * @return int
      */
-    public function getGameProgression()
+    public function getGameProgression(): int
     {
         // TODO: compute and return the game progression
 
@@ -160,6 +161,7 @@ class Game extends \Bga\GameFramework\Table
         $gameinfos = $this->getGameinfos();
         $default_colors = $gameinfos['player_colors'];
 
+        $query_values = [];
         foreach ($players as $player_id => $player) {
             // Now you can access both $player_id and $player array
             $query_values[] = vsprintf("(%s, '%s', '%s')", [

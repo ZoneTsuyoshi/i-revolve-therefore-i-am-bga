@@ -53,10 +53,10 @@ class PlayerTurn {
     /**
      * This method is called each time we are leaving the game state. You can use this method to perform some user interface changes at this moment.
      *
-     * @param {{playableCardsIds: number[]}} args
-     * @param {boolean} isCurrentPlayerActive
+     * @param {{playableCardsIds: number[]}} _args
+     * @param {boolean} _isCurrentPlayerActive
      */
-    onLeavingState(args, isCurrentPlayerActive) {
+    onLeavingState(_args, _isCurrentPlayerActive) {
     }
 
     /**
@@ -64,10 +64,10 @@ class PlayerTurn {
      * on MULTIPLE_ACTIVE_PLAYER states, you may want to call this function in onEnteringState using `this.onPlayerActivationChange(args, isCurrentPlayerActive)` at the end of onEnteringState.
      * If your state is not a MULTIPLE_ACTIVE_PLAYER one, you can delete this function.
      *
-     * @param {{playableCardsIds: number[]}} args
-     * @param {boolean} isCurrentPlayerActive
+     * @param {{playableCardsIds: number[]}} _args
+     * @param {boolean} _isCurrentPlayerActive
      */
-    onPlayerActivationChange(args, isCurrentPlayerActive) {
+    onPlayerActivationChange(_args, _isCurrentPlayerActive) {
     }
 
     /**
@@ -144,7 +144,7 @@ export class Game {
             });
 
             // example of adding a div for each player
-            document.getElementById('player-tables').insertAdjacentHTML('beforeend', `
+            document.getElementById('player-tables')?.insertAdjacentHTML('beforeend', `
                 <div id="player-table-${player.id}">
                     <strong>${player.name}</strong>
                     <div>Player zone content goes here</div>

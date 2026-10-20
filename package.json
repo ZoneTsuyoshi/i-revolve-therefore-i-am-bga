@@ -6,10 +6,16 @@
     "node": "^22.13.0 || >=24"
   },
   "scripts": {
-    "lint": "npm run lint:md && npm run lint:repo",
+    "lint": "npm run lint:md && npm run lint:repo && npm run lint:js && npm run lint:strict && npm run lint:prefix && npm run lint:css && npm run lint:types && npm run lint:assets",
     "lint:md": "markdownlint-cli2",
     "lint:links": "lychee --config lychee.toml \"./**/*.md\"",
     "lint:repo": "node scripts/lint/check-repo.mjs",
+    "lint:js": "eslint .",
+    "lint:strict": "node scripts/lint/check-strict-types.mjs",
+    "lint:prefix": "node scripts/lint/check-method-prefix.mjs",
+    "lint:css": "stylelint \"src/**/*.css\" --allow-empty-input",
+    "lint:types": "node scripts/lint/check-types.mjs",
+    "lint:assets": "node scripts/lint/check-assets.mjs",
     "test:lint": "node --test \"scripts/lint/*.test.mjs\"",
     "test:unit": "bash tests/run-unit.sh",
     "build:sprites": "node scripts/build-sprites.mjs",
@@ -18,9 +24,16 @@
     "check:cards": "node scripts/check-card-data.mjs"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@eslint/json": "^2.1.1",
+    "eslint": "^10.13.0",
+    "globals": "^17.13.0",
     "image-size": "2.0.4",
     "markdownlint-cli2": "^0.23.3",
-    "sharp": "0.35.5"
+    "sharp": "0.35.5",
+    "stylelint": "^17.16.0",
+    "stylelint-config-standard": "^40.0.0",
+    "typescript": "^7.0.2"
   },
   "type": "module"
 }

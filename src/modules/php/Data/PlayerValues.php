@@ -97,7 +97,7 @@ final class PlayerValues
     /**
      * トークンを増減する。結果が負になる場合は例外。
      *
-     * @param self::COLUMN_* $column
+     * @param string $column self::TOKEN_COLUMNS のいずれか（実行時に検査する）
      * @return int 更新後の値
      */
     public function addToken(int $playerId, string $column, int $delta): int
@@ -113,7 +113,7 @@ final class PlayerValues
     /**
      * トークンを直接書く。負は例外。
      *
-     * @param self::COLUMN_* $column
+     * @param string $column self::TOKEN_COLUMNS のいずれか（実行時に検査する）
      */
     public function setToken(int $playerId, string $column, int $value): void
     {

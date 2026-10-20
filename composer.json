@@ -4,7 +4,10 @@
     "type": "project",
     "license": "proprietary",
     "require-dev": {
-        "phpunit/phpunit": "12.5.39"
+        "php-parallel-lint/php-parallel-lint": "^1.4",
+        "phpstan/phpstan": "^2.3",
+        "phpunit/phpunit": "12.5.39",
+        "squizlabs/php_codesniffer": "^4.0"
     },
     "autoload": {
         "psr-4": {
@@ -23,10 +26,19 @@
         "sort-packages": true
     },
     "scripts": {
+        "lint": [
+            "@lint:syntax",
+            "@lint:cs"
+        ],
+        "lint:syntax": "parallel-lint src tests",
+        "lint:cs": "phpcs",
+        "lint:stan": "phpstan analyse --memory-limit=1G",
         "test": "phpunit --configuration phpunit.xml.dist --testsuite unit",
         "test:all": "phpunit --configuration phpunit.xml.dist"
     },
     "scripts-descriptions": {
+        "lint": "PHP の構文（P1）とコーディング規約（P2）を検査する。declare(strict_types=1) は npm run lint:strict、ir 接頭辞は npm run lint:prefix",
+        "lint:stan": "PHPStan（P3）。BGA のスタブ tools/bga/_ide_helper.php が必要",
         "test": "単体テスト（PHPUnit。DB 不要）。通常は npm run test:unit（Docker）で実行する",
         "test:all": "全てのテストスイート（現在は単体テストのみ）"
     }
