@@ -16,4 +16,6 @@
 | 004 | CI（lint チェック） | Approved | T-004 |
 | 005 | BGA Studio への自動同期 | Approved | T-005 |
 | 006 | 状態遷移 | Approved | T-006 |
+| 007 | データモデル・通知 | Approved | T-007 |
+| 008 | カード効果の実装方針 | Approved | T-008 |
 | 009 | UI・アセット設計 | Approved | T-009 |
