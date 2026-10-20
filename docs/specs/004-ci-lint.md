@@ -280,7 +280,7 @@ PE の `test.yml` を土台にする。トリガーと `concurrency` は `Lint` 
 
 ### 7. 実装時に追加・コピーするファイル
 
-「コピー」は PE の同名ファイルを元にし、記載の点だけ置換する。PE のパスは `/Users/zone/Developments/project-edgeworth-bga/` 配下（読み取り専用の手本）。
+「コピー」は PE の同名ファイルを元にし、記載の点だけ置換する。PE のパスは `../project-edgeworth-bga/` 配下（読み取り専用の手本）。
 
 | パス | 段階 | PE から | 内容・置換点 |
 | --- | --- | --- | --- |
