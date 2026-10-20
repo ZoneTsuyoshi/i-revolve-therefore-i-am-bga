@@ -205,6 +205,12 @@ case "$mode" in
     } >>"$summary"
     log="$(mktemp)"
     rc=0
+    # push で骨格が無いときは何もせず成功終了する（仕様書 005 §8。手動実行ではエラー）
+    if [ "${GITHUB_EVENT_NAME:-}" = push ] && { [ ! -f src/modules/php/Game.php ] || [ ! -f src/gameinfos.jsonc ]; }; then
+      echo "::warning title=BGA sync skipped::骨格が無いため push での同期をスキップしました"
+      echo "骨格が無いため push での同期をスキップしました" >>"$summary"
+      exit 0
+    fi
     (
       check_skeleton || exit 1
       # 削除リストの不正は転送の前に検出する

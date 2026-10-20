@@ -1,9 +1,17 @@
 # BGA Studio への自動同期。仕様書: docs/specs/005-bga-sync.md
-# 導入の段階 2: workflow_dispatch のみ。mode は test（接続テスト）・dry-run（転送予定の表示）・sync（転送と削除リスト）。
-# test と dry-run は Studio へ書き込まない。sync は lint の成功後にだけ動く。push トリガーは段階 3 で追加する。
+# 段階 3: main への push（paths に該当するとき）で sync を自動実行する。workflow_dispatch では mode を選べる。
+# mode は test（接続テスト）・dry-run（転送予定の表示）・sync（転送と削除リスト）。test と dry-run は Studio へ書き込まない。
+# sync は lint の成功後にだけ動く。
 name: BGA sync
 
 on:
+  push:
+    branches: [main]
+    # docs/** や他のワークフローだけの変更では同期しない（仕様書 005 §7）
+    paths:
+      - 'src/**'
+      - 'scripts/bga-sync/**'
+      - '.github/workflows/bga-sync.yml'
   workflow_dispatch:
     inputs:
       mode:
@@ -29,7 +37,7 @@ jobs:
       pull-requests: read # lint.yml の gitleaks が必要とする（読み取りのみ）
 
   sync:
-    name: Sync (${{ inputs.mode }})
+    name: Sync (${{ inputs.mode || 'sync' }})
     needs: lint
     # main 限定（PR ブランチからは実行しない）
     if: github.ref == 'refs/heads/main'
@@ -38,7 +46,8 @@ jobs:
     permissions:
       contents: read
     env:
-      MODE: ${{ inputs.mode }}
+      # push では inputs が空なので sync として扱う
+      MODE: ${{ inputs.mode || 'sync' }}
     steps:
       # 値が無ければここで止め、以降の step を全て飛ばして成功終了する
       - name: Check configuration
@@ -100,7 +109,7 @@ jobs:
           ssh-keygen -y -f "$RUNNER_TEMP/bga_key" > /dev/null 2>&1 \
             || { echo "::error::BGA_SSH_PRIVATE_KEY の形式が不正です（改行が壊れていないか確認）"; exit 1; }
 
-      - name: Run (${{ inputs.mode }})
+      - name: Run (${{ inputs.mode || 'sync' }})
         if: steps.config.outputs.ready == 'true'
         env:
           BGA_KEY_FILE: ${{ runner.temp }}/bga_key

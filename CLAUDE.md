@@ -131,7 +131,7 @@ git fetch --prune && git pull --ff-only origin main
 
 ## CI/CD
 
-方針は [docs/development/cicd.md](docs/development/cicd.md)。まだ未導入で、タスクとして仕様書から作成する。姉妹プロジェクトで導入済みの lint・同期の仕組み（同プロジェクトの仕様書 004 / 005 と `.github/workflows/`）を土台にする。
+方針は [docs/development/cicd.md](docs/development/cicd.md)、仕様は 004（lint）と 005（同期）。lint は第 1 段階（Markdown・リンク・gitleaks・リポジトリ規則・カードデータとスプライトの整合）、同期は段階 3（`main` へのマージで自動同期）まで導入済み。マージ前に `gh pr checks <番号>` で `Lint gate` が pass であることを確認する。
 
 - CI: PR ごとに lint（PHP / JS / CSS / Markdown など）を実行し、通らない PR はマージしない。
 - CD: `main` へのマージをトリガーに `src/` を BGA Studio へ SFTP で自動同期する。
