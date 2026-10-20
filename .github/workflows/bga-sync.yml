@@ -1,0 +1,108 @@
+# BGA Studio への自動同期。仕様書: docs/specs/005-bga-sync.md
+# 導入の段階 1: workflow_dispatch のみ。mode は test（接続テスト）と dry-run（転送予定の表示）。
+# どちらも Studio へ書き込まない。sync・push トリガー・lint 連携は段階 2・3 で追加する。
+name: BGA sync
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'test = 接続して ls のみ / dry-run = 転送せず予定を表示'
+        type: choice
+        options: [test, dry-run]
+        default: test
+
+permissions:
+  contents: read
+
+# 転送中のキャンセルは中途半端な状態を作るので、実行中は止めない（待機中は最新 1 件に置き換わる）
+concurrency:
+  group: bga-studio-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Sync (${{ inputs.mode }})
+    # main 限定（PR ブランチからは実行しない）
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      MODE: ${{ inputs.mode }}
+    steps:
+      # 値が無ければここで止め、以降の step を全て飛ばして成功終了する
+      - name: Check configuration
+        id: config
+        env:
+          HAS_KEY: ${{ secrets.BGA_SSH_PRIVATE_KEY != '' }}
+          HAS_USER: ${{ secrets.BGA_SFTP_USER != '' }}
+          HAS_HOST: ${{ vars.BGA_SFTP_HOST != '' }}
+          HAS_PORT: ${{ vars.BGA_SFTP_PORT != '' }}
+          HAS_DIR: ${{ vars.BGA_REMOTE_DIR != '' }}
+          HAS_KNOWN_HOSTS: ${{ vars.BGA_SSH_KNOWN_HOSTS != '' }}
+        run: |
+          missing=""
+          [ "$HAS_KEY" = true ] || missing="$missing BGA_SSH_PRIVATE_KEY(Secret)"
+          [ "$HAS_USER" = true ] || missing="$missing BGA_SFTP_USER(Secret)"
+          [ "$HAS_HOST" = true ] || missing="$missing BGA_SFTP_HOST(Variable)"
+          [ "$HAS_PORT" = true ] || missing="$missing BGA_SFTP_PORT(Variable)"
+          [ "$HAS_DIR" = true ] || missing="$missing BGA_REMOTE_DIR(Variable)"
+          [ "$HAS_KNOWN_HOSTS" = true ] || missing="$missing BGA_SSH_KNOWN_HOSTS(Variable)"
+          if [ -n "$missing" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=BGA sync skipped::未設定のためスキップ:$missing"
+            {
+              echo "## BGA sync: 未設定のためスキップ"
+              echo
+              echo "次の Secrets / Variables が未登録です:$missing"
+              echo
+              echo "手順は docs/specs/005-bga-sync.md の第 3 節を参照してください。"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.config.outputs.ready == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install lftp
+        if: steps.config.outputs.ready == 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq lftp
+          lftp --version | head -n1
+
+      # 秘密鍵は printf でファイルに書く（echo しない・set -x しない）。権限 600
+      - name: Prepare SSH key
+        if: steps.config.outputs.ready == 'true'
+        env:
+          BGA_SSH_PRIVATE_KEY: ${{ secrets.BGA_SSH_PRIVATE_KEY }}
+          BGA_SSH_KNOWN_HOSTS: ${{ vars.BGA_SSH_KNOWN_HOSTS }}
+        run: |
+          umask 077
+          install -m 600 /dev/null "$RUNNER_TEMP/bga_key"
+          printf '%s\n' "$BGA_SSH_PRIVATE_KEY" > "$RUNNER_TEMP/bga_key"
+          printf '%s\n' "$BGA_SSH_KNOWN_HOSTS" > "$RUNNER_TEMP/bga_known_hosts"
+          # 鍵の形式だけ確認する（公開鍵は出力しない）
+          ssh-keygen -y -f "$RUNNER_TEMP/bga_key" > /dev/null 2>&1 \
+            || { echo "::error::BGA_SSH_PRIVATE_KEY の形式が不正です（改行が壊れていないか確認）"; exit 1; }
+
+      - name: Run (${{ inputs.mode }})
+        if: steps.config.outputs.ready == 'true'
+        env:
+          BGA_KEY_FILE: ${{ runner.temp }}/bga_key
+          BGA_KNOWN_HOSTS_FILE: ${{ runner.temp }}/bga_known_hosts
+          BGA_SFTP_USER: ${{ secrets.BGA_SFTP_USER }}
+          BGA_SFTP_HOST: ${{ vars.BGA_SFTP_HOST }}
+          BGA_SFTP_PORT: ${{ vars.BGA_SFTP_PORT }}
+          BGA_REMOTE_DIR: ${{ vars.BGA_REMOTE_DIR }}
+        run: scripts/bga-sync/sync.sh "$MODE"
+
+      - name: Remove SSH key
+        if: always() && steps.config.outputs.ready == 'true'
+        run: rm -f "$RUNNER_TEMP/bga_key" "$RUNNER_TEMP/bga_known_hosts"

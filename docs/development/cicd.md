@@ -1,6 +1,6 @@
 # CI/CD の方針
 
-> ステータス: **未導入**。このドキュメントは方針のみを示します。具体的な設計は仕様書（[../tasks.md](../tasks.md) の T-004 / T-005）で確定させ、その後に導入します。
+> ステータス: lint（T-004）は**未導入**。同期（T-005）は**段階 1 を導入**（`workflow_dispatch` の `test` / `dry-run` のみ。`sync` と `main` への push トリガーは段階 2・3 で追加）。設計は [../specs/005-bga-sync.md](../specs/005-bga-sync.md) を参照。
 >
 > 姉妹プロジェクト [minimum-journey-bga](https://github.com/ZoneTsuyoshi/minimum-journey-bga) で同じ構成の lint と同期が稼働しています（同プロジェクトの仕様書 004 / 005、`.github/workflows/lint.yml`・`bga-sync.yml`）。仕様書では、それを土台にこのリポジトリ向けの差分（プロジェクト名、パス、アセットの扱いなど）を決めます。
 
