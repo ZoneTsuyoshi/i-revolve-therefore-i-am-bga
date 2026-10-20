@@ -35,7 +35,7 @@ Each turn has five phases: move, recall, floor action, construction, and cleanup
 
 The engine-building happens in two places. By Constructing, you pay energy by discarding cards from your hand or spending Psychic Light, then lay a Memory card in your constructed area. Its keys can pay for later moves and Psychoanalysis, and its effects keep working for you. By Psychoanalysis, you pay with keys to climb the Mind Track one tier at a time, earning bonuses along the way, including a secret Enhanced Ego card on the third tier. Your Initial Ego card, chosen in a secret draft, gives you a power of your own from the start.
 
-There are three ways to win, and each takes effect immediately. Enter every room in a single turn; the room you start in does not count, so you must go all the way around. Reach a total Construction Score of 20 or more from your Memory cards and Goal cards. Or climb all the way to the fifth tier of the Mind Track. Whichever path you choose, watch your rivals closely and be careful with the Memory deck: if it runs out, nobody wins.
+There are three ways to win, and each takes effect immediately. Fleeting Recollection: enter every room in a single turn; the room you start in does not count, so you must go all the way around. Gathered Fragments: reach a total Construction Score of 20 or more from your Memory cards and Goal cards. Pinnacle of the Mind: climb all the way to the fifth tier of the Mind Track. Whichever path you choose, watch your rivals closely and be careful with the Memory deck: if it runs out, nobody wins.
 
 Will you remain here, or cross over into the beyond? This is your one chance to prove that you are yourself.
 ```
@@ -63,7 +63,7 @@ Will you remain here, or cross over into the beyond? This is your one chance to 
 | 周遊ボーナス | Tour Bonus |
 | 初期自我 / 強化自我 | Initial Ego / Enhanced Ego |
 | 目標カード | Goal card |
-| 刹那の追憶 / 断片の結集 / 心理の極致 | Fleeting Recollection / Gathered Fragments / Pinnacle of the Mind（説明文では名前を使わず内容で説明している） |
+| 刹那の追憶 / 断片の結集 / 心理の極致 | Fleeting Recollection / Gathered Fragments / Pinnacle of the Mind |
 
 ## 基本情報
 
@@ -72,12 +72,12 @@ Will you remain here, or cross over into the beyond? This is your one chance to 
 | 名前 | I Revolve, Therefore I Am |
 | 別名 | 我廻る、故に我あり |
 | 人数 | 2–4 |
-| 対象年齢 | **作者に確認**（ルールブック・公式ページに記載なし。案: 12+） |
+| 対象年齢 | 10+ |
 | プレイ時間 | 30–60 分 |
-| 発売年 | **作者に確認**（公式ページは「発売 2025秋」と「ゲームマーケット2026春で予約受付中」の両方を記載。案: 2026） |
+| 発売年 | 2025 |
 | 複雑度 | 公式ページ記載の 2.6 / 5（作者の自己申告値。BGG の Weight はユーザー投票で決まるため入力欄はない） |
 | デザイナー | だんじり協奏曲（ぞね、ひのき、たづくり、まや）。MINIMUM JOURNEY / PROJECT EDGEWORTH の登録と同じ英語表記にする |
-| アーティスト | **作者に確認**（ルールブック・公式ページから担当を読み取れていない。案: ぞね） |
+| アーティスト | 空欄（入力しない） |
 | 出版社 | だんじり協奏曲（MINIMUM JOURNEY / PROJECT EDGEWORTH の登録と同じ英語表記） |
 
 ## カテゴリーとメカニクス（BGG の選択肢から）
@@ -86,7 +86,7 @@ Will you remain here, or cross over into the beyond? This is your one chance to 
 | --- | --- | --- |
 | Category | Psychology | 題材が精神世界（人格・想い出・精神分析・自我の確立） |
 | Category | Card Game | 想い出カードを手札・自己構成済みエリアで扱うカード中心のゲーム |
-| Category | Mythology | 部屋の床カードがギリシャ神話の神々の名（HERMES、ATHENA など）を冠する。BGG の分類として妥当かは作者に確認 |
+| Category | Mythology | 部屋の床カードがギリシャ神話の神々の名（HERMES、ATHENA など）を冠する |
 | Mechanism | Worker Placement | 人格（ミープル）が部屋に入り、その床アクションを行う |
 | Mechanism | Track Movement | 精神トラックの階層を上げて勝利を目指す |
 | Mechanism | Hand Management | 手札（上限 8 枚）を、移動・自己構成・精神分析の支払いに捨てるか、自己構成するかをやりくりする |
@@ -96,14 +96,12 @@ Will you remain here, or cross over into the beyond? This is your one chance to 
 | Mechanism | Race | 3 種の即時勝利条件のどれかを先に満たす |
 | Mechanism | Tableau Building | 自己構成済みカードを並べて鍵と効果のエンジンを作る |
 
-## 作者に確認すること
+## 作者の回答（2026-10-20）
 
-登録時に作者が決めた値は未記録（申請後に記録する）。
-
-| No. | 質問 | 案 |
+| No. | 質問 | 回答 |
 | --- | --- | --- |
-| 1 | 対象年齢 | 12+ |
-| 2 | 発売年（公式ページの「発売 2025秋」と「ゲームマーケット2026春」の食い違い） | 2026 |
-| 3 | アーティスト欄に載せる名前 | ぞね |
-| 4 | カテゴリーに Mythology を入れるか | 入れない（床カードの名前の由来のみで、題材は精神世界のため） |
-| 5 | 3 つの勝利条件に英語名を付けるか（付けるなら用語表の案を使う） | 付けない（説明文では内容で説明） |
+| 1 | 対象年齢 | 10+ |
+| 2 | 発売年 | 2025（公式ページの「ゲームマーケット2026春で予約受付中」の記載とは別に、発売は 2025 年とする） |
+| 3 | アーティスト欄に載せる名前 | 空欄にする |
+| 4 | カテゴリーに Mythology を入れるか | 入れる |
+| 5 | 3 つの勝利条件に英語名を付けるか | 付ける（用語表の英訳を説明文で使う） |
