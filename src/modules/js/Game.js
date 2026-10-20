@@ -13,6 +13,7 @@
 import { buildBoard, placeFloating } from './board/Board.js';
 import { CommonArea } from './board/CommonArea.js';
 import { PlayerAreas } from './board/PlayerAreas.js';
+import { PlayerPanels } from './board/PlayerPanels.js';
 import { createCardManagers } from './cards/managers.js';
 import { CommonNotifications } from './notifications.js';
 import { PlayerNotifications } from './player-notifications.js';
@@ -39,6 +40,8 @@ export class Game {
         this.common = null;
         /** @type {PlayerAreas | null} */
         this.playerAreas = null;
+        /** @type {PlayerPanels | null} */
+        this.panels = null;
 
         // Studio の雛形の状態（サーバー側 States/PlayerTurn.php）。サーバー側の置き換え後に状態ごとのクラスへ差し替える
         registerStubStates(bga);
@@ -91,6 +94,13 @@ export class Game {
         });
         this.common.setup(gamedatas);
         playerAreas.setup(gamedatas);
+        // プレイヤーパネルの 3 行（スコア・手札・トークン・階層・鍵。U-6）。BGA 標準の枠に足す
+        this.panels = new PlayerPanels({
+            getElement: (playerId) => this.bga.playerPanels.getElement(playerId),
+            imgUrl: (file) => this.bga.images.getImgUrl(file),
+            animationsActive: () => this.bga.gameui.bgaAnimationsActive(),
+        });
+        this.panels.setup(gamedatas);
         // 幅を測って data-layout と CSS 変数を入れ、以後は ResizeObserver で追従する。layout が変わるたびに piles と open の置き場所を替える
         this.layout = new Layout(board.root, (layout) => placeFloating(board, layout));
 
@@ -99,7 +109,7 @@ export class Game {
 
     setupNotifications() {
         // notif_xxx という名前のメソッドを通知名に対応させて自動で購読する（共通の領域の通知は CommonNotifications）
-        const players = this.playerAreas === null ? null : new PlayerNotifications(this.playerAreas);
+        const players = this.playerAreas === null ? null : new PlayerNotifications(this.playerAreas, this.panels);
         const handlers = this.common === null ? [] : [new CommonNotifications(this.common, players), ...(players === null ? [] : [players])];
         this.bga.notifications.setupPromiseNotifications({ handlers });
     }

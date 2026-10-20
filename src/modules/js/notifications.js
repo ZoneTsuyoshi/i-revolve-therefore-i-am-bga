@@ -93,6 +93,7 @@ export class CommonNotifications {
     /** N24: 精神分析。キューブを進め、到着した精神カードの心光を取る */
     async notif_spiritAdvanced(/** @type {Args} */ args) {
         const to = typeof args?.to_spirit === 'string' ? args.to_spirit : null;
+        this.players?.onSpiritAdvanced(args);
         await this.common.advanceSpirit(toInt(args?.player_id), to, args?.light_taken === true);
     }
 
