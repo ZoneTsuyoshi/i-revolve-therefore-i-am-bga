@@ -170,6 +170,11 @@ const expected = renderAll(spec);
 const handWritten = [
   'MemoryCardDefinition.php', 'FloorCardDefinition.php', 'AnalysisCardDefinition.php', 'EgoCardDefinition.php',
   'ObjectiveCardDefinition.php', 'FloorBonus.php', 'EgoKind.php',
+  // 仕様書 008 の効果の定義（手書き。生成物ではない）
+  'EffectCatalog.php', 'EffectSpec.php', 'EffectNode.php', 'EffectStep.php', 'ConditionRef.php', 'ResourceTouch.php',
+  'Op.php', 'Event.php', 'Modifier.php', 'Condition.php', 'Control.php', 'Origin.php', 'ChoiceKind.php',
+  'ResourceSymbol.php', 'Access.php', 'Mechanism.php', 'OwnerScope.php', 'EffectLimit.php', 'TokenKind.php',
+  'ComposeContext.php', 'ActionKind.php', 'ActionContext.php',
 ];
 const present = existsSync(OUT_DIR) ? readdirSync(OUT_DIR).filter((f) => f.endsWith('.php')).sort() : [];
 expect('Material/ のファイル一覧', present, [...Object.keys(expected), ...handWritten].sort());
