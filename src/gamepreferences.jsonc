@@ -1,0 +1,13 @@
+{
+  // プレイヤー設定（仕様書 003 §7.3、009 §7）。ID は 100〜199。
+  // 100: カードの下に英語名を出す。画面（UI タスク）が cssPref のクラスを使う。
+  // © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
+  "100": {
+    "name": "Card captions",
+    "values": {
+      "1": { "name": "Off", "cssPref": "ir-captions-off" },
+      "2": { "name": "English name under cards", "cssPref": "ir-captions-on" }
+    },
+    "default": 1
+  }
+}

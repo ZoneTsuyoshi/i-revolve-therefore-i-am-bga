@@ -1,0 +1,20 @@
+/**
+ *------
+ * BGA framework: Gregory Isabelli & Emmanuel Colin & BoardGameArena
+ * IRevolveThereforeIAm implementation : © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
+ *
+ * This code has been produced on the BGA studio platform for use on http://boardgamearena.com.
+ * See http://en.boardgamearena.com/#!doc/Studio for more information.
+ * -----
+ */
+
+/*
+ * ゲーム画面のスタイル（仕様書 003 §6.3）。1 ファイルで、クラス名と CSS 変数は ir- を付ける。
+ * 本番ではこのファイルは圧縮されコメントは消えるので、コメントは必要なだけ書く。
+ * 注意: @import は使えない。
+ */
+
+/* 画面の実装（UI タスク）で、カードの大きさなどの変数をここに足す。 */
+:root {
+    --ir-placeholder: 0;
+}

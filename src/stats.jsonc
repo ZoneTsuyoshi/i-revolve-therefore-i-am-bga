@@ -1,0 +1,42 @@
+{
+    // 統計（仕様書 007 §14。ID は 10 以上で各節の中で一意。公開後は変更も再利用もしない）
+    // テーブル統計 10〜19、プレイヤー統計 20〜
+    // © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
+    "table": {
+        "turns_played": { "id": 10, "name": "Number of turns", "type": "int" },
+        "end_reason": { "id": 11, "name": "Game end condition", "type": "int" },
+        "max_rooms_in_turn": { "id": 12, "name": "Most rooms entered in a turn", "type": "int" }
+    },
+
+    "player": {
+        "final_score": { "id": 20, "name": "Composition score", "type": "int" },
+        "memory_score": { "id": 21, "name": "Score: memory cards", "type": "int" },
+        "objective_score": { "id": 22, "name": "Score: goal cards", "type": "int" },
+        "final_tier": { "id": 23, "name": "Final psyche tier", "type": "int" },
+        "turns_taken": { "id": 24, "name": "Turns taken", "type": "int" },
+        "rooms_entered": { "id": 25, "name": "Rooms entered", "type": "int" },
+        "rooms_skipped": { "id": 26, "name": "Rooms skipped", "type": "int" },
+        "cards_drawn": { "id": 27, "name": "Memory cards drawn", "type": "int" },
+        "cards_composed": { "id": 28, "name": "Memory cards composed", "type": "int" },
+        "analysis_done": { "id": 29, "name": "Analyses performed", "type": "int" },
+        "light_gained": { "id": 30, "name": "Inner light gained", "type": "int" },
+        "light_spent": { "id": 31, "name": "Inner light spent", "type": "int" },
+        "cards_discarded_for_light": { "id": 32, "name": "Cards discarded for inner light", "type": "int" },
+        "cards_discarded_limit": { "id": 33, "name": "Cards discarded for hand limit", "type": "int" },
+        "wild_tokens_used": { "id": 34, "name": "Wild move keys used", "type": "int" },
+        "compose_tokens_used": { "id": 35, "name": "Compose tokens used", "type": "int" },
+        "analysis_tokens_used": { "id": 36, "name": "Analysis tokens used", "type": "int" },
+        "goals_claimed": { "id": 37, "name": "Goal cards claimed", "type": "int" },
+        "key_wisdom": { "id": 38, "name": "Wisdom keys (final)", "type": "int" },
+        "key_will": { "id": 39, "name": "Will keys (final)", "type": "int" },
+        "key_emotion": { "id": 40, "name": "Emotion keys (final)", "type": "int" },
+        "key_wild": { "id": 41, "name": "Wild keys (final)", "type": "int" },
+        "recall_effects": { "id": 42, "name": "Recall effects activated", "type": "int" },
+        "activated_effects": { "id": 43, "name": "Card effects activated", "type": "int" }
+    },
+
+    // end_reason の表示名（値 0 は終了条件が成立しなかった場合）
+    "value_labels": {
+        "11": ["-", "Fragments", "Fleeting recollection", "Apex of the psyche", "Deck ran out"]
+    }
+}

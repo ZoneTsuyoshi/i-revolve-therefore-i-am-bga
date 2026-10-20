@@ -1,0 +1,19 @@
+{
+  // ゲームオプション（仕様書 003 §7.2）。ID は 100〜199。値のキーは一度公開したら変えない。
+  // © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
+  "100": {
+    "name": "Floor layout",
+    "values": {
+      "1": {
+        "name": "Fixed order (by ID)"
+      },
+      "2": {
+        "name": "Random",
+        "tmdisplay": "Random floor layout",
+        "description": "Floor cards are placed in the corridor at random (Level 2 floors in the corners)"
+      }
+    },
+    "default": 1,
+    "level": "base"
+  }
+}
