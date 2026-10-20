@@ -1,0 +1,56 @@
+# CI/CD の方針
+
+> ステータス: **未導入**。このドキュメントは方針のみを示します。具体的な設計は仕様書（[../tasks.md](../tasks.md) の T-004 / T-005）で確定させ、その後に導入します。
+>
+> 姉妹プロジェクト [minimum-journey-bga](https://github.com/ZoneTsuyoshi/minimum-journey-bga) で同じ構成の lint と同期が稼働しています（同プロジェクトの仕様書 004 / 005、`.github/workflows/lint.yml`・`bga-sync.yml`）。仕様書では、それを土台にこのリポジトリ向けの差分（プロジェクト名、パス、アセットの扱いなど）を決めます。
+
+## 全体像
+
+```text
+PR 作成・更新 ──▶ CI: lint ──▶（通過 + ユーザー承認）──▶ squash merge
+                                                              │
+main への push ──▶ CD: src/ を BGA Studio へ SFTP 同期 ◀──────┘
+```
+
+## CI: lint チェック
+
+GitHub Actions で PR ごと、および `main` への push 時に実行します。lint が通らない PR はマージしません。
+
+想定しているチェック項目（採用するツールと設定は仕様書で決定）:
+
+| 対象 | チェック内容の候補 |
+| --- | --- |
+| PHP（ゲームロジック） | 構文チェック（`php -l`）、コーディング規約、静的解析 |
+| JavaScript / TypeScript（クライアント） | ESLint |
+| CSS | Stylelint |
+| Markdown（docs） | markdownlint、リンク切れチェック |
+| JSON（ゲームオプション・統計など） | 構文チェック |
+| 全体 | 認証情報の混入チェック |
+
+- PHP のバージョンは BGA 本番環境に合わせる（仕様書作成時に公式ドキュメントで確認）。
+- ローカルでも同じコマンドで実行できるようにする。
+
+## CD: BGA Studio への自動同期
+
+BGA Studio はゲームのソースを SFTP で受け取ります。`main` へのマージをトリガーに、`src/` 配下を BGA Studio のプロジェクトフォルダへ自動転送します。
+
+- 同期対象は **`src/` のみ**。`docs/`、CI 設定などは転送しない（`data/` はそもそも Git 管理外）。
+- 認証情報（秘密鍵・ユーザー名）は GitHub Secrets、ホスト・ポート・パス・known_hosts は Variables で管理し、リポジトリには置かない。
+- 手動実行（`workflow_dispatch`）もできるようにする。
+
+仕様書で確定させる事項:
+
+- BGA Studio の SFTP 接続情報（ホスト・ポート・認証方式）と GitHub Actions からの接続可否
+- Secrets / Variables の名前と登録手順（姉妹プロジェクトと SSH 鍵を共用するか）
+- 転送方式（差分転送 / ミラーリング、BGA 側にしかないファイルの扱い）
+- 同期の単位（`main` のみか、動作確認用に PR ブランチからも手動同期できるようにするか）
+- 同期後に BGA Studio 側で必要な操作（DB スキーマや状態定義を変更した場合の再読み込みなど）
+- 失敗時の通知とリトライ
+
+## ユーザー側で必要な準備
+
+CD の導入前に、リポジトリオーナー側で以下が必要です。
+
+1. ~~BGA Studio の開発者アカウントを取得する~~（済。姉妹プロジェクトと共通）
+2. BGA Studio でこのゲームのプロジェクトを作成する（プロジェクト名 `i_revolve_therefore_i_am`。作成後に変更できない）
+3. SSH 鍵を BGA Studio に登録し、Secrets / Variables を GitHub に登録する
