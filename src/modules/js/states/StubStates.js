@@ -1,7 +1,7 @@
 /**
  * 状態機械の骨格（I-03）を Studio で回すための仮の状態クラス。
- * 初期自我のドラフト（21）・人格の配置（24）・移動（31）・自己構成フェイズ（60）に、操作を進めるだけのボタンを出す。
- * 本物の操作 UI（カードの選択、回廊での配置、経路の計画、自己構成・精神分析）は U-3〜U-5 と I-06・I-07 で置き換える。
+ * 初期自我のドラフト（21）・人格の配置（24）・自己構成フェイズ（60）に、操作を進めるだけのボタンを出す。
+ * 本物の操作 UI（カードの選択、回廊での配置、自己構成・精神分析）は I-06・I-07 などで置き換える（移動の計画は MoveState.js）。
  * © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
  */
 
@@ -99,10 +99,6 @@ export function registerStubStates(bga) {
         const corners = /** @type {any} */ (args)?.freeCorners ?? [];
         return corners.map((pos) => ({ label: `Room ${pos}`, action: 'actPlaceMeeple', args: { pos } }));
     }));
-    // 移動の計画 UI（U-3）ができるまで、サーバーの自動計画（zombie と同じ）で 1 部屋だけ移動する
-    bga.states.register('Move', new StubState(bga, [
-        { label: 'Move automatically (placeholder)', action: 'actMoveAuto' },
-    ]));
     bga.states.register('Construct', new StubState(bga, [
         { label: 'End compose phase', action: 'actEndConstruct' },
     ]));

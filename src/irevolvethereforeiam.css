@@ -200,6 +200,29 @@ html[data-theme="dark"] {
     pointer-events: none;
 }
 
+/* 移動の計画（U-3。states/MoveState.js）: 入れる部屋は枠で光らせ、経路に入れた部屋は順番の丸を出す */
+.ir-room.ir-room-selectable {
+    outline: 3px solid var(--ir-turn-border);
+    outline-offset: -3px;
+    cursor: pointer;
+}
+
+.ir-room.ir-room-route::after {
+    content: attr(data-order);
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    z-index: 3;
+    min-width: 1.6em;
+    border-radius: 50%;
+    background: var(--ir-turn-border);
+    color: #fff;
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+    pointer-events: none;
+}
+
 /* ---- 5. 共通の領域 ---- */
 
 .ir-common {

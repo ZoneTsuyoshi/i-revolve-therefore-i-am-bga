@@ -18,6 +18,7 @@ import { recallFromGamedatas } from './board/view-model.js';
 import { createCardManagers } from './cards/managers.js';
 import { CommonNotifications } from './notifications.js';
 import { PlayerNotifications } from './player-notifications.js';
+import { MoveState } from './states/MoveState.js';
 import { registerStubStates } from './states/StubStates.js';
 import { CardInfo } from './ui/card-info.js';
 import { captionOf } from './ui/card-info-model.js';
@@ -51,6 +52,12 @@ export class Game {
 
         // Studio の雛形の状態（サーバー側 States/PlayerTurn.php）。サーバー側の置き換え後に状態ごとのクラスへ差し替える
         registerStubStates(bga);
+        // 移動の計画（31。U-3）。盤面は setup で作られるので、参照は使うときに取る
+        bga.states.register('Move', new MoveState(bga, () => ({
+            playerAreas: this.playerAreas,
+            refs: this.board,
+            me: bga.players.isCurrentPlayerSpectator() ? null : int(bga.players.getCurrentPlayerId()),
+        })));
     }
 
     /**
