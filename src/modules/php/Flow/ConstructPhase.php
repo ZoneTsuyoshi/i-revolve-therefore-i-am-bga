@@ -61,7 +61,7 @@ final class ConstructPhase
     public function startPhaseCompose(int $player): void
     {
         if ($this->globals->turnContext()->phaseComposeUsed) {
-            throw new EffectViolation('You already composed in the compose phase');
+            throw new EffectViolation(clienttranslate('You already composed in the compose phase'));
         }
         $this->pushAction(EffectFrame::KIND_COMPOSE, $player, ComposeContext::PHASE->value);
     }
@@ -74,10 +74,10 @@ final class ConstructPhase
     public function useComposeToken(int $player): void
     {
         if ($this->players->composeTokens($player) < 1) {
-            throw new EffectViolation('You have no compose token');
+            throw new EffectViolation(clienttranslate('You have no compose token'));
         }
         if (!$this->compose->canCompose($player, ComposeContext::TOKEN, 0)) {
-            throw new EffectViolation('There is no card you can compose, so the token cannot be used');
+            throw new EffectViolation(clienttranslate('There is no card you can compose, so the token cannot be used'));
         }
         $this->pushAction(EffectFrame::KIND_COMPOSE, $player, ComposeContext::TOKEN->value);
     }
@@ -90,10 +90,10 @@ final class ConstructPhase
     public function useAnalysisToken(int $player): void
     {
         if ($this->players->analysisTokens($player) < 1) {
-            throw new EffectViolation('You have no analysis token');
+            throw new EffectViolation(clienttranslate('You have no analysis token'));
         }
         if (!$this->analysis->canAnalyze($player, 0)) {
-            throw new EffectViolation('You cannot pay for an analysis, so the token cannot be used');
+            throw new EffectViolation(clienttranslate('You cannot pay for an analysis, so the token cannot be used'));
         }
         $this->pushAction(EffectFrame::KIND_ANALYZE, $player, 'TOKEN');
     }

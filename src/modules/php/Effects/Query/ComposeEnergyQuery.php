@@ -145,25 +145,48 @@ final class ComposeEnergyQuery
         }
         $spec = $this->tapSpec($player);
         if ($spec === null || !$context->paysEnergy()) {
-            throw new EffectViolation('Cards cannot be tapped for energy here');
+            throw new EffectViolation(clienttranslate('Cards cannot be tapped for energy here'));
         }
         $key = $spec->params['key'] ?? KeyType::EMOTION;
         $view = $this->active->view();
         $tableau = $view->tableauIds($player);
         if (count(array_unique($tapIds)) !== count($tapIds)) {
-            throw new EffectViolation('Duplicate card to tap');
+            throw new EffectViolation(clienttranslate('Duplicate card to tap'));
         }
         foreach ($tapIds as $cardId) {
             if (!in_array($cardId, $tableau, true) || $view->isTapped($cardId)) {
-                throw new EffectViolation("Card {$cardId} cannot be tapped");
+                throw new EffectViolation(clienttranslate('A selected card cannot be tapped'));
             }
             if (!in_array($key, MemoryCards::get($view->cardType($cardId))->keys, true)) {
-                throw new EffectViolation("Card {$cardId} has no {$this->keyName($key)} key");
+                throw new EffectViolation(clienttranslate('A selected card does not have the required key'));
             }
         }
         if (count($tapIds) > $this->need($player, $handCardId, $context, $contextDiscount, 0)) {
-            throw new EffectViolation('Too many cards tapped for the required energy');
+            throw new EffectViolation(clienttranslate('Too many cards tapped for the required energy'));
         }
+    }
+
+    /**
+     * M095 で横向きにできる自己構成済みカード（縦向きで、横向きにする鍵を印刷されたもの）。エネルギーを払う文脈だけ。
+     *
+     * @return list<int>
+     */
+    public function tapCandidates(int $player, ComposeContext $context): array
+    {
+        $spec = $this->tapSpec($player);
+        if ($spec === null || !$context->paysEnergy()) {
+            return [];
+        }
+        $key = $spec->params['key'] ?? KeyType::EMOTION;
+        $view = $this->active->view();
+        $out = [];
+        foreach ($view->tableauIds($player) as $cardId) {
+            if (!$view->isTapped($cardId) && in_array($key, MemoryCards::get($view->cardType($cardId))->keys, true)) {
+                $out[] = $cardId;
+            }
+        }
+
+        return $out;
     }
 
     /**
@@ -220,10 +243,5 @@ final class ComposeEnergyQuery
         $value = $spec->params[$key] ?? $default;
 
         return is_int($value) ? $value : $default;
-    }
-
-    private function keyName(mixed $key): string
-    {
-        return $key instanceof KeyType ? $key->value : 'unknown';
     }
 }

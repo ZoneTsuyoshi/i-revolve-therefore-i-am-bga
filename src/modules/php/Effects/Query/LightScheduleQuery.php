@@ -65,7 +65,7 @@ final class LightScheduleQuery
     {
         $expected = $this->totalLights($player, $context, $uses);
         if ($lightsPaid !== $expected) {
-            throw new EffectViolation("Light payment must be {$expected} for {$uses} use(s), got {$lightsPaid}");
+            throw new EffectViolation(clienttranslate('The inner light payment does not match the number of uses'));
         }
     }
 }

@@ -50,7 +50,7 @@ final class AdvanceTier extends AbstractOp
         } else {
             $to = $answer->data['spirit'] ?? null;
             if (!is_string($to) || !in_array($to, $candidates, true)) {
-                throw new EffectViolation('Choose one of the spirit cards on the next tier');
+                throw new EffectViolation(clienttranslate('Choose one of the spirit cards on the next tier'));
             }
         }
         $via = is_string($context->node->params['via'] ?? null) ? $context->node->params['via'] : 'EFFECT';

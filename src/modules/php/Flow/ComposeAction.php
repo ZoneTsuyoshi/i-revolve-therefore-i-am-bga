@@ -87,9 +87,41 @@ final class ComposeAction
                 'lightTotals' => $lightTotals,
                 'maxLightUses' => $this->planner->maxLightUses($player),
                 'canCompose' => $candidates !== [],
+                'tapCandidates' => $this->energy->tapCandidates($player, $context),
+                'extraMax' => $this->energy->extraPayMax($player),
             ],
-            'private' => ['hand' => $hand],
+            'private' => ['hand' => $hand, 'architectPairs' => $this->architectPairs($player, $context)],
         ];
+    }
+
+    /**
+     * I03（建築家）で入れ替えられる `[自己構成済みのカード ID, 手札のカード ID]` の組（`architect` が受け付けるものだけ）。
+     *
+     * @return list<array{int, int}>
+     */
+    private function architectPairs(int $player, ComposeContext $context): array
+    {
+        $tableau = $this->view->tableauIds($player);
+        $pairs = [];
+        foreach ($tableau as $tableauId) {
+            foreach ($this->view->handIds($player) as $handId) {
+                if (!$this->energy->architectSubstituteAllowed($player, $tableauId, $handId, $context)) {
+                    continue;
+                }
+                $type = $this->view->cardType($handId);
+                $duplicate = false;
+                foreach ($tableau as $otherId) {
+                    if ($otherId !== $tableauId && $this->view->cardType($otherId) === $type) {
+                        $duplicate = true;
+                    }
+                }
+                if (!$duplicate) {
+                    $pairs[] = [$tableauId, $handId];
+                }
+            }
+        }
+
+        return $pairs;
     }
 
     /**
@@ -102,10 +134,10 @@ final class ComposeAction
         $pending = $this->frames->current(Op::COMPOSE, $player);
         $context = ComposeContext::from($pending->context);
         if ($context === ComposeContext::TOKEN && $this->players->composeTokens($player) < 1) {
-            throw new EffectViolation('You have no compose token');
+            throw new EffectViolation(clienttranslate('You have no compose token'));
         }
         if ($context === ComposeContext::PHASE && $this->globals->turnContext()->phaseComposeUsed) {
-            throw new EffectViolation('You already composed in the compose phase');
+            throw new EffectViolation(clienttranslate('You already composed in the compose phase'));
         }
         $plan = $this->planner->plan($player, $context, $pending->discount, $cardId, $payment);
         $name = ($this->nameOf)($player);
@@ -175,18 +207,18 @@ final class ComposeAction
         $pending = $this->frames->current(Op::COMPOSE, $player);
         $context = ComposeContext::from($pending->context);
         if ($context === ComposeContext::TOKEN && $this->players->composeTokens($player) < 1) {
-            throw new EffectViolation('You have no compose token');
+            throw new EffectViolation(clienttranslate('You have no compose token'));
         }
         if ($context === ComposeContext::PHASE && $this->globals->turnContext()->phaseComposeUsed) {
-            throw new EffectViolation('You already composed in the compose phase');
+            throw new EffectViolation(clienttranslate('You already composed in the compose phase'));
         }
         if (!$this->energy->architectSubstituteAllowed($player, $tableauCardId, $newCardId, $context)) {
-            throw new EffectViolation('That substitution is not allowed');
+            throw new EffectViolation(clienttranslate('That substitution is not allowed'));
         }
         $newType = $this->view->cardType($newCardId);
         foreach ($this->view->tableauIds($player) as $otherId) {
             if ($otherId !== $tableauCardId && $this->view->cardType($otherId) === $newType) {
-                throw new EffectViolation('A card with the same name is already composed');
+                throw new EffectViolation(clienttranslate('A card with the same name is already composed'));
             }
         }
         $notices = [];

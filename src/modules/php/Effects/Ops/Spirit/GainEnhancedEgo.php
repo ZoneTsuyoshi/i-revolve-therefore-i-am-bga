@@ -47,7 +47,7 @@ final class GainEnhancedEgo extends AbstractOp
         } else {
             $ego = $answer->data['ego'] ?? null;
             if (!is_string($ego) || !in_array($ego, $candidates, true)) {
-                throw new EffectViolation('Choose one of the enhanced ego cards in the deck');
+                throw new EffectViolation(clienttranslate('Choose one of the enhanced ego cards in the deck'));
             }
         }
         $context->mutator->obtainEnhancedEgo($context->owner, $ego);

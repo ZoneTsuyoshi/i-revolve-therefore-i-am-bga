@@ -274,7 +274,7 @@ final class ComposeActionTest extends TestCase
         [$target] = $this->fx->giveHand(self::P, [1]);
         $this->begin();
 
-        $this->assertRejected($target, ['tap' => [$wild]], 'Card');
+        $this->assertRejected($target, ['tap' => [$wild]], 'required key');
         $this->assertRejected($target, ['tap' => [$tapA, $tapA]], 'duplicates');
 
         $this->compose($target, ['tap' => [$tapA, $tapB]]);
@@ -292,6 +292,23 @@ final class ComposeActionTest extends TestCase
         } catch (EffectViolation $e) {
             self::assertStringContainsString('Too many', $e->getMessage());
         }
+    }
+
+    /** 61 の args: M095 で横向きにできるのは、縦向きで感情鍵を印刷された自己構成済みカード（万能鍵のみ・横向き済みは除く）。 */
+    public function testArgsListTapCandidates(): void
+    {
+        [$tapA, $tapB, $wild] = $this->fx->giveTableau(self::P, [2, 5, 40]);
+        $this->fx->giveTableau(self::P, [95]);
+        $this->fx->memory->setTapped([$tapB], true);
+        $this->fx->giveHand(self::P, [1]);
+        $this->begin();
+
+        $args = $this->fx->kit->compose->args(self::P);
+
+        self::assertContains($tapA, $args['public']['tapCandidates']);
+        self::assertNotContains($tapB, $args['public']['tapCandidates']);
+        self::assertNotContains($wild, $args['public']['tapCandidates']);
+        self::assertSame(0, $args['public']['extraMax']);
     }
 
     /** 001 §9-1: 同名のカードは自己構成できない。 */

@@ -41,11 +41,13 @@ use Bga\Games\IRevolveThereforeIAm\Effects\Context\GameView;
 use Bga\Games\IRevolveThereforeIAm\Effects\Objective\ObjectiveEvaluator;
 use Bga\Games\IRevolveThereforeIAm\Effects\Objective\ObjectiveWindow;
 use Bga\Games\IRevolveThereforeIAm\Effects\Query\ActiveSpecs;
+use Bga\Games\IRevolveThereforeIAm\Effects\Query\ComposeEnergyQuery;
 use Bga\Games\IRevolveThereforeIAm\Effects\Query\KeyViewQuery;
 use Bga\Games\IRevolveThereforeIAm\Effects\Query\LightScheduleQuery;
 use Bga\Games\IRevolveThereforeIAm\Effects\Query\MovePaymentQuery;
 use Bga\Games\IRevolveThereforeIAm\Flow\CleanupPhase;
 use Bga\Games\IRevolveThereforeIAm\Flow\GameProgress;
+use Bga\Games\IRevolveThereforeIAm\Flow\HandEnergyReporter;
 use Bga\Games\IRevolveThereforeIAm\Flow\HandLimit;
 use Bga\Games\IRevolveThereforeIAm\Flow\MoveBoardReader;
 use Bga\Games\IRevolveThereforeIAm\Flow\MoveExecutor;
@@ -67,6 +69,8 @@ use Bga\Games\IRevolveThereforeIAm\Setup\InitialEgoDraft;
 use Bga\Games\IRevolveThereforeIAm\Setup\PersonaPlacement;
 use Bga\Games\IRevolveThereforeIAm\Setup\SetupPlanner;
 use Bga\Games\IRevolveThereforeIAm\States\SetupEgoDraftNext;
+use Bga\Games\IRevolveThereforeIAm\Stats\BgaStatStore;
+use Bga\Games\IRevolveThereforeIAm\Stats\StatsRecorder;
 
 class Game extends \Bga\GameFramework\Table
 {
@@ -82,6 +86,10 @@ class Game extends \Bga\GameFramework\Table
     private ?ScoreReporter $irScoreReporter = null;
 
     private ?ObjectiveStatusReporter $irObjectiveReporter = null;
+
+    private ?HandEnergyReporter $irHandEnergyReporter = null;
+
+    private ?StatsRecorder $irStatsRecorder = null;
 
     public function __construct()
     {
@@ -188,7 +196,7 @@ class Game extends \Bga\GameFramework\Table
         $layout = $this->bga->tableOptions->get(self::OPTION_FLOOR_LAYOUT) ?? SetupPlanner::LAYOUT_FIXED;
         $this->irGameSetup()->run($this->irPlayerValues()->playerIds(), $layout);
 
-        // TODO(I-11): 統計の初期化（stats.jsonc。007 §14）
+        $this->irStats()->initialize();
 
         // 最初の状態は GAME 状態の初期自我のドラフト（006 §3.2）
         return SetupEgoDraftNext::class;
@@ -272,6 +280,8 @@ class Game extends \Bga\GameFramework\Table
             $this->irObjectives(),
             $this->irPlayerValues(),
             $this->irGlobals(),
+            fn(int $playerId, int $cardId): int => $this->irComposeEnergy()->heldEnergy($playerId, $cardId),
+            fn(int $playerId): int => $this->irStats()->roomsEntered($playerId),
         );
     }
 
@@ -325,6 +335,7 @@ class Game extends \Bga\GameFramework\Table
      */
     public function irHandLimit(): HandLimit
     {
+        $this->irHandEnergyReporter();
         return new HandLimit($this->irMemoryCards(), $this->irPlayerValues(), $this->irEffectStack());
     }
 
@@ -333,6 +344,7 @@ class Game extends \Bga\GameFramework\Table
      */
     public function irMovePhase(): MovePhase
     {
+        $this->irHandEnergyReporter();
         $active = new ActiveSpecs($this->irGameView(), new CatalogSpecSource(), new ConditionEvaluator($this->irGameView()));
         $light = new LightScheduleQuery($active);
         $payments = new MovePaymentQuery($active, new KeyViewQuery($active), $light);
@@ -370,6 +382,7 @@ class Game extends \Bga\GameFramework\Table
             // N21・N23 の変化の比較の基準（このリクエストで状態を変える前の値）
             $this->irScoreReporter()->prime();
             $this->irObjectiveReporter()->prime();
+            $this->irHandEnergyReporter();
         }
 
         return $this->irTurnKit;
@@ -510,16 +523,60 @@ class Game extends \Bga\GameFramework\Table
     }
 
     /**
-     * 通知を全員（と観戦者）へ送る。
+     * 通知を全員（と観戦者）へ送る。送った通知は統計に加算し（007 §14）、手札のエネルギーが変わった人には N35 を続ける。
      */
     public function irSend(Notice ...$notices): void
     {
         foreach ($notices as $notice) {
-            if ($notice->recipient !== null) {
-                $this->bga->notify->player($notice->recipient, $notice->type, $notice->message, $notice->args);
-            } else {
-                $this->bga->notify->all($notice->type, $notice->message, $notice->args);
-            }
+            $this->irDeliver($notice);
+            $this->irStats()->record($notice);
+        }
+        foreach ($this->irHandEnergyReporter()->report() as $energy) {
+            $this->irDeliver($energy);
+        }
+    }
+
+    /**
+     * 統計の記録（`src/stats.jsonc`。007 §14）。
+     */
+    public function irStats(): StatsRecorder
+    {
+        return $this->irStatsRecorder ??= new StatsRecorder(new BgaStatStore($this->bga->tableStats, $this->bga->playerStats));
+    }
+
+    /**
+     * 自己構成のエネルギーの計算（保有時の効果 M098 を含む手札の現在の値など。008 §6.5.1）。
+     */
+    public function irComposeEnergy(): ComposeEnergyQuery
+    {
+        $view = $this->irGameView();
+
+        return new ComposeEnergyQuery(new ActiveSpecs($view, new CatalogSpecSource(), new ConditionEvaluator($view)));
+    }
+
+    /**
+     * N35 `handEnergyUpdated` の差分（本人宛て）。作った時点の手札の値を基準にするので、状態を変える前に呼んでおく。
+     */
+    public function irHandEnergyReporter(): HandEnergyReporter
+    {
+        if ($this->irHandEnergyReporter === null) {
+            $this->irHandEnergyReporter = new HandEnergyReporter(
+                $this->irComposeEnergy(),
+                $this->irGameView(),
+                fn(): array => $this->irSeatOrder(),
+            );
+            $this->irHandEnergyReporter->prime();
+        }
+
+        return $this->irHandEnergyReporter;
+    }
+
+    private function irDeliver(Notice $notice): void
+    {
+        if ($notice->recipient !== null) {
+            $this->bga->notify->player($notice->recipient, $notice->type, $notice->message, $notice->args);
+        } else {
+            $this->bga->notify->all($notice->type, $notice->message, $notice->args);
         }
     }
 

@@ -48,7 +48,7 @@ final class SwapHandRoom extends AbstractOp
         $hand = $answer->data['hand'] ?? null;
         $pos = $answer->data['pos'] ?? null;
         if (!is_int($hand) || !is_int($pos) || !in_array([$hand, $pos], $this->pairs($context), true)) {
-            throw new EffectViolation('Choose a hand card and an unoccupied room of the same level');
+            throw new EffectViolation(clienttranslate('Choose a hand card and an unoccupied room of the same level'));
         }
         $context->mutator->swapHandAndRoom($context->owner, $hand, $pos);
 

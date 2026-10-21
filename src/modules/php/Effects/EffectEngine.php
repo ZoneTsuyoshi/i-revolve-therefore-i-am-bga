@@ -132,12 +132,12 @@ final class EffectEngine
      */
     public function skip(EffectFrame $frame): EngineResult
     {
-        $pending = $frame->pending ?? throw new EffectViolation('No pending choice');
+        $pending = $frame->pending ?? throw new EffectViolation(clienttranslate('No pending choice'));
         if ($pending->isAction()) {
-            throw new EffectViolation('Use cancelAction() for a compose or analysis action');
+            throw new EffectViolation(clienttranslate('Use cancelAction() for a compose or analysis action'));
         }
         if ($pending->kind !== null && !$pending->kind->skippable()) {
-            throw new EffectViolation("{$pending->kind->value} cannot be skipped");
+            throw new EffectViolation(clienttranslate('This choice cannot be skipped'));
         }
 
         return $this->resume($frame, OpAnswer::skipped());
@@ -172,7 +172,7 @@ final class EffectEngine
             }
         }
         if ($optional === null) {
-            throw new EffectViolation('This action cannot be skipped');
+            throw new EffectViolation(clienttranslate('This action cannot be skipped'));
         }
         $frame->decisions[$optional->index] = 0;
         $frame->pending = null;
@@ -191,10 +191,10 @@ final class EffectEngine
         $steps = $this->spec($frame->specId)->steps();
         $chooser = $steps[0] ?? null;
         if ($chooser === null || $chooser->node->kind !== Control::CHOOSE_ONE || $frame->step !== 0) {
-            throw new EffectViolation('This effect has no branches to choose');
+            throw new EffectViolation(clienttranslate('This effect has no branches to choose'));
         }
         if ($branch < 0 || $branch >= count($chooser->node->children)) {
-            throw new EffectViolation('Unknown branch');
+            throw new EffectViolation(clienttranslate('Unknown branch'));
         }
         $frame->decisions[0] = $branch;
         $frame->pending = null;
@@ -215,7 +215,7 @@ final class EffectEngine
     {
         $pending = $frame->pending;
         if ($pending === null || !$pending->isAction()) {
-            throw new EffectViolation('No compose or analysis action is pending');
+            throw new EffectViolation(clienttranslate('No compose or analysis action is pending'));
         }
 
         return $pending;
@@ -223,9 +223,9 @@ final class EffectEngine
 
     private function resume(EffectFrame $frame, OpAnswer $answer): EngineResult
     {
-        $pending = $frame->pending ?? throw new EffectViolation('No pending choice');
+        $pending = $frame->pending ?? throw new EffectViolation(clienttranslate('No pending choice'));
         if ($pending->isAction()) {
-            throw new EffectViolation('A compose or analysis action is pending');
+            throw new EffectViolation(clienttranslate('A compose or analysis action is pending'));
         }
         $steps = $this->spec($frame->specId)->steps();
         $step = $steps[$pending->step];
@@ -238,7 +238,7 @@ final class EffectEngine
         } elseif ($step->node->kind === Control::CHOOSE_ONE) {
             $branch = $answer->data['branch'] ?? null;
             if (!is_int($branch) || $branch < 0 || $branch >= count($step->node->children)) {
-                throw new EffectViolation('Unknown branch');
+                throw new EffectViolation(clienttranslate('Unknown branch'));
             }
             $frame->decisions[$step->index] = $branch;
             $frame->pending = null;

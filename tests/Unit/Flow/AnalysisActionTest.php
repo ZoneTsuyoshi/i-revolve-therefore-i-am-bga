@@ -179,7 +179,7 @@ final class AnalysisActionTest extends TestCase
         $this->assertRejected('R1B', self::pay([], self::hand($a, 'WILL'), self::hand($b, 'WILL')), 'cannot pay');
         $this->assertRejected('R2', self::pay([], self::hand($a, 'WISDOM')), 'next tier');
         $this->assertRejected('R1A', ['keys' => 'x'], 'list');
-        $this->assertRejected('R1A', ['keys' => [['src' => 'TOKEN', 'for' => 'WISDOM']]], 'Cannot pay with TOKEN');
+        $this->assertRejected('R1A', ['keys' => [['src' => 'TOKEN', 'for' => 'WISDOM']]], 'cannot pay with that source');
     }
 
     /** 万能鍵は何の代わりにもなる（M040）。 */
@@ -224,7 +224,7 @@ final class AnalysisActionTest extends TestCase
 
         $args = $this->fx->kit->analysis->args(self::P);
         self::assertSame(1, $args['public']['reduction']);
-        $this->assertRejected('R1A', self::pay([], self::hand($a, 'WISDOM')), 'remove exactly 1');
+        $this->assertRejected('R1A', self::pay([], self::hand($a, 'WISDOM')), 'remove exactly');
         $this->assertRejected('R1A', self::pay(['WISDOM' => 2], self::hand($a, 'WISDOM')), 'remove');
         $this->assertRejected('R1A', self::pay(['WILL' => 1], self::hand($a, 'WISDOM')), 'remove');
 
@@ -249,6 +249,31 @@ final class AnalysisActionTest extends TestCase
         $this->analyze('R2', self::pay([], self::tableau($double, 'WISDOM', 0), self::tableau($double, 'EMOTION', 1), self::hand($will, 'WILL')));
 
         self::assertSame('R2', $this->fx->players->spirit(self::P));
+    }
+
+    /** 62 の args: keyServes は持つ鍵の種類ごとの払えるコスト。M094 があると知恵鍵は万能鍵として全てを払える。 */
+    public function testArgsExposeKeyServes(): void
+    {
+        $this->fx->spirits->advance(self::P, 'R1A');
+        $this->fx->giveHand(self::P, [1, 2, 3]);
+        $this->fx->players->setToken(self::P, 'player_analysis_tok', 1);
+        $this->begin();
+
+        $serves = $this->fx->kit->analysis->args(self::P)['public']['keyServes'];
+
+        self::assertSame(['WISDOM'], $serves['WISDOM']);
+        self::assertSame(['WISDOM', 'WILL', 'EMOTION'], $serves['WILD']);
+
+        $fx = new MoveFixture();
+        $fx->spirits->advance(self::P, 'R1A');
+        $fx->giveTableau(self::P, [94]);
+        $fx->giveHand(self::P, [1, 2, 3]);
+        $fx->players->setToken(self::P, 'player_analysis_tok', 1);
+        $this->begin($fx);
+
+        $serves = $fx->kit->analysis->args(self::P)['public']['keyServes'];
+        self::assertSame(['WISDOM', 'WILL', 'EMOTION'], $serves['WISDOM']);
+        self::assertSame(['WILL'], $serves['WILL']);
     }
 
     /** M094 を持たなければ、知恵鍵で感情のコストは払えない。 */

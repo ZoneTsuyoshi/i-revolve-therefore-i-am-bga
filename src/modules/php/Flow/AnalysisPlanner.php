@@ -52,6 +52,26 @@ final class AnalysisPlanner
     }
 
     /**
+     * 持っている鍵の種類ごとに、払えるコストの種類（M094 の読み替え込み。31 Move の `keyServes` と同じ形）。
+     *
+     * @return array<string, list<string>>
+     */
+    public function keyServes(int $player): array
+    {
+        $serves = [];
+        foreach (KeyType::cases() as $held) {
+            $serves[$held->value] = [];
+            foreach ([KeyType::WISDOM, KeyType::WILL, KeyType::EMOTION] as $cost) {
+                if ($this->keyView->canServeAs($player, $held, $cost, ActionContext::ANALYSIS)) {
+                    $serves[$held->value][] = $cost->value;
+                }
+            }
+        }
+
+        return $serves;
+    }
+
+    /**
      * 進める先の精神カード（次の階層。2 枚あるときはどちらでもよい）。
      *
      * @return list<AnalysisCardDefinition>
@@ -121,13 +141,13 @@ final class AnalysisPlanner
     public function plan(int $player, int $discount, string $destination, array $payment): AnalysisPlan
     {
         if (!in_array($destination, $this->view->nextSpiritIds($player), true)) {
-            throw new EffectViolation('You can only advance to a spirit card on the next tier');
+            throw new EffectViolation(clienttranslate('You can only advance to a spirit card on the next tier'));
         }
         $card = AnalysisCards::get($destination);
         $removed = [];
         foreach ((array) ($payment['removed'] ?? []) as $key => $count) {
             if (!is_int($count)) {
-                throw new EffectViolation("'removed' must map key types to counts");
+                throw new EffectViolation(clienttranslate('The removed keys must map key types to counts'));
             }
             $removed[(string) $key] = $count;
         }
@@ -135,7 +155,7 @@ final class AnalysisPlanner
 
         $keys = $payment['keys'] ?? [];
         if (!is_array($keys) || !array_is_list($keys)) {
-            throw new EffectViolation("'keys' must be a list");
+            throw new EffectViolation(clienttranslate('The payment keys must be a list'));
         }
         $hand = $this->view->handIds($player);
         $tableau = $this->view->tableauIds($player);
@@ -148,7 +168,7 @@ final class AnalysisPlanner
             $source = is_array($item) ? ($item['src'] ?? null) : null;
             $for = is_array($item) ? KeyType::tryFrom((string) ($item['for'] ?? '')) : null;
             if (!is_string($source) || $for === null || $for === KeyType::WILD) {
-                throw new EffectViolation('Each payment needs a source (src) and the cost key it pays (for)');
+                throw new EffectViolation(clienttranslate('Each payment needs a source (src) and the cost key it pays (for)'));
             }
             $paid[$for->value] = ($paid[$for->value] ?? 0) + 1;
             if ($source === 'LIGHT') {
@@ -156,28 +176,28 @@ final class AnalysisPlanner
                 continue;
             }
             if ($source !== 'TABLEAU' && $source !== 'HAND') {
-                throw new EffectViolation("Cannot pay with {$source}");
+                throw new EffectViolation(clienttranslate('You cannot pay with that source'));
             }
             $cardId = $item['card'] ?? null;
             $index = $item['key'] ?? null;
             if (!is_int($cardId) || !is_int($index)) {
-                throw new EffectViolation('A card payment needs the card id and the key number');
+                throw new EffectViolation(clienttranslate('A card payment needs the card id and the key number'));
             }
             $isTableau = $source === 'TABLEAU';
             if (!in_array($cardId, $isTableau ? $tableau : $hand, true) || ($isTableau && $this->view->isTapped($cardId))) {
-                throw new EffectViolation("Card {$cardId} cannot be used to pay");
+                throw new EffectViolation(clienttranslate('A selected card cannot be used to pay'));
             }
             $keyList = MemoryCards::get($this->view->cardType($cardId))->keys;
             if (!isset($keyList[$index])) {
-                throw new EffectViolation("Card {$cardId} has no key number {$index}");
+                throw new EffectViolation(clienttranslate('A selected card does not have that key'));
             }
             $slot = "{$source}:{$cardId}:{$index}";
             if (isset($usedSlots[$slot])) {
-                throw new EffectViolation("A key of card {$cardId} is used twice");
+                throw new EffectViolation(clienttranslate('The same key is used twice'));
             }
             $usedSlots[$slot] = true;
             if (!$this->keyView->canServeAs($player, $keyList[$index], $for, ActionContext::ANALYSIS)) {
-                throw new EffectViolation("A {$keyList[$index]->value} key cannot pay a {$for->value} cost");
+                throw new EffectViolation(clienttranslate('That key cannot pay that cost'));
             }
             if ($isTableau) {
                 $tapped[$cardId] = $cardId;
@@ -189,11 +209,11 @@ final class AnalysisPlanner
         $expected = $remaining;
         ksort($expected);
         if ($paid !== $expected) {
-            throw new EffectViolation('The payment must cover the remaining cost exactly');
+            throw new EffectViolation(clienttranslate('The payment must cover the remaining cost exactly'));
         }
         $lights = $this->light->totalLights($player, ActionContext::ANALYSIS, $uses);
         if ($lights > $this->players->light($player)) {
-            throw new EffectViolation('Not enough inner light');
+            throw new EffectViolation(clienttranslate('Not enough inner light'));
         }
 
         return new AnalysisPlan($destination, array_values($tapped), array_values($discarded), $uses, $lights);

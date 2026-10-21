@@ -226,6 +226,28 @@ function objectiveCards(spec) {
   );
 }
 
+/**
+ * ログの `i18n` 引数で送るカード名・部屋名の翻訳用の一覧。BGA の翻訳の抽出は `clienttranslate('...')` のリテラルしか拾わないので、
+ * 動的に送る名前の原文をここに列挙する（呼び出されることはない。003 §7.1）。
+ */
+function translatableNames(spec) {
+  const names = [
+    ...spec.memory.map((m) => m.nameEn),
+    ...spec.floors.map((f) => f.roomName),
+    ...spec.ego.map((e) => e.nameEn),
+  ];
+  const unique = [...new Set(names)];
+  const lines = unique.map((n) => `            clienttranslate(${str(n, '            ')}),\n`).join('');
+  return (
+    `${HEADER}/**\n * ログの \`i18n\` 引数（カード名・部屋名）の翻訳用の一覧。\n */\n` +
+    'final class TranslatableNames\n{\n' +
+    '    /**\n     * 翻訳の抽出のためだけにある。名前の原文（英語）を返す。\n     *\n     * @return list<string>\n     */\n' +
+    '    public static function all(): array\n    {\n        return [\n' +
+    lines +
+    '        ];\n    }\n}\n'
+  );
+}
+
 /** 生成するすべてのファイルを `{ ファイル名: 内容 }` で返す。 */
 export function renderAll(spec) {
   return {
@@ -239,5 +261,6 @@ export function renderAll(spec) {
     'AnalysisCards.php': analysisCards(spec),
     'EgoCards.php': egoCards(spec),
     'ObjectiveCards.php': objectiveCards(spec),
+    'TranslatableNames.php': translatableNames(spec),
   };
 }

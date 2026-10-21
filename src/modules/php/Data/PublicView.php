@@ -42,6 +42,8 @@ final class PublicView
         private readonly ObjectiveRepository $objectives,
         private readonly PlayerValues $players,
         private readonly GlobalValues $globals,
+        private readonly ?\Closure $heldEnergy = null,
+        private readonly ?\Closure $roomsEntered = null,
     ) {
     }
 
@@ -234,7 +236,7 @@ final class PublicView
      * 終局の内訳（N31 `gameEnded` の results）。
      *
      * @param list<int> $seats
-     * @return list<array<string, int>>
+     * @return list<array<string, int>> player_id、memory_score、objective_score、attached_score、total、tier、rooms_entered（統計と同じ値）
      */
     public function results(array $seats): array
     {
@@ -247,6 +249,7 @@ final class PublicView
                 'attached_score' => $s['attached'],
                 'total' => $s['total'],
                 'tier' => $this->tier($playerId),
+                'rooms_entered' => $this->roomsEntered === null ? 0 : (int) ($this->roomsEntered)($playerId),
             ];
         }
 
@@ -464,7 +467,7 @@ final class PublicView
     }
 
     /**
-     * 本人の手札。`energy` は現在の自己構成エネルギー。
+     * 本人の手札。`energy` は現在の自己構成エネルギー（M098 込み）。
      *
      * @param list<MemoryCard> $hand
      * @return list<array{id: int, type: int, energy: int}>
@@ -474,8 +477,11 @@ final class PublicView
         $out = [];
         foreach ($hand as $card) {
             if ($card->locationArg === $viewerId) {
-                // TODO(I-09): M098 などの常時効果を含めた現在のエネルギー（008 MD-02）。いまは印刷の値
-                $out[] = ['id' => $card->id, 'type' => $card->type, 'energy' => self::definition($card->type)->energy];
+                // M098 などの保有時の効果を含めた現在のエネルギー（008 MD-02）。計算の口が無いときは印刷の値
+                $energy = $this->heldEnergy === null
+                    ? self::definition($card->type)->energy
+                    : (int) ($this->heldEnergy)($viewerId, $card->id);
+                $out[] = ['id' => $card->id, 'type' => $card->type, 'energy' => $energy];
             }
         }
 

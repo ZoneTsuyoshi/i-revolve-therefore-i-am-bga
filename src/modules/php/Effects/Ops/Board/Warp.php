@@ -40,7 +40,7 @@ final class Warp extends AbstractOp
         }
         $pos = $answer->data['pos'] ?? null;
         if (!is_int($pos) || !Corridor::isValid($pos)) {
-            throw new EffectViolation('Choose a room to warp to');
+            throw new EffectViolation(clienttranslate('Choose a room to warp to'));
         }
         $context->mutator->warpPersona($context->owner, $pos);
 

@@ -45,10 +45,10 @@ class NextTurn extends GameState
         // 手札上限などで待たせた時間を考慮して、手番を終えたプレイヤーに追加時間を与える
         $this->game->giveExtraTime($previous);
 
+        $this->game->irStats()->turnFinished($globals->turnContext()->roomsEnteredCount);
         $globals->resetTurnContext();
         $globals->setTurnPlayer(SeatOrder::next($this->game->irSeatOrder(), $previous));
 
-        // TODO(I-11): 統計 turns_played・turns_taken
         return Transition::NEXT;
     }
 }

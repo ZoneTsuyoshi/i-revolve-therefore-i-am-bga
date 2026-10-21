@@ -111,7 +111,7 @@ final class ChoiceFlow
         if (($head->params['gate'] ?? null) === EffectFrame::GATE_CONFIRM) {
             $this->confirm($head, false);
         } elseif ($head->kind === EffectFrame::KIND_ORDER_EFFECTS) {
-            throw new EffectViolation('The order of effects cannot be skipped');
+            throw new EffectViolation(clienttranslate('The order of effects cannot be skipped'));
         } else {
             $frame = $this->runner->load($head);
             $this->runner->apply($head, $frame, $this->engine->skip($frame));
@@ -180,14 +180,14 @@ final class ChoiceFlow
     {
         $head = $this->stack->peek();
         if ($head === null || $head->status !== EffectFrame::WAITING || $head->choice === null) {
-            throw new EffectViolation('There is no choice to make');
+            throw new EffectViolation(clienttranslate('There is no choice to make'));
         }
         $choice = ChoiceRequest::fromArray($head->choice);
         if ($choice->isAction()) {
-            throw new EffectViolation('A compose or analysis action is pending, not a choice');
+            throw new EffectViolation(clienttranslate('A compose or analysis action is pending, not a choice'));
         }
         if ($choice->owner !== $player) {
-            throw new EffectViolation('It is not your choice');
+            throw new EffectViolation(clienttranslate('It is not your choice'));
         }
 
         return [$head, $choice];
@@ -228,7 +228,7 @@ final class ChoiceFlow
         $id = $head->id ?? throw new \LogicException('frame is not stored');
         $effects = array_values((array) ($head->params['effects'] ?? []));
         if (!is_int($index) || !isset($effects[$index])) {
-            throw new EffectViolation('Choose one of the effects');
+            throw new EffectViolation(clienttranslate('Choose one of the effects'));
         }
         $chosen = $effects[$index];
         unset($effects[$index]);

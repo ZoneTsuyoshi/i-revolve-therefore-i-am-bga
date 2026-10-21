@@ -109,7 +109,7 @@ final class MovePaymentQuery
             }
             $tokens -= $step->tokenUses;
             if ($lights < 0 || $tokens < 0) {
-                throw new EffectViolation('Not enough lights or wild move keys at room ' . ($index + 1) . ' of the route');
+                throw new EffectViolation(clienttranslate('Not enough inner light or wild move keys on this route'));
             }
             [$lights, $tokens] = $this->applyBonus($step->entryBonus, $lights, $tokens);
         }

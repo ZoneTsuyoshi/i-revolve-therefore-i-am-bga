@@ -79,13 +79,13 @@ final class HandLimit
     public function discardExcess(int $player, string $playerName, array $cardIds): Notice
     {
         if (count($cardIds) !== $this->excess($player) || count(array_unique($cardIds)) !== count($cardIds)) {
-            throw new EffectViolation('Discard exactly the excess cards');
+            throw new EffectViolation(clienttranslate('Discard exactly the excess cards'));
         }
         $cards = [];
         foreach ($cardIds as $cardId) {
             $card = $this->memoryCards->find($cardId);
             if ($card === null || $card->location !== MemoryLocation::Hand || $card->locationArg !== $player) {
-                throw new EffectViolation("Card $cardId is not in your hand");
+                throw new EffectViolation(clienttranslate('A selected card is not in your hand'));
             }
             $cards[] = $card;
         }
