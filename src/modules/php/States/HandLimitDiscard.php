@@ -88,10 +88,33 @@ class HandLimitDiscard extends GameState
     }
 
     /**
+     * 仮の操作（UI ができるまで）: zombie と同じく、超過枚数分、レベル 1 を優先して手札の後ろから捨てる。
+     * TODO(UI): 手札の選択 UI の導入時に、このアクションとクライアントの仮のボタンを削除する。
+     */
+    #[PossibleAction]
+    public function actDiscardExcessAuto(int $activePlayerId): string
+    {
+        return $this->zombie($activePlayerId);
+    }
+
+    /**
      * 超過枚数分、レベル 1 を優先して手札の後ろから捨てる（006 §10）。
      */
     public function zombie(int $playerId): string
     {
         return $this->actDiscardExcess($this->game->irHandLimit()->zombieChoice($playerId), $playerId);
+    }
+
+    /**
+     * ターンプレイヤーの心光への変換で超過が解消したら、`actDiscardExcess` を待たずに 70 へ戻る（006 §6.2、§8）。
+     * 70 が `HAND_LIMIT_CHECK` を確認し直す。
+     */
+    protected function irAfterFreeAction(int $playerId): ?string
+    {
+        if ($this->game->irGlobals()->endReason() !== null) {
+            return Transition::GAME_END;
+        }
+
+        return $this->game->irHandLimit()->excess($playerId) === 0 ? Transition::DISCARDED : null;
     }
 }

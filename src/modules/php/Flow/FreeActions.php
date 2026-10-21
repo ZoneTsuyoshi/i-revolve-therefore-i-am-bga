@@ -12,6 +12,7 @@ namespace Bga\Games\IRevolveThereforeIAm\Flow;
 use Bga\GameFramework\Actions\Types\IntArrayParam;
 use Bga\GameFramework\States\PossibleAction;
 use Bga\GameFramework\UserException;
+use Bga\Games\IRevolveThereforeIAm\Effects\EffectViolation;
 
 /**
  * フリーアクション（目標カードの獲得、想い出カードを捨てて心光を得る。仕様書 006 §6）。
@@ -34,15 +35,31 @@ trait FreeActions
 
     /**
      * 想い出カードを捨てて心光を得る（レベル 1 は 1 枚分、レベル 2 は 2 枚分。2 枚分につき心光 1。回数無制限）。
+     * 状態は変わらない（`null`）。ただし勝利が成立したら終局へ、72 で超過が解消したら 70 へ戻る（{@see self::irAfterFreeAction()}）。
      *
      * @param list<int> $cardIds
      */
     #[PossibleAction]
-    public function actDiscardForLight(#[IntArrayParam] array $cardIds, int $activePlayerId): void
+    public function actDiscardForLight(#[IntArrayParam] array $cardIds, int $activePlayerId): ?string
     {
         $this->irRequireTurnPlayer($activePlayerId);
-        // TODO(I-07): 手札のレベルから W を数え、心光 floor(W / 2) を獲得して捨札へ。手札上限の確認を行う
-        throw new UserException(clienttranslate('Discarding cards for inner light is not available yet'));
+        try {
+            $notices = $this->game->irTurn()->free->discardForLight($activePlayerId, $cardIds);
+        } catch (EffectViolation $e) {
+            throw new UserException($e->getMessage());
+        }
+        $this->game->irSend(...$notices);
+
+        return $this->irAfterFreeAction($activePlayerId);
+    }
+
+    /**
+     * フリーアクションの後の遷移。勝利が成立していれば終局、そうでなければその状態に留まる（`null`）。
+     * 手札上限の捨て札（72）は、超過が解消したら 70 へ戻るので上書きする。
+     */
+    protected function irAfterFreeAction(int $playerId): ?string
+    {
+        return $this->game->irGlobals()->endReason() !== null ? Transition::GAME_END : null;
     }
 
     /**

@@ -7,8 +7,11 @@ namespace IRevolveTests\Support;
 use Bga\Games\IRevolveThereforeIAm\Effects\Context\GameMutator;
 use Bga\Games\IRevolveThereforeIAm\Effects\Context\GameView;
 use Bga\Games\IRevolveThereforeIAm\Material\ActionKind;
+use Bga\Games\IRevolveThereforeIAm\Material\AnalysisCards;
+use Bga\Games\IRevolveThereforeIAm\Material\FloorBonus;
 use Bga\Games\IRevolveThereforeIAm\Material\KeyType;
 use Bga\Games\IRevolveThereforeIAm\Material\Origin;
+use Bga\Games\IRevolveThereforeIAm\Material\RecallGroup;
 use Bga\Games\IRevolveThereforeIAm\Material\TokenKind;
 
 /**
@@ -85,6 +88,33 @@ final class ArrayGame implements GameView, GameMutator
     public array $tokens = [];
 
     public bool $spiritLight = false;
+
+    /** @var array<int, string|null> 精神カード（プレイヤー → カード ID。階層 0 は null） */
+    public array $spirit = [];
+
+    /** @var array<string, bool> 精神カード上の心光（カード ID → 置かれているか） */
+    public array $spiritLights = [];
+
+    /** @var list<string> 強化自我の山 */
+    public array $enhancedDeck = [];
+
+    /** @var array<int, string> 位置 → 床カード ID（無ければ `F` + 位置） */
+    public array $floors = [];
+
+    /** @var list<array{int, FloorBonus}> 与えた周遊ボーナス */
+    public array $bonuses = [];
+
+    /** @var list<array{int, int, bool}> 想起効果の移動の記録（プレイヤー、行き先、入室に数えるか） */
+    public array $moves = [];
+
+    /** @var list<array{int, string, string}> 精神階層を上げた記録（プレイヤー、行き先、via） */
+    public array $advances = [];
+
+    /** @var array{int, string}|null 勝利の記録（プレイヤー、理由） */
+    public ?array $won = null;
+
+    /** @var list<array{int, string, int, list<RecallGroup>}> 積まれた想起効果の発動 */
+    public array $recallPushes = [];
 
     public bool $deckExhausted = false;
 
@@ -376,5 +406,77 @@ final class ArrayGame implements GameView, GameMutator
     public function checkVictory(): void
     {
         $this->victoryChecks++;
+    }
+
+    public function floorIdAt(int $position): string
+    {
+        return $this->floors[$position] ?? sprintf('F%02d', $position);
+    }
+
+    public function spiritId(int $player): ?string
+    {
+        return $this->spirit[$player] ?? null;
+    }
+
+    public function nextSpiritIds(int $player): array
+    {
+        $current = $this->spiritId($player);
+        $tier = $current === null ? 0 : AnalysisCards::get($current)->floor;
+        $ids = [];
+        foreach (AnalysisCards::all() as $id => $card) {
+            if ($card->floor === $tier + 1) {
+                $ids[] = $id;
+            }
+        }
+
+        return $ids;
+    }
+
+    public function enhancedEgoIds(): array
+    {
+        return $this->enhancedDeck;
+    }
+
+    public function movePersona(int $player, int $to, bool $entry): void
+    {
+        $this->persona[$player] = $to;
+        $this->moves[] = [$player, $to, $entry];
+        if ($entry) {
+            $this->roomsEntered++;
+        }
+    }
+
+    public function grantFloorBonus(int $player, FloorBonus $bonus): void
+    {
+        $this->bonuses[] = [$player, $bonus];
+    }
+
+    public function advanceSpirit(int $player, string $spiritId, string $via): bool
+    {
+        $this->spirit[$player] = $spiritId;
+        $this->advances[] = [$player, $spiritId, $via];
+
+        return $this->spiritLights[$spiritId] ?? false;
+    }
+
+    public function obtainEnhancedEgo(int $player, string $egoId): void
+    {
+        $this->enhancedDeck = array_values(array_diff($this->enhancedDeck, [$egoId]));
+        $this->egos[$player] = [...($this->egos[$player] ?? []), $egoId];
+    }
+
+    public function win(int $player, string $reason): void
+    {
+        $this->won = [$player, $reason];
+    }
+
+    public function pushRecallActivation(int $player, string $cardId, int $times, array $groups): void
+    {
+        $this->recallPushes[] = [$player, $cardId, $times, $groups];
+    }
+
+    public function isGameOver(): bool
+    {
+        return $this->won !== null;
     }
 }

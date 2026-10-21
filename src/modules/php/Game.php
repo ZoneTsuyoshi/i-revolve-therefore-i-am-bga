@@ -51,6 +51,7 @@ use Bga\Games\IRevolveThereforeIAm\Flow\MovePlanner;
 use Bga\Games\IRevolveThereforeIAm\Flow\Notice;
 use Bga\Games\IRevolveThereforeIAm\Flow\Notification;
 use Bga\Games\IRevolveThereforeIAm\Flow\StateId;
+use Bga\Games\IRevolveThereforeIAm\Flow\TurnKit;
 use Bga\Games\IRevolveThereforeIAm\Setup\GameSetup;
 use Bga\Games\IRevolveThereforeIAm\Setup\InitialEgoDraft;
 use Bga\Games\IRevolveThereforeIAm\Setup\PersonaPlacement;
@@ -65,6 +66,8 @@ class Game extends \Bga\GameFramework\Table
     private ?Database $irDb = null;
 
     private ?GlobalValues $irGlobalValues = null;
+
+    private ?TurnKit $irTurnKit = null;
 
     public function __construct()
     {
@@ -298,6 +301,8 @@ class Game extends \Bga\GameFramework\Table
             $this->irEgos(),
             $this->irPlayerValues(),
             $this->irGlobals(),
+            $this->irRooms(),
+            $this->irSpirits(),
         );
     }
 
@@ -329,15 +334,44 @@ class Game extends \Bga\GameFramework\Table
     }
 
     /**
+     * 想起・床アクション・自己構成・精神分析・効果解決・フリーアクションの部品（70・71・40・50・51・60・61・62 が共有する）。
+     * 1 回のリクエストの中では同じ組み立てを使う（通知が溜まる順序を保つため）。
+     */
+    public function irTurn(): TurnKit
+    {
+        return $this->irTurnKit ??= new TurnKit(
+            $this->irMemoryCards(),
+            $this->irRooms(),
+            $this->irSpirits(),
+            $this->irEgos(),
+            $this->irPlayerValues(),
+            $this->irGlobals(),
+            $this->irEffectStack(),
+            $this->irGameView(),
+            new CatalogSpecSource(),
+            fn(int $playerId): string => $this->getPlayerNameById($playerId),
+            fn() => $this->irCheckVictory(),
+        );
+    }
+
+    /**
      * 効果解決スタックにイベント（EV-01〜EV-08。仕様書 008 §4.1）の誘発を積む口。
+     * 自己構成済みカード・自我カードのうちこのイベントに反応する TRIGGER を集め、条件を評価して SPEC_RUN の frame を
+     * 解決スタックの先頭に積む（複数で衝突するときは ORDER_EFFECTS。008 §6.3）。
      *
      * @param list<GameEvent> $events
      */
     public function irEmitEvents(array $events): void
     {
-        // TODO(I-09): EffectCatalog から、ターンプレイヤーの自己構成済みカード・自我カードのうちこのイベントに反応する
-        //  TRIGGER を集め（008 §4.2）、条件を評価して SPEC_RUN の frame を積む（複数あれば §6.3 の順序づけ）。
-        //  EV-02（M061・M067・M069・I06）、EV-03（I04.2）、EV-04（I07）が移動から来る。
+        $this->irTurn()->triggers->emit($events);
+    }
+
+    /**
+     * 勝利判定（断片の結集 = 自己構成スコア 20 以上。008 §6.8）。スコアが変わりうる操作の直後に呼ばれる。成立したら end_reason を書く。
+     */
+    public function irCheckVictory(): void
+    {
+        // TODO(I-08・I-10): WinChecker と ScoreCalculator（目標カードの得点を含む）で全プレイヤーを評価し、FRAGMENTS を書く
     }
 
     /**

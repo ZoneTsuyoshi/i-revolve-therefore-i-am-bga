@@ -81,6 +81,18 @@ enum Op: string
     }
 
     /**
+     * この操作が、解決スタックに新しい frame を積むか（OP-12 の到着処理、OP-25 の想起効果の発動）。
+     * 積んだ後は、続きの節より先に積んだ frame を解決するため、エンジンは一度止まる（`EngineResult::$yielded`）。
+     */
+    public function pushesFrames(): bool
+    {
+        return match ($this) {
+            self::ADVANCE_TIER, self::RECALL_ACTIVATE => true,
+            default => false,
+        };
+    }
+
+    /**
      * この操作の直後に勝利判定を呼ぶか（008 §6.8。自己構成・移動・フリーアクション側の呼び出しは含めない）。
      */
     public function checksVictory(): bool

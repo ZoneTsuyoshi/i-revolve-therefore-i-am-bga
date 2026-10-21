@@ -18,7 +18,7 @@ use Bga\Games\IRevolveThereforeIAm\Game;
 
 /**
  * 50: 床アクションフェイズ。ターンプレイヤーの現在の部屋の床アクションと、想起で得た代替から選択肢を作る（006 §5.3）。
- * 選ぶ余地がなければ自動で実行する（EXECUTE）。骨格では何も実行せずに 70 へ進む。
+ * 選ぶ余地がなければ自動で実行する（EXECUTE）。中身は Flow/FloorActionPhase。
  */
 class FloorActionStart extends GameState
 {
@@ -39,11 +39,10 @@ class FloorActionStart extends GameState
     public function onEnteringState(): string
     {
         $this->game->irEnterPhase(GamePhase::Floor);
+        $result = $this->game->irTurn()->floor->start();
+        $this->game->irSend(...$result['notices']);
+        $this->game->gamestate->changeActivePlayer($this->game->irGlobals()->turnPlayer());
 
-        // TODO(I-07): 選択肢（床アクションの分岐と floor_alternatives）を作り、複数あれば CHOOSE。
-        //  1 つなら床アクションの frame を積んで EXECUTE
-        $this->game->irGlobals()->setResume(StateId::CONSTRUCT);
-
-        return Transition::EXECUTE;
+        return $result['choose'] ? Transition::CHOOSE : Transition::EXECUTE;
     }
 }

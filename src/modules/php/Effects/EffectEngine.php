@@ -11,6 +11,7 @@ namespace Bga\Games\IRevolveThereforeIAm\Effects;
 
 use Bga\Games\IRevolveThereforeIAm\Effects\Catalog\SpecSource;
 use Bga\Games\IRevolveThereforeIAm\Effects\Condition\ConditionEvaluator;
+use Bga\Games\IRevolveThereforeIAm\Effects\Context\ActionAvailability;
 use Bga\Games\IRevolveThereforeIAm\Effects\Context\GameEvent;
 use Bga\Games\IRevolveThereforeIAm\Effects\Context\GameMutator;
 use Bga\Games\IRevolveThereforeIAm\Effects\Context\GameView;
@@ -26,10 +27,13 @@ use Bga\Games\IRevolveThereforeIAm\Effects\Query\ActiveSpecs;
 use Bga\Games\IRevolveThereforeIAm\Effects\Query\ComposeEnergyQuery;
 use Bga\Games\IRevolveThereforeIAm\Material\ChoiceKind;
 use Bga\Games\IRevolveThereforeIAm\Material\Control;
+use Bga\Games\IRevolveThereforeIAm\Material\EffectKind;
 use Bga\Games\IRevolveThereforeIAm\Material\EffectNode;
 use Bga\Games\IRevolveThereforeIAm\Material\EffectSpec;
 use Bga\Games\IRevolveThereforeIAm\Material\EffectStep;
+use Bga\Games\IRevolveThereforeIAm\Material\Mechanism;
 use Bga\Games\IRevolveThereforeIAm\Material\Op;
+use Bga\Games\IRevolveThereforeIAm\Material\OwnerScope;
 
 /**
  * 効果解決スタックの frame（`SPEC_RUN`）を進めるエンジン（008 §11.1。70 `EffectResolve` が呼ぶ）。フレームワークを呼ばない。
@@ -45,17 +49,28 @@ use Bga\Games\IRevolveThereforeIAm\Material\Op;
  * - `CHOOSE_ONE`: 分岐を聞く（`ChoiceRequest.kind` が null。答えは `['branch' => 番号]`）。選ばれなかった分岐は飛ばす。
  * - `REPEAT`: 後続のタスク（M090。008 §11.2 の順 5）で足す。
  *
- * 未実装の原子操作（OP-10〜OP-21、OP-25）に当たったら {@see UnsupportedOp}。
+ * 61・62 に入る行動（OP-10・OP-11）は {@see ChoiceRequest::action()} を返して止まる。61・62 が確定したら {@see self::completeAction()}、
+ * 行わないなら {@see self::cancelAction()} で続きを解決する。解決スタックに frame を積む操作（`Op::pushesFrames()`）の後は、
+ * 積まれた frame を先に解決するため {@see EngineResult::$yielded} で止まる。
+ *
+ * 未実装の原子操作（OP-16〜OP-21）に当たったら {@see UnsupportedOp}。
  */
 final class EffectEngine
 {
+    /** 原子操作 1 つだけの frame の効果 ID の接頭辞（`OP:OP-26`） */
+    public const OP_PREFIX = 'OP:';
+
     private readonly ComposeEnergyQuery $energy;
+
+    /** @var array<string, EffectSpec> */
+    private array $opSpecs = [];
 
     public function __construct(
         private readonly GameView $view,
         private readonly GameMutator $mutator,
         private readonly SpecSource $specs,
         private readonly OpRegistry $registry = new OpRegistry(),
+        private readonly ?ActionAvailability $availability = null,
     ) {
         $this->energy = new ComposeEnergyQuery(
             new ActiveSpecs($view, $specs, new ConditionEvaluator($view)),
@@ -72,6 +87,14 @@ final class EffectEngine
         $this->spec($specId);
 
         return new EffectFrame($specId, $owner, $source, 0, [], null, $payload);
+    }
+
+    /**
+     * 原子操作 1 つだけを実行する frame を作る（`OP` frame。`OP:OP-26` のような効果 ID を使う。パラメータの無い操作だけ）。
+     */
+    public static function opSpecId(Op $op): string
+    {
+        return self::OP_PREFIX . $op->value;
     }
 
     /**
@@ -105,6 +128,9 @@ final class EffectEngine
     public function skip(EffectFrame $frame): EngineResult
     {
         $pending = $frame->pending ?? throw new EffectViolation('No pending choice');
+        if ($pending->isAction()) {
+            throw new EffectViolation('Use cancelAction() for a compose or analysis action');
+        }
         if ($pending->kind !== null && !$pending->kind->skippable()) {
             throw new EffectViolation("{$pending->kind->value} cannot be skipped");
         }
@@ -112,9 +138,90 @@ final class EffectEngine
         return $this->resume($frame, OpAnswer::skipped());
     }
 
+    /**
+     * 61・62 で行動が確定した。その節を済ませて続きを解決する。
+     *
+     * @throws EffectViolation 待っているのが行動ではないとき
+     */
+    public function completeAction(EffectFrame $frame): EngineResult
+    {
+        $pending = $this->pendingAction($frame);
+        $frame->pending = null;
+        $frame->step = $pending->step + 1;
+
+        return $this->advance($frame, []);
+    }
+
+    /**
+     * 61・62 で行動を行わなかった（`actCancel`）。その行動を包む `OPTIONAL` を「行わない」にして続きを解決する。
+     *
+     * @throws EffectViolation 待っているのが行動ではないとき、行わない選択ができないとき
+     */
+    public function cancelAction(EffectFrame $frame): EngineResult
+    {
+        $pending = $this->pendingAction($frame);
+        $optional = null;
+        foreach ($this->spec($frame->specId)->steps() as $step) {
+            if ($step->index < $pending->step && $pending->step < $step->end && $step->node->kind === Control::OPTIONAL) {
+                $optional = $step;
+            }
+        }
+        if ($optional === null) {
+            throw new EffectViolation('This action cannot be skipped');
+        }
+        $frame->decisions[$optional->index] = 0;
+        $frame->pending = null;
+        $frame->step = $optional->end;
+
+        return $this->advance($frame, []);
+    }
+
+    /**
+     * 先頭が `CHOOSE_ONE` の効果（APHRODITE・HEPHAESTUS）で、分岐を先に決めておく（51 の選択。選んだ分岐の先頭へ進める）。
+     *
+     * @throws EffectViolation 分岐のある効果でないとき、分岐の番号が違うとき
+     */
+    public function selectBranch(EffectFrame $frame, int $branch): void
+    {
+        $steps = $this->spec($frame->specId)->steps();
+        $chooser = $steps[0] ?? null;
+        if ($chooser === null || $chooser->node->kind !== Control::CHOOSE_ONE || $frame->step !== 0) {
+            throw new EffectViolation('This effect has no branches to choose');
+        }
+        if ($branch < 0 || $branch >= count($chooser->node->children)) {
+            throw new EffectViolation('Unknown branch');
+        }
+        $frame->decisions[0] = $branch;
+        $frame->pending = null;
+        $frame->step = $this->branchStart($steps, $chooser, $branch);
+    }
+
+    /**
+     * 効果の分岐の数（分岐の無い効果は 0）。51 が選択肢を作るのに使う。
+     */
+    public function branchCount(string $specId): int
+    {
+        $first = $this->spec($specId)->steps()[0] ?? null;
+
+        return $first !== null && $first->node->kind === Control::CHOOSE_ONE ? count($first->node->children) : 0;
+    }
+
+    private function pendingAction(EffectFrame $frame): ChoiceRequest
+    {
+        $pending = $frame->pending;
+        if ($pending === null || !$pending->isAction()) {
+            throw new EffectViolation('No compose or analysis action is pending');
+        }
+
+        return $pending;
+    }
+
     private function resume(EffectFrame $frame, OpAnswer $answer): EngineResult
     {
         $pending = $frame->pending ?? throw new EffectViolation('No pending choice');
+        if ($pending->isAction()) {
+            throw new EffectViolation('A compose or analysis action is pending');
+        }
         $steps = $this->spec($frame->specId)->steps();
         $step = $steps[$pending->step];
         $events = [];
@@ -136,6 +243,9 @@ final class EffectEngine
             $events = $this->execute($frame, $step, $handler, $answer);
             $frame->pending = null;
             $frame->step = $step->index + 1;
+            if ($step->node->atomicOp()?->pushesFrames() === true && $frame->step < count($steps)) {
+                return new EngineResult(null, $events, true);
+            }
         }
 
         return $this->advance($frame, $events);
@@ -150,6 +260,9 @@ final class EffectEngine
         $count = count($steps);
 
         while ($frame->step < $count) {
+            if ($this->mutator->isGameOver()) {
+                return new EngineResult(null, $events);
+            }
             $skipTo = $this->skipTarget($steps, $frame);
             if ($skipTo !== null) {
                 $frame->step = $skipTo;
@@ -178,6 +291,9 @@ final class EffectEngine
             }
             array_push($events, ...$this->execute($frame, $step, $handler, OpAnswer::auto()));
             $frame->step = $step->index + 1;
+            if ($node->atomicOp()?->pushesFrames() === true && $frame->step < $count) {
+                return new EngineResult(null, $events, true);
+            }
         }
 
         return new EngineResult(null, $events);
@@ -303,11 +419,25 @@ final class EffectEngine
 
     private function context(EffectFrame $frame, EffectNode $node): OpContext
     {
-        return new OpContext($this->view, $this->mutator, $this->energy, $node, $frame->owner);
+        return new OpContext($this->view, $this->mutator, $this->energy, $node, $frame->owner, $this->availability, $frame->payload);
     }
 
     private function spec(string $specId): EffectSpec
     {
+        if (str_starts_with($specId, self::OP_PREFIX)) {
+            $op = Op::tryFrom(substr($specId, strlen(self::OP_PREFIX)))
+                ?? throw new \OutOfBoundsException("Unknown effect id: {$specId}");
+
+            return $this->opSpecs[$specId] ??= new EffectSpec(
+                id: $specId,
+                source: '',
+                mechanism: Mechanism::ACTION,
+                kind: EffectKind::NONE,
+                ownerScope: OwnerScope::TURN_PLAYER,
+                ops: [EffectNode::op($op)],
+            );
+        }
+
         return $this->specs->find($specId) ?? throw new \OutOfBoundsException("Unknown effect id: {$specId}");
     }
 }

@@ -24,6 +24,8 @@ final class StoredGameView implements GameView
         private readonly EgoRepository $egos,
         private readonly PlayerValues $players,
         private readonly GlobalValues $globals,
+        private readonly RoomRepository $rooms,
+        private readonly SpiritRepository $spirits,
     ) {
     }
 
@@ -164,5 +166,34 @@ final class StoredGameView implements GameView
         }
 
         return $out;
+    }
+
+    public function floorIdAt(int $position): string
+    {
+        return sprintf('F%02d', $this->rooms->floorAt($position));
+    }
+
+    public function spiritId(int $player): ?string
+    {
+        return $this->players->spirit($player);
+    }
+
+    public function nextSpiritIds(int $player): array
+    {
+        $current = $this->players->spirit($player);
+        $next = ($current === null ? 0 : $this->spirits->tierOf($current)) + 1;
+
+        return array_values(array_map(
+            static fn(array $card): string => $card['id'],
+            array_filter($this->spirits->all(), static fn(array $card): bool => $card['tier'] === $next),
+        ));
+    }
+
+    public function enhancedEgoIds(): array
+    {
+        $ids = array_map(static fn(array $e): string => $e['id'], $this->egos->inLoc(EgoRepository::ENH_DECK));
+        sort($ids);
+
+        return $ids;
     }
 }

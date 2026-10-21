@@ -102,4 +102,25 @@ export function registerStubStates(bga) {
     bga.states.register('Construct', new StubState(bga, [
         { label: 'End compose phase', action: 'actEndConstruct' },
     ]));
+    // 51: 床アクションの選択肢（床アクション・左右の分岐・想起由来の代替）
+    bga.states.register('FloorActionChoose', new DynamicStubState(bga, (args) => {
+        /** @type {{kind: string, branch?: number, discount?: number}[]} */
+        const options = /** @type {any} */ (args)?.options ?? [];
+        return options.map((option) => ({ label: option.kind, action: 'actChooseFloorAction', args: { kind: option.kind } }));
+    }));
+    // 61・62: 自己構成・精神分析の操作 UI は後続。いまは取り消して先へ進む
+    bga.states.register('Compose', new StubState(bga, [
+        { label: 'Cancel (placeholder)', action: 'actCancel' },
+    ]));
+    bga.states.register('Analysis', new StubState(bga, [
+        { label: 'Cancel (placeholder)', action: 'actCancel' },
+    ]));
+    // 71: 効果の選択はサーバーの既定（zombie と同じ）で解決する
+    bga.states.register('EffectChoice', new StubState(bga, [
+        { label: 'Resolve automatically (placeholder)', action: 'actResolveAuto' },
+    ]));
+    // 72: 手札上限の超過分をサーバーの既定で捨てる
+    bga.states.register('HandLimitDiscard', new StubState(bga, [
+        { label: 'Discard automatically (placeholder)', action: 'actDiscardExcessAuto' },
+    ]));
 }

@@ -21,6 +21,33 @@ final class EffectFrame
     /** 手札上限の確認（006 §7.1）。unit の終わりに積み、70 が超過したプレイヤーを 72 へ送る。 */
     public const KIND_HAND_LIMIT_CHECK = 'HAND_LIMIT_CHECK';
 
+    /** `EffectSpec` の操作列の実行（008 §1.2。`spec` と `step`。選択の途中経過は `params['decisions']` と `choice`）。 */
+    public const KIND_SPEC_RUN = 'SPEC_RUN';
+
+    /** 原子操作 1 つ（`op`。パラメータの無い操作だけ。OP-05 など）。 */
+    public const KIND_OP = 'OP';
+
+    /** 想起効果の発動（006 §5.2。`source` は表向きの想い出カード `M0NN`、`params` は `times`・`nth`・`groups`）。 */
+    public const KIND_RECALL_ACTIVATION = 'RECALL_ACTIVATION';
+
+    /** ターンプレイヤーが開始時の部屋のカードを獲得する（OP-26 と同じ）。 */
+    public const KIND_ACQUIRE_ROOM_CARD = 'ACQUIRE_ROOM_CARD';
+
+    /** 自己構成アクション（61 へ。`params` は `ctx`・`discount`）。 */
+    public const KIND_COMPOSE = 'COMPOSE';
+
+    /** 精神分析アクション（62 へ。`params` は `ctx`・`discount`）。 */
+    public const KIND_ANALYZE = 'ANALYZE';
+
+    /** 同時に誘発した効果の解決順の選択（`params['effects']` に残りの効果）。 */
+    public const KIND_ORDER_EFFECTS = 'ORDER_EFFECTS';
+
+    /** 勝利・全員敗北の判定の窓（現在は何もせず消える。I-08 が使う）。 */
+    public const KIND_END_CHECK = 'END_CHECK';
+
+    /** 確認の門（`params['gate'] = 'CONFIRM'`）が付いた frame は、`CONFIRM_USE` の答えが来るまで解決しない。 */
+    public const GATE_CONFIRM = 'CONFIRM';
+
     /**
      * @param array<string, mixed>|null $params
      * @param array<string, mixed>|null $payload
@@ -45,6 +72,68 @@ final class EffectFrame
         public readonly ?array $payload = null,
         public readonly ?array $choice = null,
     ) {
+    }
+
+    /**
+     * `EffectSpec` の操作列の実行 frame。`$confirm` なら、最初に `CONFIRM_USE`（使う / 使わない）を聞く門を付ける。
+     *
+     * @param array<string, scalar|null> $payload 誘発したイベントの内容
+     * @param array<string, mixed> $params 追加のパラメータ（`decisions` は空で始める）
+     */
+    public static function specRun(
+        string $spec,
+        int $owner,
+        string $source = '',
+        array $payload = [],
+        bool $confirm = false,
+        array $params = [],
+    ): self {
+        $params = ['decisions' => [], ...$params];
+        $choice = null;
+        if ($confirm) {
+            $params['gate'] = self::GATE_CONFIRM;
+            $choice = ['kind' => 'CONFIRM_USE', 'owner' => $owner, 'step' => 0, 'data' => ['source' => $source, 'spec' => $spec]];
+        }
+
+        return new self(
+            self::KIND_SPEC_RUN,
+            $owner,
+            source: $source === '' ? null : $source,
+            spec: $spec,
+            status: $confirm ? self::WAITING : self::READY,
+            params: $params,
+            payload: $payload === [] ? null : $payload,
+            choice: $choice,
+        );
+    }
+
+    /**
+     * 原子操作 1 つ（パラメータの無い操作）の frame。`$op` は `Op` の値（`OP-05`）。
+     */
+    public static function op(string $op, int $owner): self
+    {
+        return new self(self::KIND_OP, $owner, op: $op, params: ['decisions' => []]);
+    }
+
+    /**
+     * 61・62 に入る行動の frame。`$kind` は `COMPOSE` / `ANALYZE`。`$cancelTo` は取り消したときに戻る状態 ID。
+     */
+    public static function action(string $kind, int $owner, string $context, int $discount, ?int $cancelTo = null): self
+    {
+        return new self(
+            $kind,
+            $owner,
+            cancelTo: $cancelTo,
+            params: ['ctx' => $context, 'discount' => $discount],
+        );
+    }
+
+    /**
+     * 手札上限の確認（単位の終わり）。
+     */
+    public static function handLimitCheck(int $turnPlayer): self
+    {
+        return new self(self::KIND_HAND_LIMIT_CHECK, $turnPlayer, unit: true);
     }
 
     /**

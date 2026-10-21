@@ -96,4 +96,20 @@ interface GameView
      * @return list<array{kind: ActionKind, discount: int}> 記録された床アクションの代替（種類ごとに 1 つ）
      */
     public function floorAlternatives(): array;
+
+    /** 位置（1〜12）の床カードの ID（`F01`〜`F12`。M055〜M057 で入れ替わる） */
+    public function floorIdAt(int $position): string;
+
+    /** 精神トラック上の現在の精神カード ID（階層 0 は null） */
+    public function spiritId(int $player): ?string;
+
+    /**
+     * @return list<string> 次の階層の精神カード ID（現在地から 1 つ上。第五階層なら空）
+     */
+    public function nextSpiritIds(int $player): array;
+
+    /**
+     * @return list<string> 強化自我の山に残るカードの ID（昇順。本人にだけ見せる候補）
+     */
+    public function enhancedEgoIds(): array;
 }
