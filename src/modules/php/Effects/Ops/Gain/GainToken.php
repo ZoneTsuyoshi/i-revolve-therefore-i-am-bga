@@ -25,7 +25,10 @@ final class GainToken extends AbstractOp
         if (!$token instanceof TokenKind) {
             throw new \LogicException('GAIN_TOKEN needs a TokenKind in "token"');
         }
-        $context->mutator->gainToken($context->owner, $token, $context->node->intParam('n', 1));
+        $count = $this->amount($context);
+        if ($count > 0) {
+            $context->mutator->gainToken($context->owner, $token, $count);
+        }
 
         return [];
     }

@@ -20,6 +20,7 @@ final readonly class ComposePlan
      * @param int $lights 払う心光の総数（逓増と軽減を反映）
      * @param list<int> $taps 横向きにする自己構成済みカード（M095）
      * @param int $need 払う必要のあるエネルギー（軽減と横向きを反映。0 未満にならない）
+     * @param list<int> $extra I08 の追加支払い（自己構成したカードの下に裏向きで置く。1 枚につきスコア +1）
      */
     public function __construct(
         public int $cardId,
@@ -28,6 +29,7 @@ final readonly class ComposePlan
         public int $lights,
         public array $taps,
         public int $need,
+        public array $extra = [],
     ) {
     }
 }

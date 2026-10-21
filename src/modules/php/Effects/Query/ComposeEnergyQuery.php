@@ -190,6 +190,17 @@ final class ComposeEnergyQuery
         return $this->heldEnergy($player, $handCardId, $tableauCardId) <= $limit;
     }
 
+    /**
+     * MD-08（I08）で、自己構成するときに追加で払ってよい手札の枚数（持っていなければ 0）。自己構成の文脈を問わない（FAQ 行 38）。
+     */
+    public function extraPayMax(int $player): int
+    {
+        $specs = $this->active->modifiers($player, Modifier::EXTRA_PAY_SCORE, new ConditionContext($player));
+        $max = $specs[0]->params['max'] ?? 0;
+
+        return isset($specs[0]) && is_int($max) ? $max : 0;
+    }
+
     private function tapSpec(int $player): ?EffectSpec
     {
         $specs = $this->active->modifiers($player, Modifier::TAP_FOR_ENERGY, new ConditionContext($player));

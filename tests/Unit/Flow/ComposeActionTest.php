@@ -21,7 +21,6 @@ use Bga\Games\IRevolveThereforeIAm\Material\Op;
 use Bga\Games\IRevolveThereforeIAm\Material\OwnerScope;
 use IRevolveTests\Support\ArrayCatalog;
 use IRevolveTests\Support\MoveFixture;
-use IRevolveTests\Support\TestSpecs;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -132,7 +131,7 @@ final class ComposeActionTest extends TestCase
         $this->assertRejected($target, ['discard' => [$a, $a]], 'duplicates');
         $this->assertRejected($target, ['discard' => 'x'], 'list');
         $this->assertRejected($target, ['light' => -1], 'count');
-        $this->assertRejected($target, ['extra' => [$a]], 'not available');
+        $this->assertRejected($target, ['extra' => [$a]], 'extra cards');
         $this->assertRejected($other, [], 'cannot be composed');
     }
 
@@ -418,7 +417,7 @@ final class ComposeActionTest extends TestCase
             events: [Event::COMPOSED],
             conditions: [ConditionRef::of(Condition::COMPOSED_CARD_HAS_KEY, ['type' => KeyType::WISDOM])],
         );
-        $catalog = new ArrayCatalog([...array_values(EffectCatalog::all()), ...TestSpecs::all(), $trigger]);
+        $catalog = new ArrayCatalog([...array_values(EffectCatalog::all()), $trigger]);
         $fx = new MoveFixture($catalog);
         $fx->giveTableau(self::P, [73]);
         [$wisdom, $emotion, $x, $y] = $fx->giveHand(self::P, [1, 2, 3, 4]);

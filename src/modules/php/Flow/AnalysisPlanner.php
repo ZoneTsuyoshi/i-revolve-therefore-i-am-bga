@@ -36,6 +36,12 @@ final class AnalysisPlanner
 {
     private const MAX_USES = 30;
 
+    /** MD-10（I04.1）で、払った手札を床カードの下へ置くか。 */
+    public function redirectsToFloor(int $player): bool
+    {
+        return $this->cost->redirectsPaymentUnderFloor($player);
+    }
+
     public function __construct(
         private readonly GameView $view,
         private readonly PlayerValues $players,

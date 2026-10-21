@@ -25,6 +25,7 @@ use Bga\Games\IRevolveThereforeIAm\Effects\Ops\OpHandler;
 use Bga\Games\IRevolveThereforeIAm\Effects\Ops\OpRegistry;
 use Bga\Games\IRevolveThereforeIAm\Effects\Query\ActiveSpecs;
 use Bga\Games\IRevolveThereforeIAm\Effects\Query\ComposeEnergyQuery;
+use Bga\Games\IRevolveThereforeIAm\Effects\Value\ValueEvaluator;
 use Bga\Games\IRevolveThereforeIAm\Material\ChoiceKind;
 use Bga\Games\IRevolveThereforeIAm\Material\Control;
 use Bga\Games\IRevolveThereforeIAm\Material\EffectKind;
@@ -34,6 +35,7 @@ use Bga\Games\IRevolveThereforeIAm\Material\EffectStep;
 use Bga\Games\IRevolveThereforeIAm\Material\Mechanism;
 use Bga\Games\IRevolveThereforeIAm\Material\Op;
 use Bga\Games\IRevolveThereforeIAm\Material\OwnerScope;
+use Bga\Games\IRevolveThereforeIAm\Material\ValueExpr;
 
 /**
  * 効果解決スタックの frame（`SPEC_RUN`）を進めるエンジン（008 §11.1。70 `EffectResolve` が呼ぶ）。フレームワークを呼ばない。
@@ -47,13 +49,16 @@ use Bga\Games\IRevolveThereforeIAm\Material\OwnerScope;
  * - `OPTIONAL`: `via` が null（61・62 の `actCancel` が担う）、または子の操作自身の選択なら確認を挟まない。
  *   `CONFIRM_USE` / `CONFIRM_MOVE` なら聞く（答えは `['use' => bool]`、スキップは「行わない」）。
  * - `CHOOSE_ONE`: 分岐を聞く（`ChoiceRequest.kind` が null。答えは `['branch' => 番号]`）。選ばれなかった分岐は飛ばす。
- * - `REPEAT`: 後続のタスク（M090。008 §11.2 の順 5）で足す。
+ * - `REPEAT`: 値式で決まる回数だけ子を繰り返す（M090 の「3 枚につき」）。残り回数は `decisions` に持つ。
  *
  * 61・62 に入る行動（OP-10・OP-11）は {@see ChoiceRequest::action()} を返して止まる。61・62 が確定したら {@see self::completeAction()}、
  * 行わないなら {@see self::cancelAction()} で続きを解決する。解決スタックに frame を積む操作（`Op::pushesFrames()`）の後は、
  * 積まれた frame を先に解決するため {@see EngineResult::$yielded} で止まる。
  *
- * 未実装の原子操作（OP-16〜OP-21）に当たったら {@see UnsupportedOp}。
+ * 起きたイベントがある操作の後も、続きの節があれば {@see EngineResult::$yielded} で止まる。呼び出し側がイベントに誘発した効果を
+ * 解決スタックの先頭に積み、先に解決してから続きを解決する（M085〜M087 の追加分は、床の要素の直後、次の要素の前に解決する。008 §6.6）。
+ *
+ * ハンドラの無い原子操作（OP-20 `PLACE_UNDER_FLOOR` は 62 が行う）に当たったら {@see UnsupportedOp}。
  */
 final class EffectEngine
 {
@@ -243,7 +248,7 @@ final class EffectEngine
             $events = $this->execute($frame, $step, $handler, $answer);
             $frame->pending = null;
             $frame->step = $step->index + 1;
-            if ($step->node->atomicOp()?->pushesFrames() === true && $frame->step < count($steps)) {
+            if (($events !== [] || $step->node->atomicOp()?->pushesFrames() === true) && $frame->step < count($steps)) {
                 return new EngineResult(null, $events, true);
             }
         }
@@ -259,7 +264,11 @@ final class EffectEngine
         $steps = $this->spec($frame->specId)->steps();
         $count = count($steps);
 
-        while ($frame->step < $count) {
+        while (true) {
+            $this->loopBack($steps, $frame);
+            if ($frame->step >= $count) {
+                break;
+            }
             if ($this->mutator->isGameOver()) {
                 return new EngineResult(null, $events);
             }
@@ -291,7 +300,7 @@ final class EffectEngine
             }
             array_push($events, ...$this->execute($frame, $step, $handler, OpAnswer::auto()));
             $frame->step = $step->index + 1;
-            if ($node->atomicOp()?->pushesFrames() === true && $frame->step < $count) {
+            if (($events !== [] || $node->atomicOp()?->pushesFrames() === true) && $frame->step < $count) {
                 return new EngineResult(null, $events, true);
             }
         }
@@ -331,8 +340,42 @@ final class EffectEngine
 
                 return null;
 
+            case Control::REPEAT:
+                if (!isset($frame->decisions[$step->index])) {
+                    $times = $node->params['times'] ?? 0;
+                    $frame->decisions[$step->index] = is_int($times) || $times instanceof ValueExpr
+                        ? max(0, ValueEvaluator::evaluate($times, $this->view, $frame->owner))
+                        : 0;
+                }
+                if ($frame->decisions[$step->index] > 0) {
+                    $frame->decisions[$step->index]--;
+                    $frame->step = $step->index + 1;
+                } else {
+                    $frame->step = $step->end;
+                }
+
+                return null;
             default:
-                throw UnsupportedOp::forKind(Control::REPEAT);
+                throw UnsupportedOp::forKind($node->kind);
+        }
+    }
+
+    /**
+     * `REPEAT` の子を 1 回終えたとき（位置が節の終わり）、残りの回数があれば先頭へ戻る。
+     *
+     * @param list<EffectStep> $steps
+     */
+    private function loopBack(array $steps, EffectFrame $frame): void
+    {
+        foreach ($steps as $step) {
+            if (
+                $step->node->kind === Control::REPEAT && $frame->step === $step->end
+                && ($frame->decisions[$step->index] ?? 0) > 0
+            ) {
+                $frame->step = $step->index;
+
+                return;
+            }
         }
     }
 

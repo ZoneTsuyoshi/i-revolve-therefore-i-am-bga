@@ -104,6 +104,11 @@ final class StoredGameView implements GameView
         ));
     }
 
+    public function floorUnderIds(int $position): array
+    {
+        return array_map(static fn(MemoryCard $c): int => $c->id, $this->memoryCards->inLoc(MemoryLocation::UnderFloor, $position));
+    }
+
     public function recallRoomPosition(): ?int
     {
         $recall = $this->globals->turnContext()->recall;

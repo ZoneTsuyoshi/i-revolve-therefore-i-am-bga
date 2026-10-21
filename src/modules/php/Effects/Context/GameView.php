@@ -66,6 +66,11 @@ interface GameView
      */
     public function playersAt(int $position): array;
 
+    /**
+     * @return list<int> 位置の床カードの下に置かれた想い出カード（I04。置いた順。位置に付く）
+     */
+    public function floorUnderIds(int $position): array;
+
     /** 想起フェイズ開始時の部屋の位置（`TurnContext.recall.room_pos`）。想起フェイズ以外では null */
     public function recallRoomPosition(): ?int;
 

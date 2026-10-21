@@ -24,7 +24,10 @@ final class GainLight extends AbstractOp
 {
     public function execute(OpContext $context, OpAnswer $answer): array
     {
-        $count = $context->node->intParam('n', 1);
+        $count = $this->amount($context);
+        if ($count === 0) {
+            return [];
+        }
         $origin = $context->node->originParam();
         $context->mutator->gainLight($context->owner, $count, $origin);
 

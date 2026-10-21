@@ -667,4 +667,144 @@ final class Notification
             GamePhase::End => clienttranslate('Game end'),
         };
     }
+
+    /**
+     * N19: I08 の追加支払い。他人には枚数だけ、本人の `_private` に下に置いたカード。
+     *
+     * @param list<array{id: int, type: int}> $cards
+     */
+    public static function cardsAttached(int $playerId, string $playerName, int $hostId, string $hostName, array $cards, int $handCount): Notice
+    {
+        return new Notice('cardsAttached', clienttranslate('${player_name} puts ${count} memory card(s) under ${card_name}'), [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'host_id' => $hostId,
+            'card_name' => $hostName,
+            'count' => count($cards),
+            'hand_count' => $handCount,
+            'i18n' => ['card_name'],
+            '_private' => [$playerId => ['cards' => $cards]],
+        ]);
+    }
+
+    /**
+     * N20: I04。支払った手札を部屋の床カードの下に置く（公開）。
+     *
+     * @param list<array{id: int, type: int}> $cards
+     */
+    public static function cardsPlacedUnderFloor(int $playerId, string $playerName, int $pos, string $roomName, array $cards, int $handCount): Notice
+    {
+        return new Notice('cardsPlacedUnderFloor', clienttranslate('${player_name} places ${count} memory card(s) under ${room_name}'), [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'pos' => $pos,
+            'room_name' => $roomName,
+            'cards' => $cards,
+            'count' => count($cards),
+            'hand_count' => $handCount,
+            'i18n' => ['room_name'],
+        ]);
+    }
+
+    /**
+     * N13（`UNDER_FLOOR`）: 床の下から手札へ（I04.2。公開）。
+     *
+     * @param list<array{id: int, type: int}> $cards
+     */
+    public static function cardsGainedFromFloor(int $playerId, string $playerName, int $pos, string $roomName, array $cards, int $handCount): Notice
+    {
+        return new Notice('cardsGained', clienttranslate('${player_name} takes ${count} memory card(s) from under ${room_name}'), [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'cards' => $cards,
+            'count' => count($cards),
+            'source' => 'UNDER_FLOOR',
+            'pos' => $pos,
+            'room_name' => $roomName,
+            'hand_count' => $handCount,
+            'reason' => 'EFFECT',
+            'i18n' => ['room_name'],
+        ]);
+    }
+
+    /**
+     * N27: I05。部屋のカードが手札へ、手札のカードが裏向きで部屋へ。公開部分は ID と裏面だけで、種類は本人の `_private`。
+     *
+     * @param array{id: int, type: int} $roomCard
+     * @param array{id: int, type: int} $handCard
+     */
+    public static function roomCardSwappedWithHand(
+        int $playerId,
+        string $playerName,
+        int $pos,
+        string $roomName,
+        array $roomCard,
+        array $handCard,
+        string $back,
+    ): Notice {
+        return new Notice('roomCardSwappedWithHand', clienttranslate('${player_name} swaps a memory card in hand with the one in ${room_name}'), [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'pos' => $pos,
+            'room_name' => $roomName,
+            'room_card_id' => $roomCard['id'],
+            'hand_card_id' => $handCard['id'],
+            'back' => $back,
+            'i18n' => ['room_name'],
+            '_private' => [$playerId => ['room_card' => $roomCard, 'hand_card' => $handCard]],
+        ]);
+    }
+
+    /**
+     * N28: 部屋の入れ替え（M052〜M057）。`$after` は入れ替え後の状態（CARD: pos / card_id / back、FLOOR: pos / floor_id）。
+     *
+     * @param list<array<string, mixed>> $after
+     */
+    public static function roomsSwapped(
+        int $playerId,
+        string $playerName,
+        string $kind,
+        int $posA,
+        int $posB,
+        string $roomA,
+        string $roomB,
+        array $after,
+    ): Notice {
+        $message = $kind === 'FLOOR'
+            ? clienttranslate('${player_name} swaps the floors of ${room_a} and ${room_b}')
+            : clienttranslate('${player_name} swaps the memory cards of ${room_a} and ${room_b}');
+
+        return new Notice('roomsSwapped', $message, [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'kind' => $kind,
+            'pos_a' => $posA,
+            'pos_b' => $posB,
+            'room_a' => $roomA,
+            'room_b' => $roomB,
+            'after' => $after,
+            'i18n' => ['room_a', 'room_b'],
+        ]);
+    }
+
+    /**
+     * N15（`ARCHITECT`）: I03 で自己構成済みのカードが捨札へ移る（全員に公開）。`from_tableau` が真のとき、クライアントは
+     * 自己構成済みエリア（とプレイヤーパネルの鍵の数）から `cards[0]` を取り除く。
+     *
+     * @param array{id: int, type: int} $card
+     * @param array{1: int, 2: int} $pileCounts
+     */
+    public static function tableauCardDiscarded(int $playerId, string $playerName, array $card, array $pileCounts, int $handCount): Notice
+    {
+        return new Notice('cardsDiscarded', '', [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'cards' => [$card],
+            'count' => 1,
+            'reason' => 'ARCHITECT',
+            'from_tableau' => true,
+            'pile_counts' => ['1' => $pileCounts[1], '2' => $pileCounts[2]],
+            'hand_count' => $handCount,
+        ]);
+    }
 }

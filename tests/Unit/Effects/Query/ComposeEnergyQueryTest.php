@@ -11,7 +11,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * 仕様書 008 §12.2 の UT-11〜UT-16、UT-27（文脈の規則の部分）。
- * カード効果の定義は `TestSpecs`（008 §7.2 の写し）。
+ * カード効果の定義は本番の `EffectCatalog`（008 §7.2）。
  */
 final class ComposeEnergyQueryTest extends TestCase
 {

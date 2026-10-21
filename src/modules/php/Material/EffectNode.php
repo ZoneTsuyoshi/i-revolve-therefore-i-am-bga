@@ -62,6 +62,43 @@ final readonly class EffectNode
         return new self(Control::REPEAT, ['times' => $times], [$child]);
     }
 
+    /**
+     * この節以下が触る資源（008 §6.3。重複なし、出現順）。`COMPOSE` は、次の自己構成の軽減（`ND`）を消費する文脈
+     * （PHASE / TOKEN / FLOOR）のときだけ `ND w` を含める（ボーナスと M089 の無料の自己構成は消費しない。R8-6）。
+     *
+     * @return list<ResourceTouch>
+     */
+    public function touches(): array
+    {
+        $seen = [];
+        $touches = [];
+        $add = static function (ResourceTouch $touch) use (&$seen, &$touches): void {
+            $key = $touch->toString();
+            if (!isset($seen[$key])) {
+                $seen[$key] = true;
+                $touches[] = $touch;
+            }
+        };
+        if ($this->kind instanceof Op) {
+            $context = $this->params['ctx'] ?? null;
+            $dropsNext = $this->kind === Op::COMPOSE && $context instanceof ComposeContext && !$context->consumesNextDiscount();
+            foreach ($this->kind->touches() as $touch) {
+                if (!($dropsNext && $touch->symbol === ResourceSymbol::ND)) {
+                    $add($touch);
+                }
+            }
+
+            return $touches;
+        }
+        foreach ($this->children as $child) {
+            foreach ($child->touches() as $touch) {
+                $add($touch);
+            }
+        }
+
+        return $touches;
+    }
+
     public function atomicOp(): ?Op
     {
         return $this->kind instanceof Op ? $this->kind : null;

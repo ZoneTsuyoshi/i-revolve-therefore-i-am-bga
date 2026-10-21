@@ -44,6 +44,21 @@ final class EffectEngineTest extends TestCase
     }
 
     /**
+     * イベントのある操作の後で止まった（yielded）frame を、続きの節まで進める。誘発した効果の解決は呼び出し側（`FrameRunner`）の担当で、
+     * ここでは積まずに続けるだけ。イベントは合わせて返す。
+     */
+    private static function settle(EffectEngine $engine, EffectFrame $frame, EngineResult $result): EngineResult
+    {
+        $events = $result->events;
+        while ($result->yielded) {
+            $result = $engine->run($frame);
+            array_push($events, ...$result->events);
+        }
+
+        return new EngineResult($result->choice, $events, false);
+    }
+
+    /**
      * frame を作って進められるところまで進める。
      *
      * @return array{EffectFrame, EngineResult}
@@ -52,7 +67,7 @@ final class EffectEngineTest extends TestCase
     {
         $frame = $this->engine->start($specId, $owner);
 
-        return [$frame, $this->engine->run($frame)];
+        return [$frame, self::settle($this->engine, $frame, $this->engine->run($frame))];
     }
 
     /**
@@ -106,7 +121,7 @@ final class EffectEngineTest extends TestCase
         self::assertSame(ChoiceKind::PICK_FIELD_CARD, $result->choice?->kind);
         self::assertSame([$b, $c, $d], $result->choice->data['candidates']);
 
-        $result = $this->engine->answer($frame, ['cards' => [$c]]);
+        $result = self::settle($this->engine, $frame, $this->engine->answer($frame, ['cards' => [$c]]));
         self::assertTrue($result->isDone());
         self::assertSame([$a, $c], $this->game->handIds(1));
         self::assertSame([$b, $d], $this->game->fieldIds());
@@ -171,7 +186,7 @@ final class EffectEngineTest extends TestCase
         [$frame, $result] = $this->begin('RC-05');
 
         self::assertSame(ChoiceKind::SELECT_DISCARD_FOR_LIGHT, $result->choice?->kind);
-        $result = $this->engine->answer($frame, ['cards' => [$a, $b]]);
+        $result = self::settle($this->engine, $frame, $this->engine->answer($frame, ['cards' => [$a, $b]]));
 
         self::assertTrue($result->isDone());
         self::assertSame(2, $this->game->lights[1]);
@@ -184,7 +199,7 @@ final class EffectEngineTest extends TestCase
     {
         $this->game->giveHand(1, ['M001']);
         [$frame] = $this->begin('RC-05');
-        $result = $this->engine->answer($frame, ['cards' => []]);
+        $result = self::settle($this->engine, $frame, $this->engine->answer($frame, ['cards' => []]));
         self::assertTrue($result->isDone());
         self::assertSame([], $this->game->lights);
         self::assertCount(1, $this->game->handIds(1));
@@ -206,7 +221,7 @@ final class EffectEngineTest extends TestCase
         [$frame] = $this->begin('RC-05');
 
         $this->expectException(EffectViolation::class);
-        $this->engine->answer($frame, ['cards' => [$stranger]]);
+        self::settle($this->engine, $frame, $this->engine->answer($frame, ['cards' => [$stranger]]));
     }
 
     /** UT-59: SWAP_HAND_FIELD は同数、0 枚可。手札から場へ出せるのはレベル 1 だけ。 */
@@ -233,7 +248,7 @@ final class EffectEngineTest extends TestCase
             }
         }
 
-        $result = $this->engine->answer($frame, ['hand' => [$h1], 'field' => [$f2]]);
+        $result = self::settle($this->engine, $frame, $this->engine->answer($frame, ['hand' => [$h1], 'field' => [$f2]]));
         self::assertTrue($result->isDone());
         self::assertEqualsCanonicalizing([$h2, $f2], $this->game->handIds(1));
         self::assertEqualsCanonicalizing([$f1, $h1], $this->game->fieldIds());
@@ -280,7 +295,7 @@ final class EffectEngineTest extends TestCase
             }
         }
         $before = $this->game->victoryChecks;
-        $result = $this->engine->answer($frame, ['tableau' => $t1, 'hand' => $h3]);
+        $result = self::settle($this->engine, $frame, $this->engine->answer($frame, ['tableau' => $t1, 'hand' => $h3]));
         self::assertTrue($result->isDone());
         self::assertSame([$h3, $t2], $this->game->tableauIds(1));
         self::assertContains($t1, $this->game->handIds(1));
@@ -368,7 +383,7 @@ final class EffectEngineTest extends TestCase
             $engine = new EffectEngine($game, $game, ArrayCatalog::withTestSpecs());
             $game->setDeck(['M001', 'M002', 'M003', 'M004']);
             $frame = $engine->start($floor, 1);
-            $result = $engine->run($frame);
+            $result = self::settle($engine, $frame, $engine->run($frame));
 
             self::assertSame(ChoiceKind::PICK_DISCARD, $result->choice?->kind, $floor);
             self::assertCount(3, $game->handIds(1)); // 引いたカードを含む手札から捨てる
@@ -379,7 +394,7 @@ final class EffectEngineTest extends TestCase
                 self::addToAssertionCount(1);
             }
             $chosen = $game->handIds(1)[1];
-            $result = $engine->answer($frame, ['cards' => [$chosen]]);
+            $result = self::settle($engine, $frame, $engine->answer($frame, ['cards' => [$chosen]]));
             self::assertTrue($result->isDone());
             self::assertCount(2, $game->handIds(1));
             self::assertSame([$chosen], $game->discard);
@@ -405,9 +420,9 @@ final class EffectEngineTest extends TestCase
             $engine = new EffectEngine($game, $game, ArrayCatalog::withTestSpecs());
             [$a, $b] = $game->setField(['M001', 'M002']);
             $frame = $engine->start($floor, 1);
-            $result = $engine->run($frame);
+            $result = self::settle($engine, $frame, $engine->run($frame));
             self::assertSame(ChoiceKind::PICK_FIELD_CARD, $result->choice?->kind);
-            $result = $engine->answer($frame, ['cards' => [$b]]);
+            $result = self::settle($engine, $frame, $engine->answer($frame, ['cards' => [$b]]));
 
             self::assertTrue($result->isDone());
             self::assertSame([$b], $game->handIds(1));
@@ -450,21 +465,21 @@ final class EffectEngineTest extends TestCase
         self::assertSame(['branches' => 2], $result->choice->data);
 
         try {
-            $this->engine->answer($frame, ['branch' => 2]);
+            self::settle($this->engine, $frame, $this->engine->answer($frame, ['branch' => 2]));
             self::fail('Unknown branch');
         } catch (EffectViolation) {
             self::addToAssertionCount(1);
         }
 
-        $result = $this->engine->answer($frame, ['branch' => 1]);
+        $result = self::settle($this->engine, $frame, $this->engine->answer($frame, ['branch' => 1]));
         self::assertTrue($result->isDone());
         self::assertSame(2, $this->game->lights[1]);
         self::assertSame([], $this->game->handIds(1));
 
         [$frame] = $this->begin('F09');
-        $result = $this->engine->answer($frame, ['branch' => 0]);
+        $result = self::settle($this->engine, $frame, $this->engine->answer($frame, ['branch' => 0]));
         self::assertSame(ChoiceKind::PICK_FIELD_CARD, $result->choice?->kind);
-        $result = $this->engine->answer($frame, ['cards' => [$a, $c]]);
+        $result = self::settle($this->engine, $frame, $this->engine->answer($frame, ['cards' => [$a, $c]]));
         self::assertTrue($result->isDone());
         self::assertSame(2, $this->game->lights[1]); // 心光は増えていない（選ばなかった分岐は飛ばす）
         self::assertSame([$a, $c], $this->game->handIds(1));
@@ -475,7 +490,7 @@ final class EffectEngineTest extends TestCase
     {
         $this->game->setDeck(['M001', 'M002', 'M003']);
         [$frame] = $this->begin('F12');
-        $result = $this->engine->answer($frame, ['branch' => 1]);
+        $result = self::settle($this->engine, $frame, $this->engine->answer($frame, ['branch' => 1]));
 
         self::assertTrue($result->isDone());
         self::assertCount(2, $this->game->handIds(1));
@@ -485,7 +500,7 @@ final class EffectEngineTest extends TestCase
     public function testFloorsThatNeedAComposeOrAnalysisWaitForTheAction(): void
     {
         [$frame] = $this->begin('F12');
-        $result = $this->engine->answer($frame, ['branch' => 0]);
+        $result = self::settle($this->engine, $frame, $this->engine->answer($frame, ['branch' => 0]));
         self::assertTrue($result->choice?->isAction());
         self::assertSame(Op::COMPOSE->value, $result->choice->data['action']);
         self::assertSame(['ctx' => 'FLOOR', 'discount' => 1, 'action' => 'OP-10'], $result->choice->data);
@@ -556,9 +571,9 @@ final class EffectEngineTest extends TestCase
     }
 
     /** ボードに触る操作（OP-16〜OP-21）は後続のタスク（実装順 6）。 */
-    public function testBoardOpsAreStillUnsupported(): void
+    public function testOpsWithoutAHandlerAreUnsupported(): void
     {
-        $spec = new EffectSpec('T.9', 'T', Mechanism::ACTION, EffectKind::NONE, OwnerScope::TURN_PLAYER, [EffectNode::op(Op::WARP)]);
+        $spec = new EffectSpec('T.9', 'T', Mechanism::ACTION, EffectKind::NONE, OwnerScope::TURN_PLAYER, [EffectNode::op(Op::PLACE_UNDER_FLOOR)]);
         $engine = new EffectEngine($this->game, $this->game, new ArrayCatalog([$spec]));
 
         $this->expectException(UnsupportedOp::class);
@@ -636,7 +651,8 @@ final class EffectEngineTest extends TestCase
             EffectNode::op(Op::ADD_NEXT_COMPOSE_DISCOUNT, ['n' => 1]),
             EffectNode::op(Op::GAIN_TOKEN, ['token' => TokenKind::WILD_MOVE_KEY, 'n' => 1]),
         ]);
-        $engine->run($engine->start('T.1', 1));
+        $frame = $engine->start('T.1', 1);
+        self::settle($engine, $frame, $engine->run($frame));
 
         self::assertSame(2, $this->game->victoryChecks); // 心光とトークンだけ（008 §6.8）
     }
@@ -655,7 +671,7 @@ final class EffectEngineTest extends TestCase
         $restored = EffectFrame::fromArray(json_decode($json, true, 512, JSON_THROW_ON_ERROR));
         self::assertEquals($frame, $restored);
 
-        $result = $this->engine->answer($restored, ['cards' => [$b]]);
+        $result = self::settle($this->engine, $restored, $this->engine->answer($restored, ['cards' => [$b]]));
         self::assertTrue($result->isDone());
         self::assertSame(1, $this->game->lights[1]);
         self::assertContains($b, $this->game->handIds(1));
@@ -666,7 +682,7 @@ final class EffectEngineTest extends TestCase
     {
         $this->game->setField(['M001', 'M002']);
         [$frame, $first] = $this->begin('RC-02');
-        $again = $this->engine->run($frame);
+        $again = self::settle($this->engine, $frame, $this->engine->run($frame));
 
         self::assertEquals($first->choice, $again->choice);
         self::assertSame([], $this->game->handIds(1)); // 二重に実行しない
@@ -677,7 +693,7 @@ final class EffectEngineTest extends TestCase
         $frame = $this->engine->start('RC-01', 1);
 
         $this->expectException(EffectViolation::class);
-        $this->engine->answer($frame, []);
+        self::settle($this->engine, $frame, $this->engine->answer($frame, []));
     }
 
     public function testChoiceRequestRemembersTheWaitingStep(): void

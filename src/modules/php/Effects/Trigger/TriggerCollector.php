@@ -16,6 +16,7 @@ use Bga\Games\IRevolveThereforeIAm\Effects\Context\GameEvent;
 use Bga\Games\IRevolveThereforeIAm\Effects\Context\GameView;
 use Bga\Games\IRevolveThereforeIAm\Material\EffectKind;
 use Bga\Games\IRevolveThereforeIAm\Material\EffectLimit;
+use Bga\Games\IRevolveThereforeIAm\Material\EffectSpec;
 use Bga\Games\IRevolveThereforeIAm\Material\Event;
 use Bga\Games\IRevolveThereforeIAm\Material\Mechanism;
 use Bga\Games\IRevolveThereforeIAm\Material\MemoryCards;
@@ -76,10 +77,30 @@ final class TriggerCollector
                 if (!$this->conditions->all($spec->conditions, new ConditionContext($owner, $card, $payload))) {
                     continue;
                 }
+                if (!$this->needsMet($spec, $payload)) {
+                    continue;
+                }
                 $out[] = new TriggeredEffect($spec, $source, $payload);
             }
         }
 
         return $out;
+    }
+
+    /**
+     * 効果の `needs`（条件の一覧に無い、状態への前提）を満たすか。
+     * `UNDER_FLOOR_CARDS`（I04.2）: 止まった部屋（イベントの `room`）の床カードの下に想い出カードがある。
+     *
+     * @param array<string, scalar|null> $payload
+     */
+    private function needsMet(EffectSpec $spec, array $payload): bool
+    {
+        if (($spec->params['needs'] ?? null) === 'UNDER_FLOOR_CARDS') {
+            $room = $payload['room'] ?? null;
+
+            return is_int($room) && $this->view->floorUnderIds($room) !== [];
+        }
+
+        return true;
     }
 }

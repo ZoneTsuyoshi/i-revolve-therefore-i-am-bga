@@ -105,20 +105,26 @@ final class AnalysisAction
             $notices[] = Notification::cardsTapped($player, $name, $plan->tapped, true);
         }
         $discarded = [];
-        foreach ($plan->discarded as $id) {
-            $card = $this->memory->find($id) ?? throw new \LogicException("unknown card $id");
-            $this->memory->move($id, MemoryLocation::discard(PublicView::definition($card->type)->level));
-            $discarded[] = Notification::cardRef($id, $card->type);
-        }
-        if ($discarded !== []) {
-            $notices[] = Notification::cardsDiscarded(
-                $player,
-                $name,
-                $discarded,
-                'COST',
-                [1 => $this->memory->count(MemoryLocation::Discard1), 2 => $this->memory->count(MemoryLocation::Discard2)],
-                $this->memory->count(MemoryLocation::Hand, $player),
-            );
+        if ($plan->discarded !== [] && $this->planner->redirectsToFloor($player)) {
+            // I04.1: 払った手札は捨札ではなく、現在の部屋から反時計回りに床カードの下へ 1 枚ずつ置く（OP-20。R8-15）
+            $this->mutator->placeUnderFloor($player, $plan->discarded);
+            $notices = [...$notices, ...$this->mutator->drain()];
+        } else {
+            foreach ($plan->discarded as $id) {
+                $card = $this->memory->find($id) ?? throw new \LogicException("unknown card $id");
+                $this->memory->move($id, MemoryLocation::discard(PublicView::definition($card->type)->level));
+                $discarded[] = Notification::cardRef($id, $card->type);
+            }
+            if ($discarded !== []) {
+                $notices[] = Notification::cardsDiscarded(
+                    $player,
+                    $name,
+                    $discarded,
+                    'COST',
+                    [1 => $this->memory->count(MemoryLocation::Discard1), 2 => $this->memory->count(MemoryLocation::Discard2)],
+                    $this->memory->count(MemoryLocation::Hand, $player),
+                );
+            }
         }
         if ($plan->lights > 0) {
             $this->players->addToken($player, PlayerValues::COLUMN_LIGHT, -$plan->lights);

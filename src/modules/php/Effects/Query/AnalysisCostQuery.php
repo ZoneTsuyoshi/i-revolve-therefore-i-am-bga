@@ -40,6 +40,14 @@ final class AnalysisCostQuery
     }
 
     /**
+     * MD-10（I04.1）: 精神分析のコストとして払った手札を、捨札の代わりに床カードの下へ置くか。
+     */
+    public function redirectsPaymentUnderFloor(int $player): bool
+    {
+        return $this->active->modifiers($player, Modifier::ANALYSIS_PAY_REDIRECT, new ConditionContext($player)) !== [];
+    }
+
+    /**
      * 減らした後の残りのコスト。`$removed` は減らす鍵の種類と本数（プレイヤーの選択）。
      * 本数の合計は `min(reduction, コストの総数)` と一致し、各鍵の本数はコストを超えてはならない。
      *

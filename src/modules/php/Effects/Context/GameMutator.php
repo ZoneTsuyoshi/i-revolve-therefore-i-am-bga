@@ -117,6 +117,30 @@ interface GameMutator
      */
     public function pushRecallActivation(int $player, string $cardId, int $times, array $groups): void;
 
+    /**
+     * 人格を好きな部屋へ移す（M072 のワープ。OP-16）。入室に数えず、周遊ボーナスも「止まった」扱いも無い（R8-12）。
+     */
+    public function warpPersona(int $player, int $to): void;
+
+    /** 回廊上の 2 つの部屋の想い出カード（裏向き）を入れ替える（M052〜M054。OP-17）。誰も券面を見ない */
+    public function swapRoomCards(int $player, int $posA, int $posB): void;
+
+    /** 回廊上の 2 つの部屋の床カードだけを入れ替える（M055〜M057。OP-18）。想い出カード・床の下・人格は位置に残る */
+    public function swapRoomFloors(int $player, int $posA, int $posB): void;
+
+    /** 手札のカードと、人格のいない部屋の想い出カードを入れ替える（I05。OP-19）。手札から置くカードは裏向き */
+    public function swapHandAndRoom(int $player, int $handCardId, int $position): void;
+
+    /**
+     * 精神分析のコストとして払った手札を、人格のいる部屋から反時計回りに 1 枚ずつ床カードの下に置く（I04。OP-20。現在の部屋を含む）。
+     *
+     * @param list<int> $cardIds
+     */
+    public function placeUnderFloor(int $player, array $cardIds): void;
+
+    /** 止まった部屋の床カードの下の想い出カードを全て手札に加える（I04。OP-21。強制） */
+    public function collectUnderFloor(int $player, int $position): void;
+
     /** ゲームが終わる状態か（勝利が確定した。以降の節は解決しない） */
     public function isGameOver(): bool;
 }

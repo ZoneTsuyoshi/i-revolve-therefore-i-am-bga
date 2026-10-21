@@ -258,8 +258,8 @@ final class ActionOpsTest extends TestCase
 
         self::assertTrue($done->isDone());
         self::assertSame([[1, 'R3B', 'EFFECT']], $this->game->advances);
-        self::assertSame('TIER_UP', $done->events[0]->event->name);
-        self::assertSame(['via' => 'EFFECT', 'spirit' => 'R3B', 'to' => 3, 'dest_had_light' => true], $done->events[0]->payload);
+        // EV-06 の誘発は advanceSpirit（SpiritArrival）が解決スタックに積むので、操作はイベントを返さない
+        self::assertSame([], $done->events);
     }
 
     public function testAdvanceTierWithASingleNextCardDoesNotAsk(): void

@@ -8,6 +8,7 @@ use Bga\Games\IRevolveThereforeIAm\Effects\Context\GameMutator;
 use Bga\Games\IRevolveThereforeIAm\Effects\Context\GameView;
 use Bga\Games\IRevolveThereforeIAm\Material\ActionKind;
 use Bga\Games\IRevolveThereforeIAm\Material\AnalysisCards;
+use Bga\Games\IRevolveThereforeIAm\Material\Corridor;
 use Bga\Games\IRevolveThereforeIAm\Material\FloorBonus;
 use Bga\Games\IRevolveThereforeIAm\Material\KeyType;
 use Bga\Games\IRevolveThereforeIAm\Material\Origin;
@@ -115,6 +116,12 @@ final class ArrayGame implements GameView, GameMutator
 
     /** @var list<array{int, string, int, list<RecallGroup>}> 積まれた想起効果の発動 */
     public array $recallPushes = [];
+
+    /** @var array<int, list<int>> 位置 → 床カードの下のカード */
+    public array $under = [];
+
+    /** @var list<array{string, mixed}> ボードに触る操作の記録（種類、内容） */
+    public array $boardLog = [];
 
     public bool $deckExhausted = false;
 
@@ -254,6 +261,11 @@ final class ArrayGame implements GameView, GameMutator
     public function playersAt(int $position): array
     {
         return array_values(array_filter($this->players, fn (int $p): bool => ($this->persona[$p] ?? 0) === $position));
+    }
+
+    public function floorUnderIds(int $position): array
+    {
+        return $this->under[$position] ?? [];
     }
 
     public function recallRoomPosition(): ?int
@@ -478,5 +490,50 @@ final class ArrayGame implements GameView, GameMutator
     public function isGameOver(): bool
     {
         return $this->won !== null;
+    }
+
+    public function warpPersona(int $player, int $to): void
+    {
+        $this->persona[$player] = $to;
+        $this->boardLog[] = ['warp', [$player, $to]];
+    }
+
+    public function swapRoomCards(int $player, int $posA, int $posB): void
+    {
+        [$this->rooms[$posA], $this->rooms[$posB]] = [$this->rooms[$posB] ?? null, $this->rooms[$posA] ?? null];
+        $this->boardLog[] = ['swapCards', [$posA, $posB]];
+    }
+
+    public function swapRoomFloors(int $player, int $posA, int $posB): void
+    {
+        [$this->floors[$posA], $this->floors[$posB]] = [$this->floorIdAt($posB), $this->floorIdAt($posA)];
+        $this->boardLog[] = ['swapFloors', [$posA, $posB]];
+    }
+
+    public function swapHandAndRoom(int $player, int $handCardId, int $position): void
+    {
+        $roomCard = $this->rooms[$position] ?? null;
+        $this->hand[$player] = array_values(array_diff($this->hand[$player] ?? [], [$handCardId]));
+        if ($roomCard !== null) {
+            $this->hand[$player][] = $roomCard;
+        }
+        $this->rooms[$position] = $handCardId;
+        $this->boardLog[] = ['swapHandRoom', [$handCardId, $position]];
+    }
+
+    public function placeUnderFloor(int $player, array $cardIds): void
+    {
+        $pos = $this->persona[$player] ?? 1;
+        foreach ($cardIds as $cardId) {
+            $this->hand[$player] = array_values(array_diff($this->hand[$player] ?? [], [$cardId]));
+            $this->under[$pos][] = $cardId;
+            $pos = Corridor::previous($pos);
+        }
+    }
+
+    public function collectUnderFloor(int $player, int $position): void
+    {
+        $this->hand[$player] = [...($this->hand[$player] ?? []), ...($this->under[$position] ?? [])];
+        $this->under[$position] = [];
     }
 }

@@ -19,6 +19,7 @@ use Bga\Games\IRevolveThereforeIAm\Effects\Condition\ConditionEvaluator;
 use Bga\Games\IRevolveThereforeIAm\Effects\EffectEngine;
 use Bga\Games\IRevolveThereforeIAm\Material\EffectCatalog;
 use Bga\Games\IRevolveThereforeIAm\Material\EffectLimit;
+use Bga\Games\IRevolveThereforeIAm\Material\EgoCards;
 use Bga\Games\IRevolveThereforeIAm\Material\Mechanism;
 use Bga\Games\IRevolveThereforeIAm\Material\MemoryCards;
 use Bga\Games\IRevolveThereforeIAm\Material\Op;
@@ -134,6 +135,12 @@ final class EffectResolver
         if ($head->kind === EffectFrame::KIND_SPEC_RUN && ($head->params['started'] ?? false) !== true) {
             $spec = $this->specs->find($head->spec ?? '');
             if ($spec !== null && $spec->mechanism === Mechanism::TRIGGER) {
+                // 同じ効果が同時に 2 度誘発しても、1 ターンに 1 回の効果は 1 度だけ解決する（008 のエッジケース）
+                if ($spec->limit === EffectLimit::ONCE_PER_TURN && $this->globals->turnContext()->isOnceUsed($head->owner, $spec->id)) {
+                    $this->complete($head);
+
+                    return;
+                }
                 $card = isset($head->payload['card_type']) && is_string($head->payload['card_type'])
                     ? MemoryCards::get($head->payload['card_type'])
                     : null;
@@ -145,10 +152,28 @@ final class EffectResolver
                 if ($spec->limit === EffectLimit::ONCE_PER_TURN) {
                     $this->mutator->markOnceUsed($head->owner, $spec->id);
                 }
+                $this->announce($head, $spec->id);
             }
             $extra['started'] = true;
         }
         $this->runner->apply($head, $frame, $this->engine->run($frame), $extra);
+    }
+
+    /**
+     * 自己構成済みカード・自我カードのトリガー効果の発動を知らせる（N11 `effectActivated`。結果は続く通知で表す）。
+     */
+    private function announce(EffectFrame $head, string $specId): void
+    {
+        $source = $head->source ?? '';
+        $name = match (true) {
+            isset(MemoryCards::all()[$source]) => MemoryCards::get($source)->nameEn,
+            isset(EgoCards::all()[$source]) => EgoCards::get($source)->nameEn,
+            default => null,
+        };
+        if ($name === null) {
+            return;
+        }
+        $this->mutator->add([Notification::effectActivated($head->owner, ($this->nameOf)($head->owner), $source, $name, $specId)]);
     }
 
     /**
