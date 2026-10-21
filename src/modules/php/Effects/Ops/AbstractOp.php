@@ -11,7 +11,9 @@ namespace Bga\Games\IRevolveThereforeIAm\Effects\Ops;
 
 use Bga\Games\IRevolveThereforeIAm\Effects\EffectViolation;
 use Bga\Games\IRevolveThereforeIAm\Effects\Engine\ChoiceRequest;
+use Bga\Games\IRevolveThereforeIAm\Effects\Value\ValueEvaluator;
 use Bga\Games\IRevolveThereforeIAm\Material\ChoiceKind;
+use Bga\Games\IRevolveThereforeIAm\Material\ValueExpr;
 
 /**
  * 原子操作ハンドラの共通部分。選択の無い操作の既定と、答えの検証の道具。
@@ -26,6 +28,19 @@ abstract class AbstractOp implements OpHandler
     public function request(OpContext $context): ?ChoiceRequest
     {
         return null;
+    }
+
+    /**
+     * 操作の個数（`n` など）。整数または値式（解決の時点で数える。008 §3.3）。負にならない。
+     */
+    protected function amount(OpContext $context, string $key = 'n', int $default = 1): int
+    {
+        $value = $context->node->params[$key] ?? $default;
+        if (!is_int($value) && !$value instanceof ValueExpr) {
+            return $default;
+        }
+
+        return max(0, ValueEvaluator::evaluate($value, $context->view, $context->owner));
     }
 
     /**

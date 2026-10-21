@@ -226,7 +226,7 @@ final class MemoryCardRepository
             throw new \LogicException("cannot swap room cards at $posA and $posB");
         }
         $this->db->execute(
-            "UPDATE `memory_card` SET `card_loc_arg` = IF(`card_loc_arg` = $posA, $posB, $posA)"
+            "UPDATE `memory_card` SET `card_loc_arg` = CASE WHEN `card_loc_arg` = $posA THEN $posB ELSE $posA END"
             . " WHERE `card_loc` = 'ROOM' AND `card_loc_arg` IN ($posA, $posB)",
         );
     }

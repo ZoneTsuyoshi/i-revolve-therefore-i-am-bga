@@ -99,6 +99,13 @@ export class PlayerNotifications {
     async onCardsDiscarded(args) {
         this.syncPanelHand(args);
         const ids = faceUpRefs(args?.cards).map((c) => c.id);
+        // I03（建築家）: 自己構成済みカードを捨札へ（手札ではなく自己構成済みエリアから消す）
+        if (args?.from_tableau === true) {
+            const playerId = toInt(args?.player_id);
+            this.panels?.removeComposed(playerId, ids);
+            await Promise.all(ids.map((id) => this.areas.removeComposed(playerId, id)));
+            return;
+        }
         if (this.areas.isMine(toInt(args?.player_id))) {
             await this.areas.removeFromHand(ids);
         } else {

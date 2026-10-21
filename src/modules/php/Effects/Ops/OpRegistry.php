@@ -12,8 +12,13 @@ namespace Bga\Games\IRevolveThereforeIAm\Effects\Ops;
 use Bga\Games\IRevolveThereforeIAm\Effects\Engine\UnsupportedOp;
 use Bga\Games\IRevolveThereforeIAm\Effects\Ops\Action\ActionOp;
 use Bga\Games\IRevolveThereforeIAm\Effects\Ops\Board\AcquireRoomCard;
+use Bga\Games\IRevolveThereforeIAm\Effects\Ops\Board\CollectUnderFloor;
 use Bga\Games\IRevolveThereforeIAm\Effects\Ops\Board\MoveNextRoom;
 use Bga\Games\IRevolveThereforeIAm\Effects\Ops\Board\RecallActivate;
+use Bga\Games\IRevolveThereforeIAm\Effects\Ops\Board\SwapHandRoom;
+use Bga\Games\IRevolveThereforeIAm\Effects\Ops\Board\SwapRoomFloor;
+use Bga\Games\IRevolveThereforeIAm\Effects\Ops\Board\SwapRoomMemory;
+use Bga\Games\IRevolveThereforeIAm\Effects\Ops\Board\Warp;
 use Bga\Games\IRevolveThereforeIAm\Effects\Ops\Gain\ClaimSpiritLight;
 use Bga\Games\IRevolveThereforeIAm\Effects\Ops\Gain\DrawDeck;
 use Bga\Games\IRevolveThereforeIAm\Effects\Ops\Gain\GainLight;
@@ -32,8 +37,9 @@ use Bga\Games\IRevolveThereforeIAm\Effects\Ops\State\SetTurnComposeDiscount;
 use Bga\Games\IRevolveThereforeIAm\Material\Op;
 
 /**
- * 原子操作 → ハンドラ。実装済み: OP-01〜OP-15、OP-22〜OP-26（008 §11.2 の順 3・4）。
- * 残り（OP-16〜OP-21。ボードに触る操作。順 6）は後続のタスクで足す。
+ * 原子操作 → ハンドラ。実装済み: OP-01〜OP-19、OP-21〜OP-26（008 §11.2 の順 3・4・6）。
+ * OP-20 `PLACE_UNDER_FLOOR` は、精神分析の支払いを適用する 62（`AnalysisAction`）が MD-10（I04.1）で直接行う
+ * （払ったカードの ID は効果の frame に載らない）ので、ハンドラを持たない。
  */
 final class OpRegistry
 {
@@ -57,6 +63,11 @@ final class OpRegistry
         $this->register(Op::GAIN_ENHANCED_EGO, new GainEnhancedEgo());
         $this->register(Op::WIN, new Win());
         $this->register(Op::MOVE_NEXT_ROOM, new MoveNextRoom());
+        $this->register(Op::WARP, new Warp());
+        $this->register(Op::SWAP_ROOM_MEMORY, new SwapRoomMemory());
+        $this->register(Op::SWAP_ROOM_FLOOR, new SwapRoomFloor());
+        $this->register(Op::SWAP_HAND_ROOM, new SwapHandRoom());
+        $this->register(Op::COLLECT_UNDER_FLOOR, new CollectUnderFloor());
         $this->register(Op::RECALL_ACTIVATE, new RecallActivate());
         $this->register(Op::SET_TURN_COMPOSE_DISCOUNT, new SetTurnComposeDiscount());
         $this->register(Op::ADD_NEXT_COMPOSE_DISCOUNT, new AddNextComposeDiscount());

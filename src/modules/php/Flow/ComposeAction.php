@@ -153,6 +153,127 @@ final class ComposeAction
         }
 
         $this->memory->compose($cardId, $player);
+        $attached = $this->attachExtra($player, $cardId, $plan->extra);
+
+        return $this->finish($player, $context, $pending, $cardId, $notices, $pending->context, [
+            'discarded' => $discarded,
+            'light' => $plan->lights,
+            'energy' => $plan->need,
+            'tapped' => $plan->taps,
+        ], $attached);
+    }
+
+    /**
+     * I03（建築家）の代替: 自己構成する代わりに、自己構成済みの 1 枚を捨札にし、そのエネルギーより 2 まで大きい手札のカードを
+     * エネルギーなしで自己構成する（捨てる処理が先。FAQ 行 32、R8-17）。自己構成アクション 1 回として数える（R8-7）。
+     *
+     * @return list<Notice>
+     * @throws EffectViolation
+     */
+    public function architect(int $player, int $tableauCardId, int $newCardId): array
+    {
+        $pending = $this->frames->current(Op::COMPOSE, $player);
+        $context = ComposeContext::from($pending->context);
+        if ($context === ComposeContext::TOKEN && $this->players->composeTokens($player) < 1) {
+            throw new EffectViolation('You have no compose token');
+        }
+        if ($context === ComposeContext::PHASE && $this->globals->turnContext()->phaseComposeUsed) {
+            throw new EffectViolation('You already composed in the compose phase');
+        }
+        if (!$this->energy->architectSubstituteAllowed($player, $tableauCardId, $newCardId, $context)) {
+            throw new EffectViolation('That substitution is not allowed');
+        }
+        $newType = $this->view->cardType($newCardId);
+        foreach ($this->view->tableauIds($player) as $otherId) {
+            if ($otherId !== $tableauCardId && $this->view->cardType($otherId) === $newType) {
+                throw new EffectViolation('A card with the same name is already composed');
+            }
+        }
+        $notices = [];
+        $name = ($this->nameOf)($player);
+        $old = $this->memory->find($tableauCardId) ?? throw new \LogicException("unknown card $tableauCardId");
+        $levelOf = static fn (int $type): int => PublicView::definition($type)->level;
+        $under = array_map(
+            static fn ($c): array => Notification::cardRef($c->id, $c->type),
+            $this->memory->inLoc(MemoryLocation::UnderCard, $tableauCardId),
+        );
+        $this->memory->releaseUnder($tableauCardId, $levelOf);
+        $this->memory->move($tableauCardId, MemoryLocation::discard($levelOf($old->type)));
+        $piles = [1 => $this->memory->count(MemoryLocation::Discard1), 2 => $this->memory->count(MemoryLocation::Discard2)];
+        $hand = $this->memory->count(MemoryLocation::Hand, $player);
+        // 場を離れた自己構成済みカード（捨札へ）。クライアントは `from_tableau` で自己構成済みエリアから取り除く
+        $notices[] = Notification::tableauCardDiscarded($player, $name, Notification::cardRef($tableauCardId, $old->type), $piles, $hand);
+        if ($under !== []) {
+            $notices[] = Notification::cardsDiscarded($player, $name, $under, 'UNDER_RELEASED', $piles, $hand);
+        }
+        if ($context === ComposeContext::TOKEN) {
+            $this->players->addToken($player, PlayerValues::COLUMN_COMPOSE, -1);
+            $notices[] = Notification::tokensChanged(
+                $player,
+                $name,
+                ['compose' => -1],
+                ['compose' => $this->players->composeTokens($player)],
+                'PAYMENT',
+            );
+        }
+        $this->memory->compose($newCardId, $player);
+
+        return $this->finish($player, $context, $pending, $newCardId, $notices, 'ARCHITECT', [
+            'discarded' => [],
+            'light' => 0,
+            'energy' => 0,
+            'tapped' => [],
+        ]);
+    }
+
+    /**
+     * I08 の追加支払い: 手札を、自己構成したカードの下に裏向きで置く（他人には枚数だけ。N19）。
+     *
+     * @param list<int> $extra
+     * @return list<Notice> 自己構成の通知（N18）の後に送る
+     */
+    private function attachExtra(int $player, int $hostId, array $extra): array
+    {
+        if ($extra === []) {
+            return [];
+        }
+        $refs = [];
+        foreach ($extra as $id) {
+            $card = $this->memory->find($id) ?? throw new \LogicException("unknown card $id");
+            $refs[] = Notification::cardRef($id, $card->type);
+            $this->memory->move($id, MemoryLocation::UnderCard, $hostId);
+        }
+        $host = $this->memory->find($hostId) ?? throw new \LogicException("unknown card $hostId");
+
+        return [Notification::cardsAttached(
+            $player,
+            ($this->nameOf)($player),
+            $hostId,
+            PublicView::definition($host->type)->nameEn,
+            $refs,
+            $this->memory->count(MemoryLocation::Hand, $player),
+        )];
+    }
+
+    /**
+     * 自己構成の確定の共通部分: 回数と軽減の消費、通知、勝利判定、行動の frame を済ませる、EV-05 の誘発。
+     *
+     * @param list<Notice> $notices
+     * @param array{discarded: list<array{id: int, type: int}>, light: int, energy: int, tapped: list<int>} $payment
+     * @param list<Notice> $afterComposed 自己構成の通知の直後に送る通知（I08 の追加支払い）
+     * @return list<Notice>
+     */
+    private function finish(
+        int $player,
+        ComposeContext $context,
+        PendingAction $pending,
+        int $cardId,
+        array $notices,
+        string $noticeContext,
+        array $payment,
+        array $afterComposed = [],
+    ): array {
+        $name = ($this->nameOf)($player);
         $turn = $this->globals->turnContext();
         $nextChanged = false;
         if ($context->consumesNextDiscount()) {
@@ -174,16 +295,12 @@ final class ComposeAction
             $name,
             Notification::cardRef($cardId, $card->type),
             $definition->nameEn,
-            $pending->context,
-            [
-                'discarded' => $discarded,
-                'light' => $plan->lights,
-                'energy' => $plan->need,
-                'tapped' => $plan->taps,
-            ],
+            $noticeContext,
+            $payment,
             $tableauCount,
             $this->memory->count(MemoryLocation::Hand, $player),
         )]);
+        $this->mutator->add($afterComposed);
         if ($nextChanged) {
             $this->mutator->add([Notification::composeDiscountChanged($player, $name, $turn->turnComposeDiscount, 0)]);
         }

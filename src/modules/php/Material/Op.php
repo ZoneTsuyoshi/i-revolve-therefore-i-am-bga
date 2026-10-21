@@ -44,6 +44,7 @@ enum Op: string
     /**
      * 操作が触る資源（008 §3.1 の「触る資源」の列。§6.3.2 の記法）。
      * OP-10 の `ND w` は自己構成アクションの文脈のときだけだが、衝突判定は保守的に常に含める。
+     * OP-16 は、ワープ先を部屋の錠前と床を見て選ぶので `RM r` `RF r` を足す（008 §6.3.3 の M072 の行）。
      * OP-25 は発動する想起効果で決まるので、ここでは空（呼び出し側が RC の資源を足す）。
      *
      * @return list<ResourceTouch>
@@ -66,7 +67,7 @@ enum Op: string
             self::GAIN_ENHANCED_EGO => 'Gw',
             self::WIN => '',
             self::MOVE_NEXT_ROOM => 'Pw Ew',
-            self::WARP => 'Pw',
+            self::WARP => 'Pw RMr RFr',
             self::SWAP_ROOM_MEMORY => 'RMw',
             self::SWAP_ROOM_FLOOR => 'RFw',
             self::SWAP_HAND_ROOM => 'Hw RMw Pr',

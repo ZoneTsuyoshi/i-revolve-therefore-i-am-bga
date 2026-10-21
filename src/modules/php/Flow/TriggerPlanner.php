@@ -16,6 +16,7 @@ use Bga\Games\IRevolveThereforeIAm\Effects\Context\GameView;
 use Bga\Games\IRevolveThereforeIAm\Effects\Trigger\ConflictResolver;
 use Bga\Games\IRevolveThereforeIAm\Effects\Trigger\TriggeredEffect;
 use Bga\Games\IRevolveThereforeIAm\Effects\Trigger\TriggerCollector;
+use Bga\Games\IRevolveThereforeIAm\Material\EffectLimit;
 
 /**
  * 誘発した効果を解決スタックの frame にする（008 §4.2、§6.3、006 §7.5）。
@@ -36,14 +37,14 @@ final class TriggerPlanner
      * イベントを集め、誘発した効果の frame を解決スタックの先頭に積む。
      *
      * @param list<GameEvent> $events
+     * @return bool 解決スタックに積んだか（誘発した効果があったか）
      */
-    public function emit(array $events): void
+    public function emit(array $events): bool
     {
-        $effects = [];
-        foreach ($events as $event) {
-            array_push($effects, ...$this->collector->collect($event));
-        }
-        $this->stack->pushFront($this->framesFor($effects));
+        $frames = $this->framesFor($this->collect($events));
+        $this->stack->pushFront($frames);
+
+        return $frames !== [];
     }
 
     /**
@@ -53,8 +54,18 @@ final class TriggerPlanner
     public function collect(array $events): array
     {
         $effects = [];
+        $once = [];
         foreach ($events as $event) {
-            array_push($effects, ...$this->collector->collect($event));
+            foreach ($this->collector->collect($event) as $effect) {
+                // 1 ターンに 1 回の効果は、同時に複数のイベントで誘発しても 1 つにする（M067・M069 の EV-02 と EV-03、I07 の EV-04）
+                if ($effect->spec->limit === EffectLimit::ONCE_PER_TURN) {
+                    if (isset($once[$effect->spec->id])) {
+                        continue;
+                    }
+                    $once[$effect->spec->id] = true;
+                }
+                $effects[] = $effect;
+            }
         }
 
         return $effects;
@@ -97,15 +108,15 @@ final class TriggerPlanner
             )];
         }
 
-        return array_map(
-            static fn (TriggeredEffect $e): EffectFrame => EffectFrame::specRun(
-                $e->spec->id,
-                $owner,
-                $e->source,
-                $e->payload,
-                $e->spec->optional,
-            ),
-            $this->resolver->fixedOrder($effects),
-        );
+        $frames = [];
+        foreach ($this->resolver->fixedOrder($effects) as $e) {
+            $frames[] = EffectFrame::specRun($e->spec->id, $owner, $e->source, $e->payload, $e->spec->optional);
+            if ($e->spec->unit) {
+                // 効果 1 つの解決ごとが手札上限の単位（ターン開始時の効果。008 §6.9）
+                $frames[] = EffectFrame::handLimitCheck($owner);
+            }
+        }
+
+        return $frames;
     }
 }

@@ -116,20 +116,26 @@ final class ComposePlanner
         if (!in_array($cardId, $this->candidates($player, $context), true)) {
             throw new EffectViolation('That card cannot be composed now (not in hand, same name already composed, or wrong level)');
         }
-        if (($payment['extra'] ?? []) !== []) {
-            throw new EffectViolation('Paying extra cards is not available yet');
-        }
+        $extra = $this->ids($payment['extra'] ?? [], 'extra');
         $discard = $this->ids($payment['discard'] ?? [], 'discard');
         $taps = $this->ids($payment['tap'] ?? [], 'tap');
         $uses = $payment['light'] ?? 0;
         if (!is_int($uses) || $uses < 0) {
             throw new EffectViolation("'light' must be a count of inner light uses");
         }
+        if (count($extra) > $this->energy->extraPayMax($player)) {
+            throw new EffectViolation('You cannot pay that many extra cards');
+        }
         if (!$context->paysEnergy() && ($discard !== [] || $taps !== [] || $uses > 0)) {
             throw new EffectViolation('No energy is needed here, so nothing can be paid');
         }
         $hand = $this->view->handIds($player);
         $paid = $uses;
+        foreach ($extra as $id) {
+            if ($id === $cardId || in_array($id, $discard, true) || !in_array($id, $hand, true)) {
+                throw new EffectViolation("Card {$id} cannot be paid as an extra card");
+            }
+        }
         foreach ($discard as $id) {
             if ($id === $cardId || !in_array($id, $hand, true)) {
                 throw new EffectViolation("Card {$id} cannot be discarded to pay");
@@ -146,7 +152,7 @@ final class ComposePlanner
             throw new EffectViolation('Not enough inner light');
         }
 
-        return new ComposePlan($cardId, $discard, $uses, $lights, $taps, $need);
+        return new ComposePlan($cardId, $discard, $uses, $lights, $taps, $need, $extra);
     }
 
     /**

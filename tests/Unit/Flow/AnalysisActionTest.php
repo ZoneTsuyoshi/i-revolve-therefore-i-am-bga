@@ -20,7 +20,6 @@ use Bga\Games\IRevolveThereforeIAm\Material\Origin;
 use Bga\Games\IRevolveThereforeIAm\Material\OwnerScope;
 use IRevolveTests\Support\ArrayCatalog;
 use IRevolveTests\Support\MoveFixture;
-use IRevolveTests\Support\TestSpecs;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -473,7 +472,7 @@ final class AnalysisActionTest extends TestCase
             ops: [EffectNode::op(Op::GAIN_LIGHT, ['n' => 1, 'origin' => Origin::EFFECT])],
             events: [Event::TIER_UP],
         );
-        $fx = new MoveFixture(new ArrayCatalog([...array_values(EffectCatalog::all()), ...TestSpecs::all(), $trigger]));
+        $fx = new MoveFixture(new ArrayCatalog([...array_values(EffectCatalog::all()), $trigger]));
         $fx->giveTableau(self::P, [58]);
         [$a, $b] = $fx->giveHand(self::P, [1, 4]);
         $this->begin($fx);
@@ -498,7 +497,7 @@ final class AnalysisActionTest extends TestCase
             ops: [EffectNode::op(Op::GAIN_OPEN, ['n' => 1, 'origin' => Origin::EFFECT])],
             events: [Event::TIER_UP],
         );
-        $fx = new MoveFixture(new ArrayCatalog([...array_values(EffectCatalog::all()), ...TestSpecs::all(), $trigger]));
+        $fx = new MoveFixture(new ArrayCatalog([...array_values(EffectCatalog::all()), $trigger]));
         $fx->giveTableau(self::P, [81]);
         $fx->spirits->advance(self::P, 'R1A');
         $fx->db->execute("UPDATE `spirit_card` SET `spirit_light` = 0");

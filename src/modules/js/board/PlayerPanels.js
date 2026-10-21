@@ -116,6 +116,15 @@ export class PlayerPanels {
     }
 
     /**
+     * N15（I03 の建築家）: 自己構成済みが減る（鍵の本数が変わる）。
+     * @param {number} playerId
+     * @param {number[]} ids
+     */
+    removeComposed(playerId, ids) {
+        this.update(playerId, (s) => ({ ...s, composed: applyComposedChange(s.composed, { removed: ids }) }));
+    }
+
+    /**
      * N26 TABLEAU_HAND: 自己構成済みのカードの入れ替え。
      * @param {number} playerId
      * @param {unknown} pairs

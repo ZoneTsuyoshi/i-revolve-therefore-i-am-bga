@@ -14,6 +14,7 @@ use Bga\Games\IRevolveThereforeIAm\Flow\Notice;
 use Bga\Games\IRevolveThereforeIAm\Flow\Notification;
 use Bga\Games\IRevolveThereforeIAm\Flow\SpiritArrival;
 use Bga\Games\IRevolveThereforeIAm\Material\ActionKind;
+use Bga\Games\IRevolveThereforeIAm\Material\Corridor;
 use Bga\Games\IRevolveThereforeIAm\Material\EgoCards;
 use Bga\Games\IRevolveThereforeIAm\Material\FloorBonus;
 use Bga\Games\IRevolveThereforeIAm\Material\FloorCards;
@@ -245,6 +246,7 @@ final class StoredGameMutator implements GameMutator
 
     public function swapComposedAndHand(int $player, int $tableauCardId, int $handCardId): void
     {
+        $under = array_map(fn (MemoryCard $c): array => $this->ref($c->id), $this->memory->inLoc(MemoryLocation::UnderCard, $tableauCardId));
         $this->memory->swapTableauHand($tableauCardId, $handCardId, fn (int $type): int => PublicView::definition($type)->level);
         $this->notices[] = Notification::cardsExchanged(
             $player,
@@ -253,6 +255,17 @@ final class StoredGameMutator implements GameMutator
             [['out' => $this->ref($tableauCardId), 'in' => $this->ref($handCardId)]],
             $this->memory->count(MemoryLocation::Hand, $player),
         );
+        if ($under !== []) {
+            // 親が場を離れたので、I08 の下のカードは各レベルの捨札へ（全員に公開。007 N15 `UNDER_RELEASED`）
+            $this->notices[] = Notification::cardsDiscarded(
+                $player,
+                ($this->nameOf)($player),
+                $under,
+                'UNDER_RELEASED',
+                $this->pileCounts(),
+                $this->memory->count(MemoryLocation::Hand, $player),
+            );
+        }
         ($this->victoryCheck)();
     }
 
@@ -417,6 +430,111 @@ final class StoredGameMutator implements GameMutator
         )]);
     }
 
+    public function warpPersona(int $player, int $to): void
+    {
+        $from = $this->players->persona($player);
+        $this->players->setPersona($player, $to);
+        $this->notices[] = Notification::personaMoved(
+            $player,
+            ($this->nameOf)($player),
+            $from,
+            $to,
+            $this->roomName($to),
+            'WARP',
+            false,
+        );
+    }
+
+    public function swapRoomCards(int $player, int $posA, int $posB): void
+    {
+        $this->memory->swapRoomCards($posA, $posB);
+        $after = [];
+        foreach ([$posA, $posB] as $pos) {
+            $card = $this->memory->inLoc(MemoryLocation::Room, $pos)[0] ?? throw new \LogicException("room $pos has no card");
+            $after[] = ['pos' => $pos, 'card_id' => $card->id, 'back' => PublicView::backKey(PublicView::definition($card->type))];
+        }
+        $this->notices[] = Notification::roomsSwapped(
+            $player,
+            ($this->nameOf)($player),
+            'CARD',
+            $posA,
+            $posB,
+            $this->roomName($posA),
+            $this->roomName($posB),
+            $after,
+        );
+    }
+
+    public function swapRoomFloors(int $player, int $posA, int $posB): void
+    {
+        $this->rooms->swapFloors($posA, $posB);
+        $this->notices[] = Notification::roomsSwapped(
+            $player,
+            ($this->nameOf)($player),
+            'FLOOR',
+            $posA,
+            $posB,
+            $this->roomName($posA),
+            $this->roomName($posB),
+            [['pos' => $posA, 'floor_id' => $this->rooms->floorAt($posA)], ['pos' => $posB, 'floor_id' => $this->rooms->floorAt($posB)]],
+        );
+    }
+
+    public function swapHandAndRoom(int $player, int $handCardId, int $position): void
+    {
+        $room = $this->memory->inLoc(MemoryLocation::Room, $position)[0] ?? throw new \LogicException("room $position has no card");
+        $roomRef = $this->ref($room->id);
+        $handRef = $this->ref($handCardId);
+        $this->memory->move($room->id, MemoryLocation::Hand, $player);
+        $this->memory->move($handCardId, MemoryLocation::Room, $position);
+        $this->notices[] = Notification::roomCardSwappedWithHand(
+            $player,
+            ($this->nameOf)($player),
+            $position,
+            $this->roomName($position),
+            $roomRef,
+            $handRef,
+            PublicView::backKey(PublicView::definition($handRef['type'])),
+        );
+    }
+
+    public function placeUnderFloor(int $player, array $cardIds): void
+    {
+        $pos = $this->players->persona($player);
+        foreach ($cardIds as $cardId) {
+            $ref = $this->ref($cardId);
+            $this->memory->move($cardId, MemoryLocation::UnderFloor, $pos);
+            $this->notices[] = Notification::cardsPlacedUnderFloor(
+                $player,
+                ($this->nameOf)($player),
+                $pos,
+                $this->roomName($pos),
+                [$ref],
+                $this->memory->count(MemoryLocation::Hand, $player),
+            );
+            $pos = Corridor::previous($pos);
+        }
+    }
+
+    public function collectUnderFloor(int $player, int $position): void
+    {
+        $refs = [];
+        foreach ($this->memory->inLoc(MemoryLocation::UnderFloor, $position) as $card) {
+            $refs[] = $this->ref($card->id);
+            $this->memory->move($card->id, MemoryLocation::Hand, $player);
+        }
+        if ($refs !== []) {
+            $this->notices[] = Notification::cardsGainedFromFloor(
+                $player,
+                ($this->nameOf)($player),
+                $position,
+                $this->roomName($position),
+                $refs,
+                $this->memory->count(MemoryLocation::Hand, $player),
+            );
+        }
+    }
+
     public function isGameOver(): bool
     {
         return $this->globals->endReason() !== null;
@@ -430,6 +548,11 @@ final class StoredGameMutator implements GameMutator
         $card = $this->memory->find($cardId) ?? throw new \LogicException("unknown card $cardId");
 
         return Notification::cardRef($card->id, $card->type);
+    }
+
+    private function roomName(int $pos): string
+    {
+        return FloorCards::get(sprintf('F%02d', $this->rooms->floorAt($pos)))->roomName;
     }
 
     private function levelOfCard(int $cardId): int

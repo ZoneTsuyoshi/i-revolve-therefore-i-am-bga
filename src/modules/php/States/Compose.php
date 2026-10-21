@@ -86,8 +86,14 @@ class Compose extends GameState
     #[PossibleAction]
     public function actComposeArchitect(int $tableauCardId, int $newCardId, int $activePlayerId): string
     {
-        // TODO(I-09): I03 の代替自己構成
-        throw new UserException(clienttranslate('Composing is not available yet'));
+        try {
+            $notices = $this->game->irTurn()->compose->architect($activePlayerId, $tableauCardId, $newCardId);
+        } catch (EffectViolation $e) {
+            throw new UserException($e->getMessage());
+        }
+        $this->game->irSend(...$notices);
+
+        return $this->irNext();
     }
 
     /**

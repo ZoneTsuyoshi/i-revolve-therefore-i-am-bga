@@ -12,6 +12,8 @@ use Bga\Games\IRevolveThereforeIAm\Material\Control;
 use Bga\Games\IRevolveThereforeIAm\Material\EffectCatalog;
 use Bga\Games\IRevolveThereforeIAm\Material\EffectKind;
 use Bga\Games\IRevolveThereforeIAm\Material\EffectNode;
+use Bga\Games\IRevolveThereforeIAm\Material\EgoCards;
+use Bga\Games\IRevolveThereforeIAm\Material\OwnerScope;
 use Bga\Games\IRevolveThereforeIAm\Material\EffectSpec;
 use Bga\Games\IRevolveThereforeIAm\Material\Event;
 use Bga\Games\IRevolveThereforeIAm\Material\FloorBonus;
@@ -27,8 +29,8 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
- * 仕様書 008 §12.1 の整合テスト（UT-01〜UT-10）。想い出カード 42・自我 13・目標 7 の定義は後続のタスク（I-09・I-10）で入るので、
- * それに依存する部分は skip にしてある（コメントの「後続で有効化」）。
+ * 仕様書 008 §12.1 の整合テスト（UT-01〜UT-10）。想い出カード 42・自我 13 の定義は I-09。目標 7 は I-10 なので、
+ * 目標に依存する UT-05 の側と texts.js の UT-09 は別（JS 側）。
  */
 final class EffectCatalogTest extends TestCase
 {
@@ -54,10 +56,19 @@ final class EffectCatalogTest extends TestCase
         }
     }
 
-    /** UT-01（効果ありの 42 種の側）: 後続で有効化。 */
+    /** UT-01（効果ありの 42 種の側）: 効果の種類が NONE でないカードは、同じ種類（kind）の効果を持つ。 */
     public function testEffectCardsHaveEffects(): void
     {
-        self::markTestSkipped('UT-01 の 42 種の側: 想い出カードの効果定義は I-09 で追加する（後続で有効化）');
+        $withEffect = array_filter(MemoryCards::all(), static fn ($c): bool => $c->effectKind !== EffectKind::NONE);
+        self::assertCount(42, $withEffect);
+        foreach ($withEffect as $id => $card) {
+            $specs = EffectCatalog::forCard($id);
+            self::assertCount(1, $specs, $id);
+            self::assertSame("{$id}.1", $specs[0]->id);
+            self::assertSame($card->effectKind, $specs[0]->kind, $id);
+            self::assertSame($id, $specs[0]->source);
+            self::assertSame(OwnerScope::OWNER, $specs[0]->ownerScope);
+        }
     }
 
     /** UT-02: 99 種の想起効果の識別子が RC-01〜RC-13 に対応し、13 種全てに EffectSpec がある。 */
@@ -137,10 +148,24 @@ final class EffectCatalogTest extends TestCase
         self::assertSame(ComposeContext::BONUS_ANY, $this->firstParam('R4', 'ctx'));
     }
 
-    /** UT-05: 初期自我 8・強化自我 5・目標 7 の効果 / 評価が定義済み。後続で有効化。 */
-    public function testEgoAndObjectivesAreDefined(): void
+    /** UT-05: 初期自我 8・強化自我 5 の効果が定義済み（目標 7 は I-10）。効果の種類は強化自我が card.csv と一致。 */
+    public function testEgoCardsAreDefined(): void
     {
-        self::markTestSkipped('UT-05: 自我 13・目標 7 の定義は I-09・I-10 で追加する（後続で有効化）');
+        self::assertCount(13, EgoCards::all());
+        foreach (EgoCards::all() as $id => $ego) {
+            $specs = EffectCatalog::forCard($id);
+            self::assertNotSame([], $specs, $id);
+            foreach ($specs as $spec) {
+                self::assertSame($id, $spec->source);
+                self::assertStringStartsWith($id . '.', $spec->id);
+                if ($ego->effectKind !== null) {
+                    self::assertSame($ego->effectKind, $spec->kind, $spec->id);
+                }
+            }
+        }
+        // I04 だけ 2 つの効果（MD-10 の修飾と、止まったときの取得）
+        self::assertSame(['I04.1', 'I04.2'], array_map(static fn (EffectSpec $s): string => $s->id, EffectCatalog::forCard('I04')));
+        self::assertCount(14, array_filter(EffectCatalog::all(), static fn (EffectSpec $s): bool => preg_match('/^[IE]\d\d\./', $s->id) === 1));
     }
 
     /** UT-06: 全 EffectSpec が参照する OP / MD / CD / EV が既知の値（enum で型が守るので、木の中も確かめる）。 */
@@ -201,13 +226,25 @@ final class EffectCatalogTest extends TestCase
     {
         $ids = array_keys(EffectCatalog::all());
         self::assertSame($ids, array_values(array_unique($ids)));
-        self::assertCount(13 + 12 + 4 + 9, $ids);
+        self::assertCount(13 + 12 + 4 + 9 + 42 + 14, $ids);
     }
 
-    /** UT-08 の後半: M052〜M054・M055〜M057・M064〜M066 の定義が同一。後続で有効化。 */
+    /** UT-08 の後半: M052〜M054・M055〜M057・M064〜M066 の定義（条件と操作と修飾）が同一。 */
     public function testInterchangeableCardsShareDefinitions(): void
     {
-        self::markTestSkipped('UT-08 の同一定義の検査: 想い出カードの効果定義は I-09 で追加する（後続で有効化）');
+        foreach ([['M052', 'M053', 'M054'], ['M055', 'M056', 'M057'], ['M064', 'M065', 'M066']] as $group) {
+            $first = EffectCatalog::get($group[0] . '.1');
+            foreach (array_slice($group, 1) as $id) {
+                $spec = EffectCatalog::get($id . '.1');
+                self::assertEquals($first->ops, $spec->ops, $id);
+                self::assertEquals($first->conditions, $spec->conditions, $id);
+                self::assertSame($first->modifier, $spec->modifier, $id);
+                self::assertEquals($first->params, $spec->params, $id);
+                self::assertSame($first->events, $spec->events, $id);
+                self::assertSame($first->limit, $spec->limit, $id);
+            }
+        }
+        self::assertNotEquals(EffectCatalog::get('M052.1')->ops, EffectCatalog::get('M055.1')->ops);
     }
 
     /** UT-09: texts.js のキーとの一致。後続で有効化。 */

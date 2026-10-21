@@ -27,7 +27,6 @@ use Bga\Games\IRevolveThereforeIAm\Material\OwnerScope;
 use Bga\Games\IRevolveThereforeIAm\Material\ResourceTouch;
 use IRevolveTests\Support\ArrayCatalog;
 use IRevolveTests\Support\MoveFixture;
-use IRevolveTests\Support\TestSpecs;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -70,7 +69,7 @@ final class EffectResolverTest extends TestCase
      */
     private static function fixture(array $extra = []): MoveFixture
     {
-        return new MoveFixture(new ArrayCatalog([...array_values(EffectCatalog::all()), ...TestSpecs::all(), ...$extra]));
+        return new MoveFixture(new ArrayCatalog([...array_values(EffectCatalog::all()), ...$extra]));
     }
 
     private static function lightEvent(): GameEvent

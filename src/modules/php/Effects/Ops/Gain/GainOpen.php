@@ -31,9 +31,9 @@ final class GainOpen extends AbstractOp
 
     public function request(OpContext $context): ?ChoiceRequest
     {
-        $count = $context->node->intParam('n', 1);
+        $count = $this->amount($context);
         $field = $context->view->fieldIds();
-        if (count($field) <= $count) {
+        if ($count === 0 || count($field) <= $count) {
             return null;
         }
 
@@ -42,8 +42,11 @@ final class GainOpen extends AbstractOp
 
     public function execute(OpContext $context, OpAnswer $answer): array
     {
-        $count = $context->node->intParam('n', 1);
+        $count = $this->amount($context);
         $field = $context->view->fieldIds();
+        if ($count === 0) {
+            return [];
+        }
 
         if ($this->request($context) === null) {
             $taken = $field;

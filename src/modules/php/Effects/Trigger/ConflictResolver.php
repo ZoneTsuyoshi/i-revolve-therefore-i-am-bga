@@ -9,6 +9,9 @@ declare(strict_types=1);
 
 namespace Bga\Games\IRevolveThereforeIAm\Effects\Trigger;
 
+use Bga\Games\IRevolveThereforeIAm\Material\EffectCatalog;
+use Bga\Games\IRevolveThereforeIAm\Material\MemoryCards;
+use Bga\Games\IRevolveThereforeIAm\Material\Op;
 use Bga\Games\IRevolveThereforeIAm\Material\ResourceTouch;
 
 /**
@@ -34,7 +37,7 @@ final class ConflictResolver
                 if ($a->ops == $b->ops && $a->conditions == $b->conditions) {
                     continue;
                 }
-                if (ResourceTouch::anyConflict($a->touches(), $b->touches())) {
+                if (ResourceTouch::anyConflict($this->touchesOf($effects[$i]), $this->touchesOf($effects[$j]))) {
                     return true;
                 }
             }
@@ -59,5 +62,34 @@ final class ConflictResolver
         });
 
         return $effects;
+    }
+
+    /**
+     * 効果が実際に触る資源。M071（RECALL_ACTIVATE）は、自己構成したカードの想起効果（RC）が触る資源を足す（008 §6.3.3）。
+     *
+     * @return list<ResourceTouch>
+     */
+    private function touchesOf(TriggeredEffect $effect): array
+    {
+        $touches = $effect->spec->touches();
+        $type = $effect->payload['card_type'] ?? null;
+        if (!is_string($type)) {
+            return $touches;
+        }
+        foreach ($effect->spec->steps() as $step) {
+            if ($step->node->atomicOp() !== Op::RECALL_ACTIVATE) {
+                continue;
+            }
+            $recall = MemoryCards::get($type)->recall;
+            $groups = (array) ($step->node->params['groups'] ?? []);
+            if ($groups !== [] && !in_array($recall->group(), $groups, true)) {
+                continue;
+            }
+            foreach (EffectCatalog::recall($recall)->touches() as $touch) {
+                $touches[] = $touch;
+            }
+        }
+
+        return $touches;
     }
 }

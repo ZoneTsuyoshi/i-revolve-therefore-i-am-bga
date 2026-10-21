@@ -9,8 +9,7 @@ use Bga\Games\IRevolveThereforeIAm\Material\EffectCatalog;
 use Bga\Games\IRevolveThereforeIAm\Material\EffectSpec;
 
 /**
- * 任意の効果の定義を差し込める `SpecSource`。想い出カード・自我カードの本番の定義（後続のタスク）が `EffectCatalog` に入るまでは、
- * `TestSpecs`（008 §7.2・§7.6 の写し）と `EffectCatalog` を合わせて使う。
+ * 任意の効果の定義を差し込める `SpecSource`。`withTestSpecs()` は本番の `EffectCatalog` の全定義（想い出カード 42・自我 13 を含む）。
  */
 final class ArrayCatalog implements SpecSource
 {
@@ -27,10 +26,10 @@ final class ArrayCatalog implements SpecSource
         }
     }
 
-    /** `EffectCatalog` の全定義 + テスト用のカード効果 */
+    /** `EffectCatalog` の全定義 */
     public static function withTestSpecs(): self
     {
-        return new self([...array_values(EffectCatalog::all()), ...TestSpecs::all()]);
+        return new self(array_values(EffectCatalog::all()));
     }
 
     public function forCard(string $cardId): array

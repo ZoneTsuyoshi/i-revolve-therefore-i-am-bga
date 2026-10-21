@@ -68,13 +68,11 @@ final readonly class EffectSpec
         $seen = [];
         $touches = [];
         foreach ($nodes as $node) {
-            foreach ($node->ops() as $op) {
-                foreach ($op->touches() as $touch) {
-                    $key = $touch->toString();
-                    if (!isset($seen[$key])) {
-                        $seen[$key] = true;
-                        $touches[] = $touch;
-                    }
+            foreach ($node->touches() as $touch) {
+                $key = $touch->toString();
+                if (!isset($seen[$key])) {
+                    $seen[$key] = true;
+                    $touches[] = $touch;
                 }
             }
         }

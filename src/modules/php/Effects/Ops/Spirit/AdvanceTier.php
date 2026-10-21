@@ -9,7 +9,6 @@ declare(strict_types=1);
 
 namespace Bga\Games\IRevolveThereforeIAm\Effects\Ops\Spirit;
 
-use Bga\Games\IRevolveThereforeIAm\Effects\Context\GameEvent;
 use Bga\Games\IRevolveThereforeIAm\Effects\EffectViolation;
 use Bga\Games\IRevolveThereforeIAm\Effects\Engine\ChoiceRequest;
 use Bga\Games\IRevolveThereforeIAm\Effects\Ops\AbstractOp;
@@ -17,7 +16,6 @@ use Bga\Games\IRevolveThereforeIAm\Effects\Ops\OpAnswer;
 use Bga\Games\IRevolveThereforeIAm\Effects\Ops\OpContext;
 use Bga\Games\IRevolveThereforeIAm\Material\AnalysisCards;
 use Bga\Games\IRevolveThereforeIAm\Material\ChoiceKind;
-use Bga\Games\IRevolveThereforeIAm\Material\Event;
 
 /**
  * OP-12 `ADVANCE_TIER`: 精神階層を 1 つ上げる（`via = EFFECT`。M088 の効果）。`max_tier` を超える階層へは上げない。
@@ -56,14 +54,11 @@ final class AdvanceTier extends AbstractOp
             }
         }
         $via = is_string($context->node->params['via'] ?? null) ? $context->node->params['via'] : 'EFFECT';
-        $hadLight = $context->mutator->advanceSpirit($context->owner, $to, $via);
+        // EV-06（TIER_UP）の誘発は、到着した精神カードのボーナスと合わせて順序づけるので、advanceSpirit（SpiritArrival）が
+        // 解決スタックに積む。ここでイベントを返すと二重に誘発する。
+        $context->mutator->advanceSpirit($context->owner, $to, $via);
 
-        return [new GameEvent(Event::TIER_UP, $context->owner, [
-            'via' => $via,
-            'spirit' => $to,
-            'to' => AnalysisCards::get($to)->floor,
-            'dest_had_light' => $hadLight,
-        ])];
+        return [];
     }
 
     /**
