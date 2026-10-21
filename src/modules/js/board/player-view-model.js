@@ -8,13 +8,13 @@ import { memKey, toInt } from './view-model.js';
 /** 手札の上限（001 §12。獲得の途中では一時的に超える） */
 export const HAND_LIMIT = 8;
 
-/** トークンの種類。表示順と UI スプライトのキー、英語の名前 */
+/** トークンの種類。表示順と UI スプライトのキー（名前の翻訳は PlayerAreas の `tokenTitle`） */
 export const TOKEN_KINDS = /** @type {const} */ ([
-  { kind: 'light', sprite: 'token_light', name: 'Inner light' },
-  { kind: 'wildUp', sprite: 'token_wildkey', name: 'Wild move key' },
-  { kind: 'wildUsed', sprite: 'token_wildkey_used', name: 'Wild move key (used)' },
-  { kind: 'compose', sprite: 'token_compose', name: 'Self-composition token' },
-  { kind: 'analysis', sprite: 'token_analysis', name: 'Psychoanalysis token' },
+  { kind: 'light', sprite: 'token_light' },
+  { kind: 'wildUp', sprite: 'token_wildkey' },
+  { kind: 'wildUsed', sprite: 'token_wildkey_used' },
+  { kind: 'compose', sprite: 'token_compose' },
+  { kind: 'analysis', sprite: 'token_analysis' },
 ]);
 
 /** N16 の `totals` のキー（snake_case）→ トークンの種類 */

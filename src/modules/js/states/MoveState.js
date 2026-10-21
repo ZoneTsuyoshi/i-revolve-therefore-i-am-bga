@@ -12,6 +12,27 @@ import {
   undoRoom,
 } from './move-plan.js';
 
+/**
+ * 経路の要約の文言（move-plan.js の `describePlan` の `tr`）。抽出のため `_()` のリテラルで書く。`_()` は setup 以降に呼ぶ。
+ * @param {string} key 英語の原文
+ * @returns {string}
+ */
+function translatePlan(key) {
+  switch (key) {
+    case 'Room': return _('Room');
+    case 'Inner light': return _('Inner light');
+    case 'Wild move key': return _('Wild move key');
+    case 'Effect key': return _('Effect key');
+    case 'Hand': return _('Hand');
+    case 'Composed': return _('Composed');
+    case 'Wisdom': return _('Wisdom');
+    case 'Will': return _('Will');
+    case 'Emotion': return _('Emotion');
+    case 'Wild': return _('Wild');
+    default: return key;
+  }
+}
+
 /** 入れる部屋の印 */
 export const CLASS_ROOM_SELECTABLE = 'ir-room-selectable';
 /** 経路に入った部屋の印（順番は data-order） */
@@ -102,7 +123,7 @@ export class MoveState {
       }
     });
 
-    const summary = describePlan(board, this.steps, (key) => _(key));
+    const summary = describePlan(board, this.steps, translatePlan);
     const pending = pendingRoom(board, this.steps);
     if (pending !== null) {
       this.renderPayment(board, pending, summary, playerAreas, me);

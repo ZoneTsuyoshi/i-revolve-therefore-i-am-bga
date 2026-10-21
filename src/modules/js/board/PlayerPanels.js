@@ -25,6 +25,20 @@ import { toInt } from './view-model.js';
 /** 値が変わったときの強調（CSS の `ir-pop`、0.3 秒）を付け直す時間 */
 const POP_MS = 300;
 
+/**
+ * 鍵の本数のツールチップ（翻訳済み。`_()` は setup 以降に呼ぶ）。
+ * @param {string} kind `KEY_KINDS` の kind
+ * @returns {string}
+ */
+function keyTitle(kind) {
+    switch (kind) {
+        case 'WISDOM': return _('Wisdom keys');
+        case 'WILL': return _('Will keys');
+        case 'EMOTION': return _('Emotion keys');
+        default: return _('Wild keys');
+    }
+}
+
 export class PlayerPanels {
     /**
      * @param {PanelDeps} deps
@@ -172,14 +186,14 @@ export class PlayerPanels {
             }
             const value = el('span', { class: 'ir-pp-value', data: { item: name } });
             values[name] = value;
-            return el('span', { class: 'ir-pp-item', data: { item: name }, attrs: { title: _(title) } }, [icon, value]);
+            return el('span', { class: 'ir-pp-item', data: { item: name }, attrs: { title } }, [icon, value]);
         };
         const row = (/** @type {HTMLElement[]} */ ...items) => el('div', { class: 'ir-pp-row' }, items);
-        const keys = KEY_KINDS.map(({ kind, sprite, name }) => item(`key${kind}`, name, sprite));
+        const keys = KEY_KINDS.map(({ kind, sprite }) => item(`key${kind}`, keyTitle(kind), sprite));
         const root = el('div', { class: 'ir-pp', data: { player: playerId } }, [
-            row(item('score', 'Self-composition score', 'icon_score'), item('hand', 'Hand (cards)', null, 'ir-hand-icon'), item('light', 'Inner light', 'token_light')),
-            row(item('wild', 'Wild move key (face up + used)', 'token_wildkey'), item('compose', 'Self-composition token', 'token_compose'), item('analysis', 'Psychoanalysis token', 'token_analysis')),
-            row(item('tier', 'Psyche tier', null, 'ir-tier-icon'), ...keys),
+            row(item('score', _('Self-composition score'), 'icon_score'), item('hand', _('Hand (cards)'), null, 'ir-hand-icon'), item('light', _('Inner light'), 'token_light')),
+            row(item('wild', _('Wild move key (face up + used)'), 'token_wildkey'), item('compose', _('Self-composition token'), 'token_compose'), item('analysis', _('Psychoanalysis token'), 'token_analysis')),
+            row(item('tier', _('Psyche tier'), null, 'ir-tier-icon'), ...keys),
         ]);
         host.append(root);
         this.values.set(playerId, values);

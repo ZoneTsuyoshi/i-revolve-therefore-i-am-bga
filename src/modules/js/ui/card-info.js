@@ -95,6 +95,26 @@ export class CardInfo {
         window.addEventListener('scroll', () => this.hideTip(), { passive: true });
     }
 
+    /**
+     * ログの中のカード名（`span.ir-log-card`）にも、ホバー・長押し・クリックの説明を付ける。1 回だけ呼ぶ。
+     * ログは盤面の外で、後から要素が増えるので、document で受けて対象を絞る。
+     */
+    attachLog() {
+        /** @param {(event: any) => void} handler */
+        const onLogCard = (handler) => (/** @type {Event} */ event) => {
+            if (event.target instanceof Element && event.target.closest('.ir-log-card') !== null) {
+                handler(event);
+            }
+        };
+        document.addEventListener('pointerover', onLogCard((e) => this.handlePointerOver(e)));
+        document.addEventListener('pointerout', onLogCard((e) => this.handlePointerOut(e)));
+        document.addEventListener('pointerdown', onLogCard((e) => this.handlePointerDown(e)));
+        document.addEventListener('pointermove', onLogCard((e) => this.handlePointerMove(e)));
+        document.addEventListener('click', onLogCard((e) => this.handleClick(e)));
+        document.addEventListener('pointerup', () => this.cancelPress());
+        document.addEventListener('pointercancel', () => this.cancelPress());
+    }
+
     // ---- カードの特定 ----
 
     /**
@@ -107,7 +127,8 @@ export class CardInfo {
             return null;
         }
         const hook = node.closest('[data-ir-zoom-key]');
-        if (hook instanceof HTMLElement && this.deps.root.contains(hook)) {
+        // ログの中のカード名（`span.ir-log-card`）は盤面の外にある
+        if (hook instanceof HTMLElement && (this.deps.root.contains(hook) || hook.classList.contains('ir-log-card'))) {
             return { key: hook.dataset.irZoomKey ?? '', element: hook, selectionMode: false };
         }
         const card = node.closest('.ir-card');

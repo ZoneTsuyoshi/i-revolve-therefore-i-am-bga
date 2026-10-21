@@ -855,6 +855,21 @@ html[data-theme="dark"] {
     margin: 0 0.1em;
 }
 
+/* ログの中のカード名・部屋名・トークン名（009 §9） */
+.ir-log-card {
+    border-bottom: 1px dotted currentcolor;
+    cursor: help;
+    font-weight: bold;
+}
+
+.ir-log-room {
+    font-weight: bold;
+}
+
+.ir-log-token .ir-i {
+    height: 1.4em;
+}
+
 /* 英語の名前・効果文の部品（ツールチップ・拡大表示・案内パネルで共通） */
 .ir-info {
     overflow-wrap: anywhere;

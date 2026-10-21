@@ -22,7 +22,9 @@ import { MoveState } from './states/MoveState.js';
 import { registerActionStates } from './states/register.js';
 import { CardInfo } from './ui/card-info.js';
 import { captionOf } from './ui/card-info-model.js';
+import { createIcon } from './ui/icons.js';
 import { Layout } from './ui/Layout.js';
+import { formatLogArgs } from './ui/log-format.js';
 import { buildCardTexts } from './ui/texts.js';
 import { int } from './ui/dom.js';
 
@@ -149,7 +151,44 @@ export class Game {
         // 幅を測って data-layout と CSS 変数を入れ、以後は ResizeObserver で追従する。layout が変わるたびに piles と open の置き場所を替える
         this.layout = new Layout(board.root, (layout) => placeFloating(board, layout));
 
+        // ログの引数の整形（カード名・部屋名・トークン名。009 §9）。ログ・リプレイは setup の後に描かれる
+        cardInfo.attachLog();
+        this.hookLogFormat();
         this.setupNotifications();
+    }
+
+    /**
+     * ログ文の引数の整形（BGA が `format_string_recursive` の頭で呼ぶ）。texts が無い（setup の前）、
+     * または整形に失敗したときは、何もせず元のまま返す。
+     *
+     * @param {string} log
+     * @param {any} args
+     * @returns {{ log: string, args: any }}
+     */
+    bgaFormatText(log, args) {
+        if (this.texts === null) {
+            return { log, args };
+        }
+        try {
+            return formatLogArgs(log, args, {
+                texts: this.texts,
+                translate: (text) => _(text),
+                iconHtml: (name) => createIcon(name, (file) => this.bga.images.getImgUrl(file)).outerHTML,
+            });
+        } catch {
+            return { log, args };
+        }
+    }
+
+    /**
+     * 新しい Game クラスでも `bgaFormatText` が呼ばれるように、土台の GameGui の同名メソッドに橋渡しする
+     * （二重に呼ばれても結果は同じ。Studio で確認: U-8）。
+     */
+    hookLogFormat() {
+        const gui = /** @type {any} */ (this.bga.gameui);
+        if (gui !== null && gui !== undefined && typeof gui.bgaFormatText === 'function') {
+            gui.bgaFormatText = (/** @type {string} */ log, /** @type {any} */ args) => this.bgaFormatText(log, args);
+        }
     }
 
     setupNotifications() {
