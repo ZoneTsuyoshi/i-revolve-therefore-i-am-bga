@@ -31,9 +31,10 @@ import { paintCardFace } from './card-face.js';
  * @param {import('./card-face.js').ImgUrl} deps.imgUrl
  * @param {() => boolean} deps.animationsActive
  * @param {{ memW: number, landW: number }} [deps.initial] bga-cards に渡す初期寸法（実寸は CSS 変数で上書きする）
+ * @param {(key: string) => string | undefined} [deps.captionOf] スプライトのキー → カードの下に出す英語名（Card captions。ui/card-info-model.js の captionOf）
  * @returns {Managers}
  */
-export function createCardManagers({ BgaCards, BgaAnimations, imgUrl, animationsActive, initial = { memW: 128, landW: 149 } }) {
+export function createCardManagers({ BgaCards, BgaAnimations, imgUrl, animationsActive, initial = { memW: 128, landW: 149 }, captionOf }) {
     const animations = new BgaAnimations.Manager({ animationsActive });
 
     /**
@@ -54,10 +55,11 @@ export function createCardManagers({ BgaCards, BgaAnimations, imgUrl, animations
         setupDiv: (/** @type {IrCard} */ card, /** @type {HTMLDivElement} */ div) => {
             div.classList.add('ir-card', type);
             div.dataset.irCardId = String(card.id);
-            if (card.caption !== undefined) {
+            const text = card.caption ?? captionOf?.(card.key);
+            if (text !== undefined) {
                 const caption = document.createElement('span');
                 caption.className = 'ir-caption';
-                caption.textContent = card.caption;
+                caption.textContent = text;
                 div.append(caption);
             }
         },

@@ -14,11 +14,15 @@ import { buildBoard, placeFloating } from './board/Board.js';
 import { CommonArea } from './board/CommonArea.js';
 import { PlayerAreas } from './board/PlayerAreas.js';
 import { PlayerPanels } from './board/PlayerPanels.js';
+import { recallFromGamedatas } from './board/view-model.js';
 import { createCardManagers } from './cards/managers.js';
 import { CommonNotifications } from './notifications.js';
 import { PlayerNotifications } from './player-notifications.js';
 import { registerStubStates } from './states/StubStates.js';
+import { CardInfo } from './ui/card-info.js';
+import { captionOf } from './ui/card-info-model.js';
 import { Layout } from './ui/Layout.js';
+import { buildCardTexts } from './ui/texts.js';
 import { int } from './ui/dom.js';
 
 const BgaAnimations = await importEsmLib('bga-animations', '1.x');
@@ -42,6 +46,8 @@ export class Game {
         this.playerAreas = null;
         /** @type {PlayerPanels | null} */
         this.panels = null;
+        /** @type {CardInfo | null} */
+        this.cardInfo = null;
 
         // Studio の雛形の状態（サーバー側 States/PlayerTurn.php）。サーバー側の置き換え後に状態ごとのクラスへ差し替える
         registerStubStates(bga);
@@ -58,11 +64,14 @@ export class Game {
         // 拡大表示用のシートは使うまで読み込まない（009 §10.1）
         this.bga.images.dontPreloadImages([1, 2, 3].map((n) => `ir_mem_zoom_${n}.webp`).concat(['ir_land_zoom_1.webp', 'ir_land_zoom_2.webp']));
 
+        // 英語のカード文（`_()` は setup 以降に呼ぶ。003 §7.1）。カードの下の英語名（Card captions）にも使う
+        const texts = buildCardTexts();
         this.cards = createCardManagers({
             BgaCards,
             BgaAnimations,
             imgUrl: (file) => this.bga.images.getImgUrl(file),
             animationsActive: () => this.bga.gameui.bgaAnimationsActive(),
+            captionOf: (key) => captionOf(key, texts),
         });
 
         const spectator = this.bga.players.isCurrentPlayerSpectator();
@@ -101,6 +110,23 @@ export class Game {
             animationsActive: () => this.bga.gameui.bgaAnimationsActive(),
         });
         this.panels.setup(gamedatas);
+        // ツールチップ・拡大表示・想起中の案内パネル（U-7）。カードの要素から英語の名前と効果を引く
+        const cardInfo = new CardInfo({
+            root: board.root,
+            recallPanel: board.recallPanel,
+            texts,
+            catalog: /** @type {any} */ (gamedatas)?.catalog,
+            imgUrl: (file) => this.bga.images.getImgUrl(file),
+            objectiveStatus: () => this.common?.objectiveStatus,
+            spiritHasLight: (id) => this.common?.lights.has(id),
+            playerName: (playerId) => gamedatas?.players?.[playerId]?.name,
+        });
+        cardInfo.attach();
+        this.cardInfo = cardInfo;
+        const recall = recallFromGamedatas(gamedatas);
+        if (recall !== null) {
+            cardInfo.showRecall(recall);
+        }
         // 幅を測って data-layout と CSS 変数を入れ、以後は ResizeObserver で追従する。layout が変わるたびに piles と open の置き場所を替える
         this.layout = new Layout(board.root, (layout) => placeFloating(board, layout));
 
@@ -110,7 +136,7 @@ export class Game {
     setupNotifications() {
         // notif_xxx という名前のメソッドを通知名に対応させて自動で購読する（共通の領域の通知は CommonNotifications）
         const players = this.playerAreas === null ? null : new PlayerNotifications(this.playerAreas, this.panels);
-        const handlers = this.common === null ? [] : [new CommonNotifications(this.common, players), ...(players === null ? [] : [players])];
+        const handlers = this.common === null ? [] : [new CommonNotifications(this.common, players, this.cardInfo), ...(players === null ? [] : [players])];
         this.bga.notifications.setupPromiseNotifications({ handlers });
     }
 }

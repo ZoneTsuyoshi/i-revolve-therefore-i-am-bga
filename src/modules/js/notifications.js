@@ -4,20 +4,29 @@
  * 戻り値の Promise が終わるまで次の通知は処理されない。引数の形が欠けていても例外を出さない。
  * プレイヤーの領域（手札・自己構成済み・トークンなど。U-5）にも関わる通知は、同名のメソッドを 2 つのクラスに分けられないので、
  * こちらから `PlayerNotifications` のフック（`on…`）を呼ぶ。
- * 扱う通知: N02 N03 N06 N08 N09 N12 N13 N14 N15 N22 N23 N24 N25 N26 N27 N28 N29 N32（画面を更新するもの）。
+ * 扱う通知: N02 N03 N05（想起中の案内パネルを閉じる） N06 N08 N09 N12 N13 N14 N15 N22 N23 N24 N25 N26 N27 N28 N29 N32（画面を更新するもの）。
  * © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
  */
-import { cleanupRefills, faceDownMemory, faceUpMemory, faceUpRefs, levelOfPosition, objectiveKey, objectiveStatusMap, roomsSwappedAfter, toInt } from './board/view-model.js';
+import { cleanupRefills, faceDownMemory, faceUpMemory, faceUpRefs, levelOfPosition, memKey, objectiveKey, objectiveStatusMap, roomsSwappedAfter, toInt } from './board/view-model.js';
 
 /** @typedef {Record<string, any>} Args */
+
+/**
+ * 想起中の案内パネル（ui/card-info.js の CardInfo）。通知から出し入れする。
+ * @typedef {object} RecallPanel
+ * @property {(p: { key: string, activators?: number[] }) => void} showRecall
+ * @property {() => void} hideRecall
+ */
 
 export class CommonNotifications {
     /**
      * @param {import('./board/CommonArea.js').CommonArea} common
      * @param {import('./player-notifications.js').PlayerNotifications | null} [players]
+     * @param {RecallPanel | null} [recall] 想起中の案内パネル（U-7）
      */
-    constructor(common, players = null) {
+    constructor(common, players = null, recall = null) {
         this.common = common;
+        this.recall = recall;
         /** @type {import('./player-notifications.js').PlayerNotifications | null} */
         this.players = players;
     }
@@ -49,7 +58,18 @@ export class CommonNotifications {
     /** N09: 想起で部屋のカードを表向きにする */
     async notif_recallStarted(/** @type {Args} */ args) {
         if (args?.card !== undefined && args.card !== null) {
+            this.recall?.showRecall({
+                key: memKey(args.card.type),
+                activators: Array.isArray(args.activators) ? args.activators.map(toInt) : [],
+            });
             await this.common.revealRoomCard(toInt(args.pos), args.card);
+        }
+    }
+
+    /** N05: フェイズの切り替え。想起フェイズを出たら、想起中の案内パネルを閉じる */
+    async notif_phaseStarted(/** @type {Args} */ args) {
+        if (args?.phase !== 'RECALL') {
+            this.recall?.hideRecall();
         }
     }
 
@@ -70,6 +90,7 @@ export class CommonNotifications {
 
     /** N14: 想起の獲得。部屋のカードが手札へ（部屋は空く） */
     async notif_roomCardAcquired(/** @type {Args} */ args) {
+        this.recall?.hideRecall();
         await this.players?.onRoomCardAcquired(args);
         await this.common.removeRoomCard(toInt(args?.pos), this.common.areaOf(toInt(args?.player_id)));
     }
@@ -138,6 +159,7 @@ export class CommonNotifications {
 
     /** N29: クリーンアップ。部屋と場札の補充（山から飛んでくる） */
     async notif_cleanup(/** @type {Args} */ args) {
+        this.recall?.hideRecall();
         this.common.syncDecks(args?.decks);
         this.players?.onCleanup(args);
         const { rooms, open } = cleanupRefills(args);

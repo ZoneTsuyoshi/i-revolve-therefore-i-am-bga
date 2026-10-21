@@ -45,6 +45,9 @@
     --ir-slot-bg: rgb(0 0 0 / 4%);
     --ir-slot-border: #9a948a;
     --ir-turn-border: #c0392b;
+    --ir-tip-bg: #fffdf8;
+    --ir-tip-border: #8a8478;
+    --ir-tip-shadow: rgb(0 0 0 / 35%);
 }
 
 /* BGA のダークモードは html の data-theme="dark"（@media (prefers-color-scheme) は BGA の切り替えを無視するので使わない。009 §12.2） */
@@ -56,6 +59,9 @@ html[data-theme="dark"] {
     --ir-slot-bg: rgb(255 255 255 / 6%);
     --ir-slot-border: #7a776f;
     --ir-turn-border: #ff7b6b;
+    --ir-tip-bg: #25252a;
+    --ir-tip-border: #7a776f;
+    --ir-tip-shadow: rgb(0 0 0 / 70%);
 }
 
 /* ---- 2. ルートと盤面の配置 ---- */
@@ -778,4 +784,188 @@ html[data-theme="dark"] {
 /* BGA 標準のスコア欄は使わない（終了時の勝者 1 / 他 0。009 §6） */
 .ir-hide-standard-score {
     display: none;
+}
+
+/* ---- 9. ツールチップ・拡大表示・想起中の案内パネル（U-7。009 §3.9・§7・§8） ---- */
+
+/* 長押しでメニューや文字選択が出ないようにする（スマホの長押しは拡大表示） */
+.ir-card {
+    -webkit-touch-callout: none;
+    user-select: none;
+}
+
+/* 英語テキストの中のアイコン（鍵や錠前の画像は余白が大きいので、本文の文字の 1.6 倍の高さで描く。幅は縦横比で決まる） */
+.ir-i {
+    display: inline-block;
+    height: 1.6em;
+    margin: -0.3em 0.1em;
+    vertical-align: middle;
+}
+
+.ir-i svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.ir-i-spirit,
+.ir-i-floor {
+    width: 1.2em;
+    height: 1.2em;
+    margin: 0 0.1em;
+}
+
+/* 英語の名前・効果文の部品（ツールチップ・拡大表示・案内パネルで共通） */
+.ir-info {
+    overflow-wrap: anywhere;
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--ir-text);
+}
+
+.ir-info-title {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.ir-info-sub {
+    margin-bottom: 4px;
+    color: var(--ir-text-muted);
+}
+
+.ir-info-section {
+    margin-top: 6px;
+}
+
+.ir-info-label {
+    font-weight: bold;
+}
+
+/* ツールチップ（マウスのみ。body 直下。カードの横に出る） */
+.ir-tip {
+    position: fixed;
+    z-index: 10000;
+    box-sizing: border-box;
+    max-width: min(320px, 90vw);
+    padding: 8px 10px;
+    border: 1px solid var(--ir-tip-border);
+    border-radius: 6px;
+    background: var(--ir-tip-bg);
+    box-shadow: 0 2px 8px var(--ir-tip-shadow);
+    pointer-events: none;
+}
+
+/* 拡大表示（body 直下。高さと上端は JS が window.innerHeight から決める） */
+.ir-zoom {
+    position: fixed;
+    right: 0;
+    left: 0;
+    z-index: 10001;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    background: rgb(0 0 0 / 55%);
+}
+
+.ir-zoom-dialog {
+    box-sizing: border-box;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    max-width: 100%;
+    padding: 10px;
+    border: 1px solid var(--ir-tip-border);
+    border-radius: 8px;
+    background: var(--ir-tip-bg);
+    color: var(--ir-text);
+    overflow: hidden;
+}
+
+.ir-zoom-dialog.ir-zoom-stacked {
+    flex-direction: column;
+    align-items: center;
+}
+
+.ir-zoom-image {
+    flex: none;
+    border-radius: 4px;
+}
+
+.ir-zoom-text {
+    box-sizing: border-box;
+    display: flex;
+    flex: 1 1 240px;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.ir-zoom-scroll {
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.ir-zoom-stacked .ir-zoom-text {
+    flex: none;
+    width: 100%;
+}
+
+.ir-zoom-actions {
+    display: flex;
+    flex: none;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.ir-zoom-actions button {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 6px 14px;
+    border: 1px solid var(--ir-tip-border);
+    border-radius: 6px;
+    background: var(--ir-slot-bg);
+    color: var(--ir-text);
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.ir-zoom-actions .ir-zoom-select {
+    border-color: var(--ir-turn-border);
+    font-weight: bold;
+}
+
+/* 想起中の案内パネル: 左に部屋のカードの拡大画像（幅は標準カードの 2 倍まで）、右に英語の想起効果 */
+.ir-recall-panel:not([hidden]) {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--ir-gap);
+}
+
+.ir-recall-image.ir-face {
+    flex: none;
+    width: min(calc(var(--ir-w) * 2), 40%);
+    height: auto;
+    aspect-ratio: 280 / 390;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.ir-recall-body {
+    min-width: 0;
+}
+
+.ir-recall-heading {
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ir-turn-border);
+}
+
+.ir-recall-who {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--ir-text-muted);
 }

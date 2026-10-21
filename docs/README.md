@@ -14,6 +14,7 @@
 | [development/rule-questions.md](development/rule-questions.md) | 作者への質問と回答の記録 |
 | [development/faq-workflow.md](development/faq-workflow.md) | FAQ・カードデータ（サイト側の `faq.csv` / `card.csv`）の起票・改修と同期の手順 |
 | [publishing/game-description.md](publishing/game-description.md) | 英語のゲーム紹介文と BGG 登録の手順 |
+| [publishing/card-texts-review.md](publishing/card-texts-review.md) | カードの英語テキストの対照表（日本語の原文と英語案。作者の確認用） |
 
 ## 一次情報
 
