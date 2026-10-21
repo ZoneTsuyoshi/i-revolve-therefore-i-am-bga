@@ -112,6 +112,8 @@ final class GlobalValues
 
     /**
      * FRAGMENTS / INSTANT_MEMORY / APEX_OF_PSYCHE / DECK_OUT。未確定は null。
+     *
+     * @phpstan-impure 効果の解決中に書き換わるため、呼ぶたびに読み直す
      */
     public function endReason(): ?string
     {
@@ -126,6 +128,8 @@ final class GlobalValues
 
     /**
      * 勝者のプレイヤー ID。全員敗北なら null。
+     *
+     * @phpstan-impure
      */
     public function winnerId(): ?int
     {
@@ -142,6 +146,8 @@ final class GlobalValues
      * 山札切れが成立したレベル（1 または 2）。
      *
      * @return list<int>
+     *
+     * @phpstan-impure
      */
     public function deckOut(): array
     {
