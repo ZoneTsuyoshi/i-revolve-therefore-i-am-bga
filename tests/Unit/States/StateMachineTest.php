@@ -154,7 +154,7 @@ final class StateMachineTest extends TestCase
 
     public function testGameEndIsReachableFromTheStatesThatCanEndTheGame(): void
     {
-        foreach ([31, 60, 61, 62, 70, 71, 72, 80, 81] as $id) {
+        foreach ([31, 51, 60, 61, 62, 70, 71, 72, 80, 81] as $id) {
             self::assertSame(95, self::$states[$id]->transitions[Transition::GAME_END] ?? null, "state $id");
         }
     }

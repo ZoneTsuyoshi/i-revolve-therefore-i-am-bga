@@ -13,7 +13,8 @@ use Bga\Games\IRevolveThereforeIAm\Data\GamePhase;
 
 /**
  * 通知の組み立て（仕様書 007 §10.2）。ログ文言（英語原文）はここに集める（翻訳の抽出のため）。
- * 今は N01〜N07、N15〜N17、N31 `gameEnded` と、移動できなかったときの `moveBlocked` だけ。残りは後続のタスクで足す。
+ * 今は N01〜N18、N24〜N26、N31 `gameEnded`、N33・N34 と、移動できなかったときの `moveBlocked` 。残り（N19〜N23、N27〜N30、N32、N35）は
+ * 後続のタスクで足す。
  */
 final class Notification
 {
@@ -126,6 +127,315 @@ final class Notification
             'pos' => $pos,
             'room_name' => $roomName,
             'i18n' => ['room_name'],
+        ]);
+    }
+
+    /**
+     * カードの参照（007 §10.1）。種類まで公開してよいカードにだけ使う。
+     *
+     * @return array{id: int, type: int}
+     */
+    public static function cardRef(int $cardId, int $type): array
+    {
+        return ['id' => $cardId, 'type' => $type];
+    }
+
+    /**
+     * N08: 想起効果による人格の移動（Q-06）。
+     */
+    public static function personaMoved(
+        int $playerId,
+        string $playerName,
+        int $fromPos,
+        int $pos,
+        string $roomName,
+        string $reason,
+        bool $countsAsEntry,
+    ): Notice {
+        return new Notice('personaMoved', clienttranslate('${player_name} moves to ${room_name}'), [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'from_pos' => $fromPos,
+            'pos' => $pos,
+            'room_name' => $roomName,
+            'reason' => $reason,
+            'counts_as_entry' => $countsAsEntry,
+            'i18n' => ['room_name'],
+        ]);
+    }
+
+    /**
+     * N09: 想起フェイズの開始。ターンプレイヤーの部屋の想い出カードを表向きにする。
+     *
+     * @param array{id: int, type: int} $card
+     * @param list<int> $activators 発動者（ターンプレイヤーから時計回り）
+     * @param array<int, int> $counts 発動者ごとの発動回数
+     */
+    public static function recallStarted(
+        int $playerId,
+        string $playerName,
+        int $pos,
+        string $roomName,
+        array $card,
+        string $cardName,
+        array $activators,
+        array $counts,
+    ): Notice {
+        return new Notice('recallStarted', clienttranslate('${player_name} recalls ${card_name} in ${room_name}'), [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'pos' => $pos,
+            'room_name' => $roomName,
+            'card' => $card,
+            'card_name' => $cardName,
+            'activators' => $activators,
+            'counts' => $counts,
+            'i18n' => ['room_name', 'card_name'],
+        ]);
+    }
+
+    /**
+     * N10: 床アクション（または想起効果による代替）を選んだ。`$kind` は `FLOOR` / `FLOOR_A` / `FLOOR_B` / `ALT_ANALYSIS` / `ALT_COMPOSE`。
+     */
+    public static function floorActionChosen(int $playerId, string $playerName, string $kind, string $actionName): Notice
+    {
+        return new Notice('floorActionChosen', clienttranslate('${player_name} performs ${action_name}'), [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'kind' => $kind,
+            'action_name' => $actionName,
+            'i18n' => ['action_name'],
+        ]);
+    }
+
+    /**
+     * 床アクションの代替の名前（N10 の `action_name`。翻訳対象の英語原文）。
+     */
+    public static function alternativeName(string $kind): string
+    {
+        return $kind === 'ALT_ANALYSIS' ? clienttranslate('an analysis instead of the floor action') : clienttranslate('a composition instead of the floor action');
+    }
+
+    /**
+     * N11: 想起効果・起動効果の発動（共通の部品）。想起効果では `$sourceName` に表向きにしたカードの名前、M062 の 2 回目は `$nth = 2`。
+     */
+    public static function effectActivated(
+        int $playerId,
+        string $playerName,
+        string $source,
+        string $sourceName,
+        ?string $specId,
+        ?int $nth = null,
+        ?int $times = null,
+    ): Notice {
+        $args = [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'source' => $source,
+            'source_name' => $sourceName,
+            'i18n' => ['source_name'],
+        ];
+        if ($specId !== null) {
+            $args['spec_id'] = $specId;
+        }
+        if ($nth !== null && $times !== null && $times > 1) {
+            $args['nth'] = $nth;
+            $args['times'] = $times;
+        }
+
+        return new Notice('effectActivated', clienttranslate('${player_name} activates ${source_name}'), $args);
+    }
+
+    /**
+     * N12: 山札から手札へ。公開部分は枚数だけで、引いたカードは本人の `_private` にだけ入れる。
+     *
+     * @param list<array{id: int, type: int}> $cards
+     * @param array<int, array{count: int, top: ?string}> $decks
+     */
+    public static function cardsDrawn(
+        int $playerId,
+        string $playerName,
+        array $cards,
+        string $reason,
+        array $decks,
+        int $handCount,
+    ): Notice {
+        return new Notice('cardsDrawn', clienttranslate('${player_name} draws ${count} memory card(s)'), [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'count' => count($cards),
+            'level' => 1,
+            'reason' => $reason,
+            'decks' => $decks,
+            'hand_count' => $handCount,
+            '_private' => [$playerId => ['cards' => $cards]],
+        ]);
+    }
+
+    /**
+     * N13: 場札から手札へ（表向きのカードなので種類を公開する）。
+     *
+     * @param list<array{id: int, type: int}> $cards
+     * @param list<int> $fromSlots 場札の枠
+     */
+    public static function cardsGained(
+        int $playerId,
+        string $playerName,
+        array $cards,
+        array $fromSlots,
+        int $handCount,
+        string $reason,
+    ): Notice {
+        return new Notice('cardsGained', clienttranslate('${player_name} takes ${count} memory card(s) from the open cards'), [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'cards' => $cards,
+            'count' => count($cards),
+            'source' => 'OPEN',
+            'from_slots' => $fromSlots,
+            'hand_count' => $handCount,
+            'reason' => $reason,
+        ]);
+    }
+
+    /**
+     * N14: 想起の最後の獲得（ターンプレイヤー。Q-04）。
+     *
+     * @param array{id: int, type: int} $card
+     */
+    public static function roomCardAcquired(
+        int $playerId,
+        string $playerName,
+        int $pos,
+        array $card,
+        string $cardName,
+        int $handCount,
+    ): Notice {
+        return new Notice('roomCardAcquired', clienttranslate('${player_name} acquires ${card_name}'), [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'pos' => $pos,
+            'card' => $card,
+            'card_name' => $cardName,
+            'hand_count' => $handCount,
+            'i18n' => ['card_name'],
+        ]);
+    }
+
+    /**
+     * N18: 手札から自己構成済みエリアへ。
+     *
+     * @param array{id: int, type: int} $card
+     * @param array{discarded: list<array{id: int, type: int}>, light: int, energy: int, tapped: list<int>} $payment
+     */
+    public static function cardComposed(
+        int $playerId,
+        string $playerName,
+        array $card,
+        string $cardName,
+        string $context,
+        array $payment,
+        int $tableauCount,
+        int $handCount,
+    ): Notice {
+        return new Notice('cardComposed', clienttranslate('${player_name} composes ${card_name}'), [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'card' => $card,
+            'card_name' => $cardName,
+            'context' => $context,
+            'payment' => $payment,
+            'tableau_count' => $tableauCount,
+            'hand_count' => $handCount,
+            'i18n' => ['card_name'],
+        ]);
+    }
+
+    /**
+     * N24: 精神トラックの階層を上げた。心光の獲得は N16 が続く。
+     *
+     * @param array{tapped: list<int>, discarded: list<array{id: int, type: int}>, light: int}|null $payment 精神分析アクションの支払い（効果による上昇は null）
+     */
+    public static function spiritAdvanced(
+        int $playerId,
+        string $playerName,
+        ?string $from,
+        string $to,
+        int $tier,
+        string $via,
+        bool $lightTaken,
+        ?array $payment,
+        int $analysisCount,
+    ): Notice {
+        return new Notice('spiritAdvanced', clienttranslate('${player_name} advances to tier ${tier}'), [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'from_spirit' => $from,
+            'to_spirit' => $to,
+            'tier' => $tier,
+            'via' => $via,
+            'light_taken' => $lightTaken,
+            'payment' => $payment,
+            'analysis_count' => $analysisCount,
+        ]);
+    }
+
+    /**
+     * N25: 強化自我の獲得（公開。Q-08）。
+     */
+    public static function enhancedEgoObtained(int $playerId, string $playerName, string $egoId, string $egoName, int $deckCount): Notice
+    {
+        return new Notice('enhancedEgoObtained', clienttranslate('${player_name} obtains the enhanced ego ${ego_name}'), [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'ego_id' => $egoId,
+            'ego_name' => $egoName,
+            'deck_count' => $deckCount,
+            'i18n' => ['ego_name'],
+        ]);
+    }
+
+    /**
+     * N26: 手札と場札、自己構成済みと手札の交換（想起の `SWAP_HAND_FIELD`・`SWAP_SAME_COST`）。
+     *
+     * @param list<array{out: array{id: int, type: int}, in: array{id: int, type: int}, slot?: int}> $pairs
+     */
+    public static function cardsExchanged(int $playerId, string $playerName, string $kind, array $pairs, int $handCount): Notice
+    {
+        return new Notice('cardsExchanged', clienttranslate('${player_name} exchanges ${count} memory card(s)'), [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'kind' => $kind,
+            'pairs' => $pairs,
+            'count' => count($pairs),
+            'hand_count' => $handCount,
+        ]);
+    }
+
+    /**
+     * N33: 想起効果による床アクションの代替の記録（ターンプレイヤーのみ）。同じ種類は割引が最大の 1 件にまとまる。
+     *
+     * @param list<array{kind: string, discount: int}> $alternatives 記録後の全件
+     */
+    public static function floorAlternativeRecorded(int $playerId, string $playerName, array $alternatives): Notice
+    {
+        return new Notice('floorAlternativeRecorded', clienttranslate('${player_name} may perform another action instead of a floor action'), [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'alternatives' => $alternatives,
+        ]);
+    }
+
+    /**
+     * N34: 自己構成エネルギーの軽減の現在の合計（POSEIDON と、次の自己構成の軽減）。
+     */
+    public static function composeDiscountChanged(int $playerId, string $playerName, int $turnDiscount, int $nextDiscount): Notice
+    {
+        return new Notice('composeDiscountChanged', clienttranslate('${player_name} reduces composition energy'), [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'turn_compose_discount' => $turnDiscount,
+            'next_compose_discount' => $nextDiscount,
         ]);
     }
 

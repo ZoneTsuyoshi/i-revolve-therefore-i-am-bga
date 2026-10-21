@@ -18,7 +18,7 @@ use Bga\Games\IRevolveThereforeIAm\Game;
 
 /**
  * 40: 想起フェイズの開始。部屋の想い出カードを表向きにし、発動者ごとの効果をスタックに積む（006 §5.2）。
- * 骨格では何も積まずに 70 へ進む。
+ * 中身は Flow/RecallPhase。解決は 70・71 が行う。
  */
 class RecallStart extends GameState
 {
@@ -38,10 +38,7 @@ class RecallStart extends GameState
     public function onEnteringState(): string
     {
         $this->game->irEnterPhase(GamePhase::Recall);
-
-        // TODO(I-07): ターンプレイヤーの部屋の想い出カードを公開（N09）し、発動者の列
-        //  （SeatOrder::startingFrom）ごとに RECALL_ACTIVATION、続けて ACQUIRE_ROOM_CARD と HAND_LIMIT_CHECK を積む
-        $this->game->irGlobals()->setResume(StateId::FLOOR_ACTION_START);
+        $this->game->irSend(...$this->game->irTurn()->recall->start());
 
         return Transition::RESOLVE;
     }

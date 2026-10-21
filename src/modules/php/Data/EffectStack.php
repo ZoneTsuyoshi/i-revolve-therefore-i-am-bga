@@ -138,6 +138,31 @@ final class EffectStack
     }
 
     /**
+     * frame の途中経過を保存する（エンジンが進めた `step`・`decisions`・保留中の選択）。実行順は変えない。
+     *
+     * @param array<string, mixed>|null $params
+     * @param array<string, mixed>|null $choice 保留中の選択（null なら READY に戻す）
+     */
+    public function saveProgress(int $frameId, int $step, ?array $params, ?array $choice): void
+    {
+        $status = $choice === null ? EffectFrame::READY : EffectFrame::WAITING;
+        $this->db->execute(
+            "UPDATE `effect_frame` SET `frame_step` = $step, `frame_params` = " . $this->json($params)
+            . ', `frame_choice` = ' . $this->json($choice) . ", `frame_status` = '$status' WHERE `frame_id` = $frameId",
+        );
+    }
+
+    /**
+     * frame の `params` だけを書き換える（確認の門を外すなど）。
+     *
+     * @param array<string, mixed>|null $params
+     */
+    public function setParams(int $frameId, ?array $params): void
+    {
+        $this->db->execute("UPDATE `effect_frame` SET `frame_params` = " . $this->json($params) . " WHERE `frame_id` = $frameId");
+    }
+
+    /**
      * 保留を解く（READY に戻し、選択の定義を消す）。
      */
     public function markReady(int $frameId): void

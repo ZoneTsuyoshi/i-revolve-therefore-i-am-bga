@@ -27,6 +27,7 @@ use Bga\Games\IRevolveThereforeIAm\Flow\MoveBoardReader;
 use Bga\Games\IRevolveThereforeIAm\Flow\MoveExecutor;
 use Bga\Games\IRevolveThereforeIAm\Flow\MovePhase;
 use Bga\Games\IRevolveThereforeIAm\Flow\MovePlanner;
+use Bga\Games\IRevolveThereforeIAm\Flow\TurnKit;
 use Bga\Games\IRevolveThereforeIAm\Material\CardBack;
 use Bga\Games\IRevolveThereforeIAm\Material\KeyType;
 use Bga\Games\IRevolveThereforeIAm\Material\MemoryCards;
@@ -59,20 +60,37 @@ final class MoveFixture
 
     public readonly StoredGameView $view;
 
+    public readonly RoomRepository $rooms;
+
+    public readonly SpiritRepository $spirits;
+
+    public readonly EgoRepository $egos;
+
+    public readonly TurnKit $kit;
+
+    private readonly SpecSource $specs;
+
+    /** 勝利判定（断片の結集）が呼ばれた回数 */
+    public int $victoryChecks = 0;
+
     public function __construct(?SpecSource $specs = null)
     {
         $specs ??= ArrayCatalog::withTestSpecs();
+        $this->specs = $specs;
         $this->db = SqliteDatabase::create(self::SEATS);
         $this->globals = new GlobalValues(new Globals());
         $this->players = new PlayerValues($this->db);
         $this->memory = new MemoryCardRepository($this->db);
         $rooms = new RoomRepository($this->db);
         $egos = new EgoRepository($this->db);
+        $this->rooms = $rooms;
+        $this->egos = $egos;
+        $this->spirits = new SpiritRepository($this->db);
         (new GameSetup(
             new SetupPlanner(new SeededRandom(7)),
             $this->memory,
             $rooms,
-            new SpiritRepository($this->db),
+            $this->spirits,
             $egos,
             new ObjectiveRepository($this->db),
             $this->players,
@@ -91,11 +109,26 @@ final class MoveFixture
         $this->globals->setTurnContext(new TurnContext());
 
         $this->stack = new EffectStack($this->db);
-        $this->view = new StoredGameView($this->memory, $egos, $this->players, $this->globals);
+        $this->view = new StoredGameView($this->memory, $egos, $this->players, $this->globals, $rooms, $this->spirits);
         $active = new ActiveSpecs($this->view, $specs, new ConditionEvaluator($this->view));
         $light = new LightScheduleQuery($active);
         $payments = new MovePaymentQuery($active, new KeyViewQuery($active), $light);
         $this->planner = new MovePlanner($payments, $light);
+        $this->kit = new TurnKit(
+            $this->memory,
+            $rooms,
+            $this->spirits,
+            $egos,
+            $this->players,
+            $this->globals,
+            $this->stack,
+            $this->view,
+            $specs,
+            static fn (int $id): string => "P{$id}",
+            function (): void {
+                $this->victoryChecks++;
+            },
+        );
         $this->handLimit = new HandLimit($this->memory, $this->players, $this->stack);
         $this->phase = new MovePhase(
             new MoveBoardReader($this->memory, $rooms, $this->players, $this->globals),
@@ -115,6 +148,39 @@ final class MoveFixture
             $ctx->startPos = $pos;
             $this->globals->setTurnContext($ctx);
         }
+    }
+
+    /**
+     * 部屋の想い出カードを、指定の種類（card_type）のカードにする（位置のカードの種類を書き換えるだけで、他の札は動かさない）。
+     */
+    public function roomCard(int $pos, int $type): int
+    {
+        $this->db->execute(
+            "UPDATE `memory_card` SET `card_type` = $type WHERE `card_loc` = 'ROOM' AND `card_loc_arg` = $pos",
+        );
+
+        return $this->memory->inLoc(MemoryLocation::Room, $pos)[0]->id;
+    }
+
+    /**
+     * 同じ DB を読み書きする、別の組み立て（再読み込み・再接続の後を模す。007 §8.3）。
+     */
+    public function newKit(): TurnKit
+    {
+        return new TurnKit(
+            $this->memory,
+            $this->rooms,
+            $this->spirits,
+            $this->egos,
+            $this->players,
+            $this->globals,
+            $this->stack,
+            $this->view,
+            $this->specs,
+            static fn (int $id): string => "P{$id}",
+            static function (): void {
+            },
+        );
     }
 
     public function tokens(int $player, int $light = 0, int $wildUp = 0): void
@@ -185,9 +251,19 @@ final class MoveFixture
                 . " AND `card_loc` IN ('DECK1', 'DECK2', 'OUT', 'OPEN')",
             );
             if ($id === null) {
-                throw new \LogicException("no free card of type $type");
+                // 自由な札が無ければ、部屋のカードを取り、その部屋には山札の一番上の札を置く
+                $roomId = $this->db->value("SELECT MIN(`card_id`) FROM `memory_card` WHERE `card_type` = $type AND `card_loc` = 'ROOM'");
+                if ($roomId === null) {
+                    throw new \LogicException("no free card of type $type");
+                }
+                $card = $this->memory->find((int) $roomId) ?? throw new \LogicException('unknown card');
+                $level = RoomRepository::levelOfPosition($card->locationArg);
+                $this->memory->move((int) $roomId, $to, $player);
+                $this->memory->drawFromDeck($level, 1, MemoryLocation::Room, $card->locationArg);
+                $id = $roomId;
+            } else {
+                $this->memory->move((int) $id, $to, $player);
             }
-            $this->memory->move((int) $id, $to, $player);
             $ids[] = (int) $id;
         }
 

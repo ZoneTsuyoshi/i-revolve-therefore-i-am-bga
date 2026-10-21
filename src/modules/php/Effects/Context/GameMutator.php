@@ -10,7 +10,9 @@ declare(strict_types=1);
 namespace Bga\Games\IRevolveThereforeIAm\Effects\Context;
 
 use Bga\Games\IRevolveThereforeIAm\Material\ActionKind;
+use Bga\Games\IRevolveThereforeIAm\Material\FloorBonus;
 use Bga\Games\IRevolveThereforeIAm\Material\Origin;
+use Bga\Games\IRevolveThereforeIAm\Material\RecallGroup;
 use Bga\Games\IRevolveThereforeIAm\Material\TokenKind;
 
 /**
@@ -84,4 +86,37 @@ interface GameMutator
 
     /** 勝利判定を行う（008 §6.8。全プレイヤーを評価する） */
     public function checkVictory(): void;
+
+    /**
+     * 想起効果による移動で人格を動かす（OP-15）。`$entry` なら入室に数える。12 部屋に入室した時点で刹那の追憶が成立する（Q-09）。
+     * 入室に数えない移動（M072 のワープ）は後続のタスクで足す。
+     */
+    public function movePersona(int $player, int $to, bool $entry): void;
+
+    /** 周遊ボーナスを与える（`origin = TOUR`）。想起効果の移動で通過・到着したレベル 2 の部屋の分（FAQ 行 8） */
+    public function grantFloorBonus(int $player, FloorBonus $bonus): void;
+
+    /**
+     * 精神トラックの階層を 1 つ上げる（OP-12 とそのほか精神分析アクション）。`$via` は `ACTION` / `EFFECT`。
+     * 到着した精神カードの心光の獲得とボーナスの frame を、解決スタックの先頭に積む（第五階層は心理の極致で勝利する）。
+     *
+     * @return bool 到着した精神カードに心光が置かれていたか（008 の `dest_had_light`）
+     */
+    public function advanceSpirit(int $player, string $spiritId, string $via): bool;
+
+    /** 強化自我の山から 1 枚を獲得する（公開される） */
+    public function obtainEnhancedEgo(int $player, string $egoId): void;
+
+    /** 即座に勝利する（`$reason` は `APEX_OF_PSYCHE` など。OP-14） */
+    public function win(int $player, string $reason): void;
+
+    /**
+     * 想い出カード `$cardId`（`M071` で自己構成したカードなど）の想起効果の発動を、解決スタックの先頭に積む（OP-25）。
+     *
+     * @param list<RecallGroup> $groups 発動してよい想起効果のグループ（空なら制限なし）
+     */
+    public function pushRecallActivation(int $player, string $cardId, int $times, array $groups): void;
+
+    /** ゲームが終わる状態か（勝利が確定した。以降の節は解決しない） */
+    public function isGameOver(): bool;
 }

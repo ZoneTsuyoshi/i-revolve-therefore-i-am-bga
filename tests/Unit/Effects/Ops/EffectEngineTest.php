@@ -334,7 +334,7 @@ final class EffectEngineTest extends TestCase
         self::assertSame(0, $this->game->victoryChecks);
     }
 
-    /** 想起効果の移動は、確認（CONFIRM_MOVE）を聞いてから移動に入る。移動（OP-15）の実装は後続。 */
+    /** 想起効果の移動は、確認（CONFIRM_MOVE）を聞いてから移動に入る。移動そのもの（OP-15）は ActionOpsTest。 */
     public function testRecallMoveAsksForConfirmation(): void
     {
         [$frame, $result] = $this->begin('RC-12');
@@ -342,10 +342,7 @@ final class EffectEngineTest extends TestCase
 
         $declined = $this->engine->skip($frame);
         self::assertTrue($declined->isDone());
-
-        [$frame] = $this->begin('RC-13');
-        $this->expectException(UnsupportedOp::class);
-        $this->engine->answer($frame, ['use' => true]);
+        self::assertSame([], $this->game->moves);
     }
 
     // ---- 床アクション ----
@@ -484,35 +481,33 @@ final class EffectEngineTest extends TestCase
         self::assertCount(2, $this->game->handIds(1));
     }
 
-    public function testFloorsThatNeedAComposeOrAnalysisAreNotImplementedYet(): void
+    /** HEPHAESTUS の自己構成の分岐、HERMES・DIONYSUS・HADES の精神分析は、61・62 に入る行動の要求（ChoiceRequest::action）で止まる。 */
+    public function testFloorsThatNeedAComposeOrAnalysisWaitForTheAction(): void
     {
-        // HEPHAESTUS の自己構成の分岐、HERMES・DIONYSUS・HADES の精神分析は、実装順 4（OP-10・OP-11）で入る
         [$frame] = $this->begin('F12');
-        try {
-            $this->engine->answer($frame, ['branch' => 0]);
-            self::fail('OP-10 is not implemented yet');
-        } catch (UnsupportedOp $e) {
-            self::assertStringContainsString('OP-10', $e->getMessage());
-        }
+        $result = $this->engine->answer($frame, ['branch' => 0]);
+        self::assertTrue($result->choice?->isAction());
+        self::assertSame(Op::COMPOSE->value, $result->choice->data['action']);
+        self::assertSame(['ctx' => 'FLOOR', 'discount' => 1, 'action' => 'OP-10'], $result->choice->data);
+
         foreach (['F02', 'F06', 'F10'] as $floor) {
-            try {
-                $this->begin($floor);
-                self::fail("{$floor} needs OP-11");
-            } catch (UnsupportedOp $e) {
-                self::assertStringContainsString('OP-11', $e->getMessage());
-            }
+            [, $result] = $this->begin($floor);
+            self::assertTrue($result->choice?->isAction(), $floor);
+            self::assertSame(Op::ANALYZE->value, $result->choice->data['action']);
         }
     }
 
     /** UT-62: POSEIDON の軽減は、自己構成を行わなくても（自己構成の前に）以降へ効く。 */
     public function testPoseidonSetsTheTurnDiscountBeforeTheOptionalCompose(): void
     {
-        try {
-            $this->begin('F04');
-            self::fail('OP-10 is not implemented yet');
-        } catch (UnsupportedOp) {
-            self::assertSame(1, $this->game->turnDiscount);
-        }
+        [$frame, $result] = $this->begin('F04');
+
+        self::assertSame(1, $this->game->turnDiscount);
+        self::assertSame(Op::COMPOSE->value, $result->choice?->data['action']);
+        // 行わない（actCancel）と、軽減だけが残る
+        $result = $this->engine->cancelAction($frame);
+        self::assertTrue($result->isDone());
+        self::assertSame(1, $this->game->turnDiscount);
     }
 
     /** UT-63（周遊ボーナス 4 種）: 該当する資源を 1 つ得る。 */
@@ -544,16 +539,30 @@ final class EffectEngineTest extends TestCase
         self::assertSame([], $result->events); // origin が FLOOR ではないので EV-08 を起こさない
     }
 
-    public function testSpiritBonusesWithoutHandlersYet(): void
+    /** UT-65: R2・R4 は自己構成の行動（エネルギーなし）、R3 は強化自我（山が空なら飛ばす）、R5 は勝利。 */
+    public function testSpiritBonuses(): void
     {
-        foreach (['R2' => 'OP-10', 'R3A' => 'OP-13', 'R4' => 'OP-10', 'R5' => 'OP-14'] as $spirit => $op) {
-            try {
-                $this->begin($spirit);
-                self::fail("{$spirit} is not implemented yet");
-            } catch (UnsupportedOp $e) {
-                self::assertStringContainsString($op, $e->getMessage());
-            }
-        }
+        [, $result] = $this->begin('R2');
+        self::assertSame(['ctx' => 'BONUS_LV1', 'discount' => 0, 'action' => 'OP-10'], $result->choice?->data);
+        [, $result] = $this->begin('R4');
+        self::assertSame(['ctx' => 'BONUS_ANY', 'discount' => 0, 'action' => 'OP-10'], $result->choice?->data);
+
+        [, $result] = $this->begin('R3A');
+        self::assertTrue($result->isDone());
+
+        [, $result] = $this->begin('R5');
+        self::assertTrue($result->isDone());
+        self::assertSame([1, 'APEX_OF_PSYCHE'], $this->game->won);
+    }
+
+    /** ボードに触る操作（OP-16〜OP-21）は後続のタスク（実装順 6）。 */
+    public function testBoardOpsAreStillUnsupported(): void
+    {
+        $spec = new EffectSpec('T.9', 'T', Mechanism::ACTION, EffectKind::NONE, OwnerScope::TURN_PLAYER, [EffectNode::op(Op::WARP)]);
+        $engine = new EffectEngine($this->game, $this->game, new ArrayCatalog([$spec]));
+
+        $this->expectException(UnsupportedOp::class);
+        $engine->run($engine->start('T.9', 1));
     }
 
     // ---- 個別の原子操作（テスト用の効果で動かす） ----
