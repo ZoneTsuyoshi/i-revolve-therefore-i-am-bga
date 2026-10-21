@@ -61,6 +61,13 @@ final class EffectResolver
                 return $this->finish(Transition::GAME_END, $turn);
             }
             $head = $this->stack->peek();
+            if (($head === null || $head->status !== EffectFrame::WAITING) && $this->globals->deckOut() !== []) {
+                // frame の終了時に山札切れを判定する（勝利が先。Q-05）。成立したら以降の frame は破棄
+                $this->mutator->settleDeckOut();
+                if ($this->globals->endReason() !== null) {
+                    continue;
+                }
+            }
             if ($head === null) {
                 return $this->finish(Transition::resumeTransition($this->globals->resume()), $turn);
             }

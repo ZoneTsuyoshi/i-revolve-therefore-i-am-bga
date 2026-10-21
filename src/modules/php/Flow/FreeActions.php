@@ -59,6 +59,9 @@ trait FreeActions
      */
     protected function irAfterFreeAction(int $playerId): ?string
     {
+        // 勝利判定が溜めた通知（N21 scoreUpdated など）を送る
+        $this->game->irSend(...$this->game->irTurn()->mutator->drain());
+
         return $this->game->irGlobals()->endReason() !== null ? Transition::GAME_END : null;
     }
 

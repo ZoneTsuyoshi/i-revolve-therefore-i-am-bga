@@ -572,6 +572,52 @@ final class Notification
     }
 
     /**
+     * N29: クリーンアップ（a〜d を 1 通知にまとめる。ターンプレイヤーの自己構成済みを縦に、万能移動鍵を表に戻し、部屋と場札を補充する）。
+     *
+     * @param list<int> $untapped 縦に戻した自己構成済みカードの card_id
+     * @param list<array{pos: int, card_id: int, back: string}> $rooms 補充した部屋（裏向き）
+     * @param list<array{slot: int, id: int, type: int}> $open 補充した場札（表向き）
+     * @param array<int, array{count: int, top: ?string}> $decks
+     */
+    public static function cleanup(
+        int $playerId,
+        string $playerName,
+        array $untapped,
+        int $wildRestored,
+        array $rooms,
+        array $open,
+        array $decks,
+    ): Notice {
+        return new Notice('cleanup', clienttranslate('${player_name} cleans up'), [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'untapped' => $untapped,
+            'wild_restored' => $wildRestored,
+            'rooms' => $rooms,
+            'open' => $open,
+            'decks' => $decks,
+        ]);
+    }
+
+    /**
+     * N30: 山札切れの確定（引けるだけ引いた後）。続けて N31。
+     */
+    public static function deckOut(int $level): Notice
+    {
+        return new Notice('deckOut', clienttranslate('The level ${level} memory deck has run out'), ['level' => $level]);
+    }
+
+    /**
+     * N21: 自己構成スコアの変化（変わったプレイヤーだけ。ログには出さない）。
+     *
+     * @param array<int, array{total: int, memory: int, objective: int}> $scores プレイヤー ID → 内訳
+     */
+    public static function scoreUpdated(array $scores): Notice
+    {
+        return new Notice('scoreUpdated', '', ['scores' => $scores]);
+    }
+
+    /**
      * N31: 終局。勝者または全員敗北の明示と得点の内訳。
      *
      * @param list<array<string, int>> $results プレイヤーごとの内訳（player_id、memory_score、objective_score、attached_score、total、tier）

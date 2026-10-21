@@ -42,6 +42,7 @@ use Bga\Games\IRevolveThereforeIAm\Effects\Query\ActiveSpecs;
 use Bga\Games\IRevolveThereforeIAm\Effects\Query\KeyViewQuery;
 use Bga\Games\IRevolveThereforeIAm\Effects\Query\LightScheduleQuery;
 use Bga\Games\IRevolveThereforeIAm\Effects\Query\MovePaymentQuery;
+use Bga\Games\IRevolveThereforeIAm\Flow\CleanupPhase;
 use Bga\Games\IRevolveThereforeIAm\Flow\GameProgress;
 use Bga\Games\IRevolveThereforeIAm\Flow\HandLimit;
 use Bga\Games\IRevolveThereforeIAm\Flow\MoveBoardReader;
@@ -50,8 +51,12 @@ use Bga\Games\IRevolveThereforeIAm\Flow\MovePhase;
 use Bga\Games\IRevolveThereforeIAm\Flow\MovePlanner;
 use Bga\Games\IRevolveThereforeIAm\Flow\Notice;
 use Bga\Games\IRevolveThereforeIAm\Flow\Notification;
+use Bga\Games\IRevolveThereforeIAm\Flow\PrintedScoreCalculator;
+use Bga\Games\IRevolveThereforeIAm\Flow\ScoreCalculator;
+use Bga\Games\IRevolveThereforeIAm\Flow\ScoreReporter;
 use Bga\Games\IRevolveThereforeIAm\Flow\StateId;
 use Bga\Games\IRevolveThereforeIAm\Flow\TurnKit;
+use Bga\Games\IRevolveThereforeIAm\Flow\WinChecker;
 use Bga\Games\IRevolveThereforeIAm\Setup\GameSetup;
 use Bga\Games\IRevolveThereforeIAm\Setup\InitialEgoDraft;
 use Bga\Games\IRevolveThereforeIAm\Setup\PersonaPlacement;
@@ -68,6 +73,8 @@ class Game extends \Bga\GameFramework\Table
     private ?GlobalValues $irGlobalValues = null;
 
     private ?TurnKit $irTurnKit = null;
+
+    private ?ScoreReporter $irScoreReporter = null;
 
     public function __construct()
     {
@@ -339,19 +346,25 @@ class Game extends \Bga\GameFramework\Table
      */
     public function irTurn(): TurnKit
     {
-        return $this->irTurnKit ??= new TurnKit(
-            $this->irMemoryCards(),
-            $this->irRooms(),
-            $this->irSpirits(),
-            $this->irEgos(),
-            $this->irPlayerValues(),
-            $this->irGlobals(),
-            $this->irEffectStack(),
-            $this->irGameView(),
-            new CatalogSpecSource(),
-            fn(int $playerId): string => $this->getPlayerNameById($playerId),
-            fn() => $this->irCheckVictory(),
-        );
+        if ($this->irTurnKit === null) {
+            $this->irTurnKit = new TurnKit(
+                $this->irMemoryCards(),
+                $this->irRooms(),
+                $this->irSpirits(),
+                $this->irEgos(),
+                $this->irPlayerValues(),
+                $this->irGlobals(),
+                $this->irEffectStack(),
+                $this->irGameView(),
+                new CatalogSpecSource(),
+                fn(int $playerId): string => $this->getPlayerNameById($playerId),
+                fn() => $this->irCheckVictory(),
+            );
+            // N21 の変化の比較の基準（このリクエストで状態を変える前の値）
+            $this->irScoreReporter()->prime();
+        }
+
+        return $this->irTurnKit;
     }
 
     /**
@@ -367,11 +380,54 @@ class Game extends \Bga\GameFramework\Table
     }
 
     /**
-     * 勝利判定（断片の結集 = 自己構成スコア 20 以上。008 §6.8）。スコアが変わりうる操作の直後に呼ばれる。成立したら end_reason を書く。
+     * 自己構成スコアの計算（I-10 が目標カードの得点を足した実装に置き換える）。
+     */
+    public function irScoreCalculator(): ScoreCalculator
+    {
+        return new PrintedScoreCalculator($this->irMemoryCards());
+    }
+
+    /**
+     * 勝利判定（断片の結集・心理の極致。008 §6.8 の T8-11）。スコアが変わりうる操作の直後に呼ばれる。
+     * 変わった人のスコアを N21 として溜め、成立したら end_reason と勝者を書く。
      */
     public function irCheckVictory(): void
     {
-        // TODO(I-08・I-10): WinChecker と ScoreCalculator（目標カードの得点を含む）で全プレイヤーを評価し、FRAGMENTS を書く
+        $turn = $this->irTurn();
+        $notice = $this->irScoreReporter()->report();
+        if ($notice !== null) {
+            $turn->mutator->add([$notice]);
+        }
+        (new WinChecker(
+            $this->irScoreCalculator(),
+            $this->irPlayerValues(),
+            $this->irSpirits(),
+            $this->irGlobals(),
+            $this->irEffectStack(),
+        ))->check();
+    }
+
+    /**
+     * クリーンアップ（状態 80。仕様書 001 §13、006 §5.6）。
+     */
+    public function irCleanup(): CleanupPhase
+    {
+        return new CleanupPhase(
+            $this->irMemoryCards(),
+            $this->irRooms(),
+            $this->irPlayerValues(),
+            $this->irGlobals(),
+            $this->irTurn()->mutator,
+            fn(int $playerId): string => $this->getPlayerNameById($playerId),
+        );
+    }
+
+    private function irScoreReporter(): ScoreReporter
+    {
+        return $this->irScoreReporter ??= new ScoreReporter(
+            $this->irScoreCalculator(),
+            fn(): array => $this->irSeatOrder(),
+        );
     }
 
     /**

@@ -45,8 +45,6 @@ class EffectResolve extends GameState
 
     public function onEnteringState(): string
     {
-        // TODO(I-08): 山札切れ（DECK_OUT）の判定を、frame の終了時にここで行う。勝利が先（Q-05）。
-        //  断片の結集の判定（WinChecker）は Game::irCheckVictory（I-08・I-10）が end_reason を書く。
         $result = $this->game->irTurn()->resolver->resolve();
         $this->game->irSend(...$result->notices);
         if ($result->transition !== Transition::GAME_END) {

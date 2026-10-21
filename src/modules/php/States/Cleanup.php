@@ -18,7 +18,7 @@ use Bga\Games\IRevolveThereforeIAm\Game;
 
 /**
  * 80: クリーンアップ a〜d（001 §13）と山札切れの判定（006 §5.6）。
- * 骨格では何もせず 82 へ進む（O004 の窓 81 にも入らない）。
+ * 中身は Flow/CleanupPhase。O004 の窓 81 へ入る判定は I-10。
  */
 class Cleanup extends GameState
 {
@@ -41,9 +41,9 @@ class Cleanup extends GameState
     {
         $this->game->irEnterPhase(GamePhase::Cleanup);
 
-        // TODO(I-08): a 自己構成済みカードを縦に戻す、b 万能移動鍵トークンを表に戻す、c 想い出カードのない部屋に補充、
-        //  d 場札を 6 枚まで補充。山札が足りなければ補充できるだけ補充して DECK_OUT で GAME_END（Q-05・Q-24）。
-        //  O004 を獲得できる状況（006 §6.3）なら ASK
-        return Transition::SKIP;
+        $transition = $this->game->irCleanup()->run();
+        $this->game->irSend(...$this->game->irTurn()->mutator->drain());
+
+        return $transition;
     }
 }
