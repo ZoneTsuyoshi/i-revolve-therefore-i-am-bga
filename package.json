@@ -6,7 +6,7 @@
     "node": "^22.13.0 || >=24"
   },
   "scripts": {
-    "lint": "npm run lint:md && npm run lint:repo && npm run lint:js && npm run lint:strict && npm run lint:prefix && npm run lint:css && npm run lint:types && npm run lint:assets",
+    "lint": "npm run lint:md && npm run lint:repo && npm run lint:js && npm run lint:strict && npm run lint:prefix && npm run lint:css && npm run lint:types && npm run lint:assets && npm run check:cards && npm run check:sprites",
     "lint:md": "markdownlint-cli2",
     "lint:links": "lychee --config lychee.toml \"./**/*.md\"",
     "lint:repo": "node scripts/lint/check-repo.mjs",
