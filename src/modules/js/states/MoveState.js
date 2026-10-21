@@ -216,11 +216,11 @@ export class MoveState {
     }
   }
 
-  /** 経路と支払いを 1 回で送る（オブジェクトは performAction が JSON にして JsonParam へ渡す）。払える移動が無いときは空の経路（Q-38） */
+  /** 経路と支払いを 1 回で送る（JsonParam には JSON 文字列で渡す。姉妹 PE と同じ）。払える移動が無いときは空の経路（Q-38） */
   confirm() {
     if (this.board === null) {
       return;
     }
-    this.bga.actions.performAction('actMove', { plan: toInput(this.steps) });
+    this.bga.actions.performAction('actMove', { plan: JSON.stringify(toInput(this.steps)) });
   }
 }
