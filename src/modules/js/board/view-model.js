@@ -386,12 +386,12 @@ export function egoCard(egoId) {
 /**
  * 目標カードの現在の X と得点のバッジの文言の部品（009 §3.6）。N23 の `statuses` を ID → 値にする。
  * @param {unknown} statuses
- * @returns {Map<string, { x: number, points: number }>} 目標カードのキー（`O001`）→ 値
+ * @returns {Map<string, { x: number, points: number, claimable: boolean }>} 目標カードのキー（`O001`）→ 値（claimable はターンプレイヤーの本人だけ真になりうる）
  */
 export function objectiveStatusMap(statuses) {
   const out = new Map();
   for (const row of Array.isArray(statuses) ? statuses : []) {
-    out.set(objectiveKey(row?.obj_id ?? row?.id), { x: toInt(row?.x), points: toInt(row?.points) });
+    out.set(objectiveKey(row?.obj_id ?? row?.id), { x: toInt(row?.x), points: toInt(row?.points), claimable: row?.claimable === true });
   }
   return out;
 }

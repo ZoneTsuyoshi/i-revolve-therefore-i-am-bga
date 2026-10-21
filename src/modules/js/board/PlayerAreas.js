@@ -40,6 +40,9 @@ import { egoCard, faceUpMemory, objectivesModel, toInt } from './view-model.js';
  * @property {any | null} under
  */
 
+/** 自己構成するカードとして選んだ手札の印（選択中の印とは別。手札を捨てる選択と重ねる） */
+export const CLASS_PENDING = 'ir-pending';
+
 export class PlayerAreas {
     /**
      * @param {PlayerAreasDeps} deps
@@ -72,6 +75,8 @@ export class PlayerAreas {
         /** @type {Map<string, number>} 獲得した目標カードのキー → 現在の得点 */
         this.goalPoints = new Map();
         this.selection = new SelectionController();
+        /** @type {HTMLElement[]} 「自己構成するカード」の印を付けた手札の要素 */
+        this.marked = [];
         /** setup の非同期の追加がすべて終わったら解決する（テスト用） */
         this.ready = Promise.resolve();
         for (const [playerId, area] of this.refs.playerAreas) {
@@ -598,8 +603,45 @@ export class PlayerAreas {
         }
     }
 
+    /**
+     * 手札のカードに「自己構成するカード」の印（`ir-pending`）を付ける。前の印は外す。clearSelection で全部外れる。
+     * @param {Iterable<number>} ids
+     */
+    markHand(ids) {
+        this.unmarkHand();
+        const hand = this.me === null ? null : this.stocks.get(this.me)?.hand;
+        if (hand === null || hand === undefined) {
+            return;
+        }
+        const wanted = new Set(ids);
+        for (const card of hand.getCards()) {
+            const element = hand.getCardElement(card);
+            if (wanted.has(toInt(card.id)) && element instanceof HTMLElement) {
+                element.classList.add(CLASS_PENDING);
+                this.marked.push(element);
+            }
+        }
+    }
+
+    unmarkHand() {
+        for (const element of this.marked) {
+            element.classList.remove(CLASS_PENDING);
+        }
+        this.marked = [];
+    }
+
+    /**
+     * 手札のカードのレベル（分からなければ 1）。
+     * @param {number} id
+     * @returns {number}
+     */
+    handLevel(id) {
+        return this.handData.get(id)?.level ?? 1;
+    }
+
     /** 状態を出るとき: 選択モードと見た目を全部掃除する */
     clearSelection() {
         this.selection.clear();
+        this.unmarkHand();
     }
 }

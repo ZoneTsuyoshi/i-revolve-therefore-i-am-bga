@@ -110,7 +110,8 @@ test('egoCard と objectiveStatusMap と faceUpRefs', () => {
   assert.equal(egoCard(null), null);
   assert.equal(egoCard('X01'), null);
   const status = objectiveStatusMap([{ obj_id: 2, x: 1, points: '1', claimable: false }]);
-  assert.deepEqual(status.get('O002'), { x: 1, points: 1 });
+  assert.deepEqual(status.get('O002'), { x: 1, points: 1, claimable: false });
+  assert.equal(objectiveStatusMap([{ id: 3, x: 4, points: 2, claimable: true }]).get('O003')?.claimable, true);
   // 非公開（type が無い）の cardRef は除く
   assert.deepEqual(faceUpRefs([{ id: 1, type: 2 }, { id: 3 }, null]), [{ id: 1, type: 2 }]);
 });

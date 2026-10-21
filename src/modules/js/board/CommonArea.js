@@ -75,8 +75,10 @@ export class CommonArea {
         this.meeples = new Map();
         /** @type {Map<number, number>} 想い出カードの種類 → レベル */
         this.levels = new Map();
-        /** @type {Map<string, { x: number, points: number }>} */
+        /** @type {Map<string, { x: number, points: number, claimable?: boolean }>} */
         this.objectiveStatus = new Map();
+        /** @type {(() => void) | null} 目標の現在値が変わったとき（獲得ボタンの更新。states/ActionState.js） */
+        this.onObjectiveStatus = null;
         /** @type {number[]} 席順（ミープルのスロットとキューブの並び） */
         this.seatOrder = deps.refs.playerOrder;
     }
@@ -564,11 +566,12 @@ export class CommonArea {
 
     /**
      * 未獲得の目標カードの「現在の X と得点」のバッジ（N23。自分の分だけ。009 §3.6）。
-     * @param {Map<string, { x: number, points: number }>} statuses
+     * @param {Map<string, { x: number, points: number, claimable?: boolean }>} statuses
      */
     setObjectiveStatus(statuses) {
         this.objectiveStatus = statuses;
         this.refreshObjectiveBadges();
+        this.onObjectiveStatus?.();
     }
 
     refreshObjectiveBadges() {
