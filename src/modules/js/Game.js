@@ -19,7 +19,7 @@ import { createCardManagers } from './cards/managers.js';
 import { CommonNotifications } from './notifications.js';
 import { PlayerNotifications } from './player-notifications.js';
 import { MoveState } from './states/MoveState.js';
-import { registerStubStates } from './states/StubStates.js';
+import { registerActionStates } from './states/register.js';
 import { CardInfo } from './ui/card-info.js';
 import { captionOf } from './ui/card-info-model.js';
 import { Layout } from './ui/Layout.js';
@@ -49,9 +49,20 @@ export class Game {
         this.panels = null;
         /** @type {CardInfo | null} */
         this.cardInfo = null;
+        /** @type {import('./ui/texts.js').CardTexts | null} */
+        this.texts = null;
 
-        // Studio の雛形の状態（サーバー側 States/PlayerTurn.php）。サーバー側の置き換え後に状態ごとのクラスへ差し替える
-        registerStubStates(bga);
+        // 操作 UI の状態（21・24・60・51・61・62・71・72。U-10）。盤面は setup で作られるので、参照は使うときに取る
+        registerActionStates(bga, () => ({
+            playerAreas: this.playerAreas,
+            common: this.common,
+            refs: this.board,
+            me: bga.players.isCurrentPlayerSpectator() ? null : int(bga.players.getCurrentPlayerId()),
+            cards: this.cards,
+            BgaCards,
+            texts: this.texts,
+            catalog: /** @type {any} */ (this.gamedatas)?.catalog,
+        }));
         // 移動の計画（31。U-3）。盤面は setup で作られるので、参照は使うときに取る
         bga.states.register('Move', new MoveState(bga, () => ({
             playerAreas: this.playerAreas,
@@ -73,6 +84,7 @@ export class Game {
 
         // 英語のカード文（`_()` は setup 以降に呼ぶ。003 §7.1）。カードの下の英語名（Card captions）にも使う
         const texts = buildCardTexts();
+        this.texts = texts;
         this.cards = createCardManagers({
             BgaCards,
             BgaAnimations,

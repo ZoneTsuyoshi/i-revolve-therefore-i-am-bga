@@ -17,6 +17,7 @@ export const CLASS_SELECTED = 'ir-selected';
  * @property {'single' | 'multiple'} [mode] 既定は multiple
  * @property {number} [max] multiple の最大枚数（既定は無制限）
  * @property {(ids: (number | string)[]) => void} [onChange] 選択が変わるたびに、選択中の ID を渡す
+ * @property {Iterable<number | string>} [selected] 最初から選択済みにするカードの ID（選べるカードの中のものだけ。画面を作り直すときに選択を引き継ぐ）
  */
 
 /**
@@ -95,6 +96,12 @@ export class SelectionController {
     };
     this.entries.push(entry);
     stock.setSelectionMode(entry.mode, this.selectableCards(entry));
+    for (const id of options.selected ?? []) {
+      const card = this.selectableCards(entry).find((/** @type {{ id: number | string }} */ c) => String(c.id) === String(id));
+      if (card !== undefined) {
+        stock.selectCard(card, true);
+      }
+    }
     stock.onSelectionChange = (/** @type {{ id: number | string }[]} */ selection, /** @type {{ id: number | string } | null} */ last) => {
       if (selection.length > entry.max && last !== null && last !== undefined) {
         stock.unselectCard(last, true);

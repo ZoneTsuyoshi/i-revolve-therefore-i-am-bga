@@ -529,6 +529,23 @@ html[data-theme="dark"] {
     text-align: center;
 }
 
+/* 操作 UI（U-10。states/ActionState.js）: 自己構成するカードとして選んだ手札の印、一時的な候補のカード置き場（初期自我のドラフト、強化自我の選択） */
+.ir-card.ir-pending {
+    outline: 3px dashed var(--ir-turn-border);
+    outline-offset: -3px;
+}
+
+.ir-pick-panel {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ir-gap);
+    justify-content: center;
+    margin-bottom: var(--ir-gap);
+    padding: var(--ir-gap);
+    border: 2px dashed var(--ir-turn-border);
+    background: var(--ir-panel-bg);
+}
+
 /* ---- 7. カード ---- */
 
 /*
