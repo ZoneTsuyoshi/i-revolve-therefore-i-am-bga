@@ -205,6 +205,25 @@ export function roomsModel(rooms) {
 }
 
 /**
+ * ページを開き直したとき（想起フェイズ中）に、想起中の案内パネルに出すカード。想起フェイズで、表向きの部屋のカードがあるときだけ。
+ * @param {Record<string, any> | null | undefined} gamedatas
+ * @returns {{ key: string, activators: number[] } | null}
+ */
+export function recallFromGamedatas(gamedatas) {
+  if (gamedatas?.phase !== 'RECALL') {
+    return null;
+  }
+  for (const row of Array.isArray(gamedatas.rooms) ? gamedatas.rooms : []) {
+    const raw = row?.card;
+    if (raw !== null && raw !== undefined && typeof raw === 'object' && raw.faceUp === true && raw.type !== undefined) {
+      const activators = gamedatas.turn?.recall?.activators;
+      return { key: memKey(raw.type), activators: Array.isArray(activators) ? activators.map(toInt) : [] };
+    }
+  }
+  return null;
+}
+
+/**
  * 人格の位置。`playerData[id].persona`（0 = 未配置）。
  * @param {Record<string, any> | undefined} playerData
  * @returns {Map<number, number>} プレイヤー ID → 位置 1〜12（置かれていない人は含めない）
