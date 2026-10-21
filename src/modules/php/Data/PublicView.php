@@ -9,6 +9,11 @@ declare(strict_types=1);
 
 namespace Bga\Games\IRevolveThereforeIAm\Data;
 
+use Bga\Games\IRevolveThereforeIAm\Effects\Catalog\CatalogSpecSource;
+use Bga\Games\IRevolveThereforeIAm\Effects\Objective\ObjectiveEvaluator;
+use Bga\Games\IRevolveThereforeIAm\Effects\Objective\ObjectiveWindow;
+use Bga\Games\IRevolveThereforeIAm\Flow\GameScoreCalculator;
+use Bga\Games\IRevolveThereforeIAm\Flow\ObjectiveBoard;
 use Bga\Games\IRevolveThereforeIAm\Material\AnalysisCards;
 use Bga\Games\IRevolveThereforeIAm\Material\EgoCards;
 use Bga\Games\IRevolveThereforeIAm\Material\FloorCards;
@@ -75,7 +80,7 @@ final class PublicView
             'myHand' => [],
             'myUnder' => [],
             'myPickedEgo' => null,
-            'myObjectiveStatus' => [], // TODO(I-10): ObjectiveEvaluator が本人視点の X と得点、claimable を返す
+            'myObjectiveStatus' => [],
             'gameEnd' => $this->gameEnd($seats),
         ];
 
@@ -83,6 +88,7 @@ final class PublicView
             $result['myHand'] = $this->myHand($viewerId, $hand);
             $result['myUnder'] = $this->myUnder($viewerId, $tableau, $underCard);
             $result['myPickedEgo'] = $this->myPickedEgo($viewerId);
+            $result['myObjectiveStatus'] = $this->myObjectiveStatus($viewerId);
         }
 
         return $result;
@@ -186,30 +192,42 @@ final class PublicView
 
     /**
      * プレイヤーごとの自己構成スコアの内訳。想い出カード（自己構成済み）、I08 の下のカード、目標カード。
+     * `Game::irScoreCalculator()`（勝利判定）と同じ計算器を使う。
      *
      * @param list<int> $seats
-     * @param list<MemoryCard> $tableau
-     * @param list<MemoryCard> $underCard
      * @return array<int, array{memory: int, attached: int, objective: int, total: int}>
      */
-    public function scores(array $seats, array $tableau, array $underCard): array
+    public function scores(array $seats): array
     {
-        $out = [];
-        foreach ($seats as $playerId) {
-            $memory = 0;
-            $attached = 0;
-            foreach ($tableau as $card) {
-                if ($card->locationArg !== $playerId) {
-                    continue;
-                }
-                $memory += self::definition($card->type)->score;
-                $attached += count(array_filter($underCard, static fn(MemoryCard $u): bool => $u->locationArg === $card->id));
-            }
-            $objective = 0; // TODO(I-10): ObjectiveEvaluator の得点（X を数え直して得点表から引く）
-            $out[$playerId] = ['memory' => $memory, 'attached' => $attached, 'objective' => $objective, 'total' => $memory + $attached + $objective];
-        }
+        return (new GameScoreCalculator($this->memoryCards, $this->objectives, $this->evaluator()))->scores($seats);
+    }
 
-        return $out;
+    private function evaluator(): ObjectiveEvaluator
+    {
+        return ObjectiveEvaluator::forView(
+            new StoredGameView($this->memoryCards, $this->egos, $this->players, $this->globals, $this->rooms, $this->spirits),
+            new CatalogSpecSource(),
+        );
+    }
+
+    /**
+     * 本人から見た、場に残っている目標の現在の X・得点・獲得できるか。窓はフェイズから分かる範囲（31 と 81。62 は状態が決める）。
+     *
+     * @return list<array{id: int, x: int, points: int, claimable: bool}>
+     */
+    private function myObjectiveStatus(int $viewerId): array
+    {
+        $window = match ($this->globals->phase()) {
+            GamePhase::Move => ObjectiveWindow::move(),
+            GamePhase::TurnEnd => ObjectiveWindow::turnEnd(),
+            default => ObjectiveWindow::none(),
+        };
+        $board = new ObjectiveBoard($this->objectives, $this->evaluator(), $this->globals);
+
+        return array_map(
+            static fn(array $s): array => ['id' => $s['obj_id'], 'x' => $s['x'], 'points' => $s['points'], 'claimable' => $s['claimable']],
+            $board->statuses($viewerId, $window),
+        );
     }
 
     /**
@@ -220,10 +238,8 @@ final class PublicView
      */
     public function results(array $seats): array
     {
-        $tableau = $this->memoryCards->inLocAnyArg(MemoryLocation::Tableau);
-        $underCard = $this->memoryCards->inLocAnyArg(MemoryLocation::UnderCard);
         $rows = [];
-        foreach ($this->scores($seats, $tableau, $underCard) as $playerId => $s) {
+        foreach ($this->scores($seats) as $playerId => $s) {
             $rows[] = [
                 'player_id' => $playerId,
                 'memory_score' => $s['memory'],
@@ -386,7 +402,7 @@ final class PublicView
      */
     private function playerData(array $seats, array $hand, array $tableau, array $underCard): array
     {
-        $scores = $this->scores($seats, $tableau, $underCard);
+        $scores = $this->scores($seats);
         $owned = $this->egos->inLoc(EgoRepository::OWNED);
         $objectives = $this->objectives->all();
 

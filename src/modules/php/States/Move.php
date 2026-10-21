@@ -15,6 +15,7 @@ use Bga\GameFramework\States\GameState;
 use Bga\GameFramework\States\PossibleAction;
 use Bga\GameFramework\UserException;
 use Bga\Games\IRevolveThereforeIAm\Data\GamePhase;
+use Bga\Games\IRevolveThereforeIAm\Effects\Objective\ObjectiveWindow;
 use Bga\Games\IRevolveThereforeIAm\Flow\FreeActions;
 use Bga\Games\IRevolveThereforeIAm\Flow\MoveViolation;
 use Bga\Games\IRevolveThereforeIAm\Flow\StateId;
@@ -28,6 +29,11 @@ use Bga\Games\IRevolveThereforeIAm\Game;
 class Move extends GameState
 {
     use FreeActions;
+
+    protected function irObjectiveWindow(): ObjectiveWindow
+    {
+        return ObjectiveWindow::move();
+    }
 
     public function __construct(
         protected Game $game,

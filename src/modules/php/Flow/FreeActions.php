@@ -13,6 +13,7 @@ use Bga\GameFramework\Actions\Types\IntArrayParam;
 use Bga\GameFramework\States\PossibleAction;
 use Bga\GameFramework\UserException;
 use Bga\Games\IRevolveThereforeIAm\Effects\EffectViolation;
+use Bga\Games\IRevolveThereforeIAm\Effects\Objective\ObjectiveWindow;
 
 /**
  * フリーアクション（目標カードの獲得、想い出カードを捨てて心光を得る。仕様書 006 §6）。
@@ -24,13 +25,29 @@ trait FreeActions
 {
     /**
      * 目標カードを獲得する（1 ターンに 1 枚。条件はサーバーが評価。001 §11-2）。
+     * 獲得の直後に勝利判定（断片の結集）を呼ぶ。勝利が成立したら終局へ、そうでなければその状態に留まる（`null`）。
      */
     #[PossibleAction]
-    public function actClaimObjective(int $objectiveId, int $activePlayerId): void
+    public function actClaimObjective(int $objectiveId, int $activePlayerId): ?string
     {
         $this->irRequireTurnPlayer($activePlayerId);
-        // TODO(I-10): ObjectiveEvaluator で条件を評価して獲得し、勝利判定（断片の結集）と手札上限の確認を行う
-        throw new UserException(clienttranslate('Claiming goal cards is not available yet'));
+        try {
+            $notices = $this->game->irObjectiveService()->claim($activePlayerId, $objectiveId, $this->irObjectiveWindow());
+        } catch (EffectViolation $e) {
+            throw new UserException($e->getMessage());
+        }
+        $this->game->irSend(...$notices);
+
+        return $this->irAfterFreeAction($activePlayerId);
+    }
+
+    /**
+     * 目標を評価する窓（この状態で変わる、鍵の読み替えとターン終了時の判定。008 T8-6）。既定は無し。
+     * 31（M096 の読み替え）、62（M094）、81（O004）の状態クラスが上書きする。
+     */
+    protected function irObjectiveWindow(): ObjectiveWindow
+    {
+        return ObjectiveWindow::none();
     }
 
     /**

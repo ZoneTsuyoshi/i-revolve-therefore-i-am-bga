@@ -16,7 +16,7 @@ namespace Bga\Games\IRevolveThereforeIAm\Material;
  * 現在の収録: 想起効果 13（RC-01〜RC-13。§7.3）、床アクション 12（F01〜F12。§7.4）、
  * 周遊ボーナス 4（F01.TOUR など。§7.4）、精神カードのボーナス 9（R1A〜R5。§7.5）、
  * 想い出カードの効果 42（M052.1 など。§7.2）、初期自我 8・強化自我 5（I01.1・I04.1・I04.2・E01.1 など。§7.6）。
- * 目標カード 7 は後続のタスク（実装順 7。§11.2）で足す。
+ * 目標カード 7（O001〜O007。`OBJECTIVE`。§7.7）。
  */
 final class EffectCatalog
 {
@@ -44,6 +44,7 @@ final class EffectCatalog
                 ...self::spiritSpecs(),
                 ...self::memorySpecs(),
                 ...self::egoSpecs(),
+                ...self::objectiveSpecs(),
                 ] as $spec
             ) {
                 if (isset($all[$spec->id])) {
@@ -549,6 +550,35 @@ final class EffectCatalog
             $turnStart('E03', $draw),
             $turnStart('E04', $effect(Op::GAIN_LIGHT, ['n' => 1])),
             $turnStart('E05', EffectNode::op(Op::GAIN_TOKEN, ['token' => TokenKind::WILD_MOVE_KEY, 'n' => 1])),
+        ];
+    }
+
+    /**
+     * 目標カード 7（008 §7.7）。条件は O001 だけ CD-01 で、他は `params['when']` の名前で `ObjectiveEvaluator` が判定する。
+     * X の数え方は `params['x']`、得点表（X の下限 → 得点）は 002 §10 の生成物 `ObjectiveCards` から引く（重複して持たない）。
+     *
+     * @return list<EffectSpec>
+     */
+    private static function objectiveSpecs(): array
+    {
+        $objective = static fn (string $id, string $when, string $x, array $conditions = [], array $params = []): EffectSpec => new EffectSpec(
+            id: $id,
+            source: $id,
+            mechanism: Mechanism::OBJECTIVE,
+            kind: EffectKind::NONE,
+            ownerScope: OwnerScope::TURN_PLAYER,
+            conditions: $conditions,
+            params: [...$params, 'when' => $when, 'x' => $x, 'table' => ObjectiveCards::get($id)->scoreTable],
+        );
+
+        return [
+            $objective('O001', 'ROOMS_ENTERED', 'WILD_MOVE_KEY_TOKENS', [ConditionRef::of(Condition::ROOMS_ENTERED_GE, ['n' => 6])]),
+            $objective('O002', 'LEVEL2_COMPOSED_GE', 'LEVEL2_COMPOSED', params: ['n' => 2]),
+            $objective('O003', 'MOST_KEYS_GE', 'MOST_KEYS', params: ['n' => 4]),
+            $objective('O004', 'HAND_AT_TURN_END_GE', 'HAND_COUNT', params: ['n' => 6]),
+            $objective('O005', 'LIGHTS_GAINED_GE', 'LIGHT_COUNT', params: ['n' => 4]),
+            $objective('O006', 'ANALYSIS_ACTIONS_GE', 'SPIRIT_TIER', params: ['n' => 2]),
+            $objective('O007', 'ALL_KEY_KINDS_WITH_WILD', 'KEY_SETS'),
         ];
     }
 }

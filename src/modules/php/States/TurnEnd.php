@@ -13,6 +13,7 @@ use Bga\GameFramework\StateType;
 use Bga\GameFramework\States\GameState;
 use Bga\GameFramework\States\PossibleAction;
 use Bga\Games\IRevolveThereforeIAm\Data\GamePhase;
+use Bga\Games\IRevolveThereforeIAm\Effects\Objective\ObjectiveWindow;
 use Bga\Games\IRevolveThereforeIAm\Flow\FreeActions;
 use Bga\Games\IRevolveThereforeIAm\Flow\StateId;
 use Bga\Games\IRevolveThereforeIAm\Flow\Transition;
@@ -20,11 +21,16 @@ use Bga\Games\IRevolveThereforeIAm\Game;
 
 /**
  * 81: ターン終了時の窓。ターン終了時にだけ条件を満たせる目標（O004）を獲得するため（006 §6.3）。
- * 80 が ASK を返したときだけ入る。骨格では 80 が SKIP を返すので入らない。
+ * 80 が ASK（O004 を獲得できる）を返したときだけ入る。
  */
 class TurnEnd extends GameState
 {
     use FreeActions;
+
+    protected function irObjectiveWindow(): ObjectiveWindow
+    {
+        return ObjectiveWindow::turnEnd();
+    }
 
     public function __construct(
         protected Game $game,
@@ -45,6 +51,8 @@ class TurnEnd extends GameState
     public function onEnteringState(): void
     {
         $this->game->irGlobals()->setPhase(GamePhase::TurnEnd);
+        // 窓が変わったので、O004 の獲得できるかを含めた状況を本人に送り直す（N23）
+        $this->game->irSend(...$this->game->irObjectiveReporter()->all());
     }
 
     /**

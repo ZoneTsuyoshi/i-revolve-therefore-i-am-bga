@@ -38,6 +38,8 @@ use Bga\Games\IRevolveThereforeIAm\Effects\Catalog\CatalogSpecSource;
 use Bga\Games\IRevolveThereforeIAm\Effects\Condition\ConditionEvaluator;
 use Bga\Games\IRevolveThereforeIAm\Effects\Context\GameEvent;
 use Bga\Games\IRevolveThereforeIAm\Effects\Context\GameView;
+use Bga\Games\IRevolveThereforeIAm\Effects\Objective\ObjectiveEvaluator;
+use Bga\Games\IRevolveThereforeIAm\Effects\Objective\ObjectiveWindow;
 use Bga\Games\IRevolveThereforeIAm\Effects\Query\ActiveSpecs;
 use Bga\Games\IRevolveThereforeIAm\Effects\Query\KeyViewQuery;
 use Bga\Games\IRevolveThereforeIAm\Effects\Query\LightScheduleQuery;
@@ -51,7 +53,10 @@ use Bga\Games\IRevolveThereforeIAm\Flow\MovePhase;
 use Bga\Games\IRevolveThereforeIAm\Flow\MovePlanner;
 use Bga\Games\IRevolveThereforeIAm\Flow\Notice;
 use Bga\Games\IRevolveThereforeIAm\Flow\Notification;
-use Bga\Games\IRevolveThereforeIAm\Flow\PrintedScoreCalculator;
+use Bga\Games\IRevolveThereforeIAm\Flow\GameScoreCalculator;
+use Bga\Games\IRevolveThereforeIAm\Flow\ObjectiveBoard;
+use Bga\Games\IRevolveThereforeIAm\Flow\ObjectiveService;
+use Bga\Games\IRevolveThereforeIAm\Flow\ObjectiveStatusReporter;
 use Bga\Games\IRevolveThereforeIAm\Flow\ScoreCalculator;
 use Bga\Games\IRevolveThereforeIAm\Flow\ScoreReporter;
 use Bga\Games\IRevolveThereforeIAm\Flow\StateId;
@@ -75,6 +80,8 @@ class Game extends \Bga\GameFramework\Table
     private ?TurnKit $irTurnKit = null;
 
     private ?ScoreReporter $irScoreReporter = null;
+
+    private ?ObjectiveStatusReporter $irObjectiveReporter = null;
 
     public function __construct()
     {
@@ -360,8 +367,9 @@ class Game extends \Bga\GameFramework\Table
                 fn(int $playerId): string => $this->getPlayerNameById($playerId),
                 fn() => $this->irCheckVictory(),
             );
-            // N21 の変化の比較の基準（このリクエストで状態を変える前の値）
+            // N21・N23 の変化の比較の基準（このリクエストで状態を変える前の値）
             $this->irScoreReporter()->prime();
+            $this->irObjectiveReporter()->prime();
         }
 
         return $this->irTurnKit;
@@ -380,11 +388,66 @@ class Game extends \Bga\GameFramework\Table
     }
 
     /**
-     * 自己構成スコアの計算（I-10 が目標カードの得点を足した実装に置き換える）。
+     * 自己構成スコアの計算（想い出カードの印刷スコア + I08 の下のカード + 獲得した目標の現在の得点。008 §6.7）。
      */
     public function irScoreCalculator(): ScoreCalculator
     {
-        return new PrintedScoreCalculator($this->irMemoryCards());
+        return new GameScoreCalculator($this->irMemoryCards(), $this->irObjectives(), $this->irObjectiveEvaluator());
+    }
+
+    /**
+     * 目標カードの評価（008 §6.7）。
+     */
+    public function irObjectiveEvaluator(): ObjectiveEvaluator
+    {
+        return ObjectiveEvaluator::forView($this->irGameView(), new CatalogSpecSource());
+    }
+
+    /**
+     * 場に残っている目標の状況（読み取りだけ）。
+     */
+    public function irObjectiveBoard(): ObjectiveBoard
+    {
+        return new ObjectiveBoard($this->irObjectives(), $this->irObjectiveEvaluator(), $this->irGlobals());
+    }
+
+    /**
+     * 目標の獲得（フリーアクション `actClaimObjective`）。
+     */
+    public function irObjectiveService(): ObjectiveService
+    {
+        return new ObjectiveService(
+            $this->irObjectiveBoard(),
+            $this->irObjectives(),
+            $this->irGlobals(),
+            fn(int $playerId): string => $this->getPlayerNameById($playerId),
+            fn() => $this->irCheckVictory(),
+        );
+    }
+
+    /**
+     * N23 `objectiveStatus`（本人宛て）の差分と全送り。
+     */
+    public function irObjectiveReporter(): ObjectiveStatusReporter
+    {
+        return $this->irObjectiveReporter ??= new ObjectiveStatusReporter(
+            $this->irObjectiveBoard(),
+            fn(): array => $this->irSeatOrder(),
+            fn(): ObjectiveWindow => $this->irObjectiveWindow(),
+        );
+    }
+
+    /**
+     * いまのフェイズから分かる範囲の、目標を評価する窓（31 = 鍵の読み替え MOVE、81 = ターン終了時）。
+     * 62 の読み替え（M094）は状態クラスが `ObjectiveWindow::analysis()` を渡して獲得を検証する。
+     */
+    public function irObjectiveWindow(): ObjectiveWindow
+    {
+        return match ($this->irGlobals()->phase()) {
+            GamePhase::Move => ObjectiveWindow::move(),
+            GamePhase::TurnEnd => ObjectiveWindow::turnEnd(),
+            default => ObjectiveWindow::none(),
+        };
     }
 
     /**
@@ -398,6 +461,7 @@ class Game extends \Bga\GameFramework\Table
         if ($notice !== null) {
             $turn->mutator->add([$notice]);
         }
+        $turn->mutator->add($this->irObjectiveReporter()->report());
         (new WinChecker(
             $this->irScoreCalculator(),
             $this->irPlayerValues(),
@@ -419,6 +483,7 @@ class Game extends \Bga\GameFramework\Table
             $this->irGlobals(),
             $this->irTurn()->mutator,
             fn(int $playerId): string => $this->getPlayerNameById($playerId),
+            $this->irObjectiveBoard(),
         );
     }
 
@@ -450,7 +515,11 @@ class Game extends \Bga\GameFramework\Table
     public function irSend(Notice ...$notices): void
     {
         foreach ($notices as $notice) {
-            $this->bga->notify->all($notice->type, $notice->message, $notice->args);
+            if ($notice->recipient !== null) {
+                $this->bga->notify->player($notice->recipient, $notice->type, $notice->message, $notice->args);
+            } else {
+                $this->bga->notify->all($notice->type, $notice->message, $notice->args);
+            }
         }
     }
 

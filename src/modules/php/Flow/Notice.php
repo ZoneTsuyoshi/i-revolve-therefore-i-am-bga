@@ -18,11 +18,13 @@ final readonly class Notice
      * @param string $type 通知名（camelCase）
      * @param string $message ログ文言（clienttranslate で包んだ英語原文。ログに出さないときは空文字）
      * @param array<string, mixed> $args
+     * @param int|null $recipient 宛先のプレイヤー。null なら全員（と観戦者）。本人だけの通知（N23）に使う
      */
     public function __construct(
         public string $type,
         public string $message,
         public array $args = [],
+        public ?int $recipient = null,
     ) {
     }
 }

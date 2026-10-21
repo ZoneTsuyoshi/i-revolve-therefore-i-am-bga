@@ -18,7 +18,7 @@ use Bga\Games\IRevolveThereforeIAm\Game;
 
 /**
  * 80: クリーンアップ a〜d（001 §13）と山札切れの判定（006 §5.6）。
- * 中身は Flow/CleanupPhase。O004 の窓 81 へ入る判定は I-10。
+ * 中身は Flow/CleanupPhase。O004 を獲得できるときだけ窓 81 へ入る（006 §6.3）。
  */
 class Cleanup extends GameState
 {

@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace IRevolveTests\Support;
 
+use Bga\Games\IRevolveThereforeIAm\Data\ObjectiveRepository;
+use Bga\Games\IRevolveThereforeIAm\Effects\Objective\ObjectiveEvaluator;
 use Bga\Games\IRevolveThereforeIAm\Flow\CleanupPhase;
-use Bga\Games\IRevolveThereforeIAm\Flow\PrintedScoreCalculator;
+use Bga\Games\IRevolveThereforeIAm\Flow\GameScoreCalculator;
+use Bga\Games\IRevolveThereforeIAm\Flow\ObjectiveBoard;
 use Bga\Games\IRevolveThereforeIAm\Flow\ScoreReporter;
 use Bga\Games\IRevolveThereforeIAm\Flow\TurnKit;
 use Bga\Games\IRevolveThereforeIAm\Flow\WinChecker;
@@ -25,9 +28,14 @@ final class EndgameRig
 
     public readonly CleanupPhase $cleanup;
 
+    public readonly ObjectiveBoard $board;
+
     public function __construct(public readonly MoveFixture $fx)
     {
-        $calculator = new PrintedScoreCalculator($fx->memory);
+        $objectives = new ObjectiveRepository($fx->db);
+        $evaluator = ObjectiveEvaluator::forView($fx->view, ArrayCatalog::withTestSpecs());
+        $this->board = new ObjectiveBoard($objectives, $evaluator, $fx->globals);
+        $calculator = new GameScoreCalculator($fx->memory, $objectives, $evaluator);
         $this->win = new WinChecker($calculator, $fx->players, $fx->spirits, $fx->globals, $fx->stack);
         $this->reporter = new ScoreReporter($calculator, static fn (): array => MoveFixture::SEATS);
         $this->reporter->prime();
@@ -57,6 +65,7 @@ final class EndgameRig
             $fx->globals,
             $this->kit->mutator,
             static fn (int $id): string => "P{$id}",
+            $this->board,
         );
     }
 

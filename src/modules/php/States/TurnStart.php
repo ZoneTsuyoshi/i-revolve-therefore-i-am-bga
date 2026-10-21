@@ -54,6 +54,8 @@ class TurnStart extends GameState
 
         $this->game->irSend(Notification::turnStarted($turnPlayer, $this->game->getPlayerNameById($turnPlayer), $turnNo));
         $this->game->gamestate->changeActivePlayer($turnPlayer);
+        // ターンプレイヤーが変わり、ターンの記録が初期化されたので、目標の状況（獲得できるか）を本人に送り直す（N23）
+        $this->game->irSend(...$this->game->irObjectiveReporter()->all());
 
         // ターン開始時の効果（EV-01。E03〜E05、I05、M052〜M057、M072）。効果 1 つの解決ごとに手札上限を確認し（008 §6.9）、
         // 終わったら 31 へ進む

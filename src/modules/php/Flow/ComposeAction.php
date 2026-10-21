@@ -31,7 +31,7 @@ use Bga\Games\IRevolveThereforeIAm\Material\Op;
  *
  * 確定すると、軽減の消費と回数の記録（PHASE・TOKEN・FLOOR のとき）、トークンの消費（TOKEN）、フェイズの使用済み（PHASE）を行い、
  * EV-05（自己構成した）の誘発を解決スタックの先頭に積み、行動の frame を済ませる。トークンは確定したときにだけ消費する
- * （取り消しでは何も消費しない。空撃ち防止 Q-28）。自己構成スコアの更新と 20 点の判定は {@see StoredGameMutator::checkVictory()} （I-10）。
+ * （取り消しでは何も消費しない。空撃ち防止 Q-28）。自己構成スコアの更新と 20 点の判定は {@see StoredGameMutator::checkVictory()} 。
  */
 final class ComposeAction
 {

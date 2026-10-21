@@ -618,6 +618,51 @@ final class Notification
     }
 
     /**
+     * 目標カードの名前（N22 の `objective_name`。翻訳対象の英語原文。002 §10 の `name_id` に対応）。
+     */
+    public static function objectiveName(string $objectiveId): string
+    {
+        return match ($objectiveId) {
+            'O001' => clienttranslate('Wild Move Key Goal'),
+            'O002' => clienttranslate('Level 2 Composed Goal'),
+            'O003' => clienttranslate('Single Engine Goal'),
+            'O004' => clienttranslate('Hand Goal'),
+            'O005' => clienttranslate('Light Goal'),
+            'O006' => clienttranslate('Analysis Floor Goal'),
+            'O007' => clienttranslate('Multi Engine Goal'),
+            default => throw new \InvalidArgumentException("unknown objective: $objectiveId"),
+        };
+    }
+
+    /**
+     * N22: 目標カードの獲得（公開）。共通の場の枠が空き、獲得者の領域へ移る。
+     *
+     * @param int $objectiveId 目標の個体 ID（1〜7）
+     * @param int $points 獲得した時点の得点
+     */
+    public static function objectiveClaimed(int $playerId, string $playerName, int $objectiveId, string $objectiveName, int $points): Notice
+    {
+        return new Notice('objectiveClaimed', clienttranslate('${player_name} claims ${objective_name}'), [
+            'player_id' => $playerId,
+            'player_name' => $playerName,
+            'obj_id' => $objectiveId,
+            'objective_name' => $objectiveName,
+            'points' => $points,
+            'i18n' => ['objective_name'],
+        ]);
+    }
+
+    /**
+     * N23: 未獲得の目標の現在の X と得点（本人だけに送る。ログには出さない）。
+     *
+     * @param list<array{obj_id: int, x: int, points: int, claimable: bool}> $statuses
+     */
+    public static function objectiveStatus(int $playerId, array $statuses): Notice
+    {
+        return new Notice('objectiveStatus', '', ['statuses' => $statuses], $playerId);
+    }
+
+    /**
      * N31: 終局。勝者または全員敗北の明示と得点の内訳。
      *
      * @param list<array<string, int>> $results プレイヤーごとの内訳（player_id、memory_score、objective_score、attached_score、total、tier）

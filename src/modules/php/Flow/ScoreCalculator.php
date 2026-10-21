@@ -11,7 +11,7 @@ namespace Bga\Games\IRevolveThereforeIAm\Flow;
 
 /**
  * 自己構成スコアを返す唯一の口（仕様書 007 §11）。`WinChecker`（断片の結集）と N21 `scoreUpdated` が使う。
- * 本番の実装は I-10 が目標カードの得点・初期自我 I8 の加算を含めて用意する。それまでは {@see PrintedScoreCalculator}。
+ * 本番の実装は {@see GameScoreCalculator}（想い出カードの印刷スコア + I08 の下のカード + 獲得した目標の現在の得点）。
  */
 interface ScoreCalculator
 {
