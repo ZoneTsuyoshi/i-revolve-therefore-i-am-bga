@@ -9,12 +9,12 @@ import { toInt } from './view-model.js';
 /** 断片の結集（自己構成スコア 20 以上で勝利。001 §15） */
 export const WIN_SCORE = 20;
 
-/** 鍵の種類（表示順）、UI スプライトのキー、英語の名前 */
+/** 鍵の種類（表示順）、UI スプライトのキー（名前の翻訳は PlayerPanels の `keyTitle`） */
 export const KEY_KINDS = /** @type {const} */ ([
-  { kind: 'WISDOM', sprite: 'key_wisdom', name: 'Wisdom keys' },
-  { kind: 'WILL', sprite: 'key_will', name: 'Will keys' },
-  { kind: 'EMOTION', sprite: 'key_emotion', name: 'Emotion keys' },
-  { kind: 'WILD', sprite: 'key_wild', name: 'Wild keys' },
+  { kind: 'WISDOM', sprite: 'key_wisdom' },
+  { kind: 'WILL', sprite: 'key_will' },
+  { kind: 'EMOTION', sprite: 'key_emotion' },
+  { kind: 'WILD', sprite: 'key_wild' },
 ]);
 
 /** @typedef {{ WISDOM: number, WILL: number, EMOTION: number, WILD: number }} KeyCounts */

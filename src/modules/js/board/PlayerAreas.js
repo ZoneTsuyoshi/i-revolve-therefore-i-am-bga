@@ -43,6 +43,22 @@ import { egoCard, faceUpMemory, objectivesModel, toInt } from './view-model.js';
 /** 自己構成するカードとして選んだ手札の印（選択中の印とは別。手札を捨てる選択と重ねる） */
 export const CLASS_PENDING = 'ir-pending';
 
+/**
+ * トークンのツールチップ（翻訳済み。`_()` は setup 以降に呼ぶ）。抽出のため文字列は `_()` のリテラルで書く。
+ * @param {string} kind `TOKEN_KINDS` の kind
+ * @returns {string}
+ */
+function tokenTitle(kind) {
+    switch (kind) {
+        case 'light': return _('Inner light');
+        case 'wildUp': return _('Wild move key');
+        case 'wildUsed': return _('Wild move key (used)');
+        case 'compose': return _('Self-composition token');
+        case 'analysis': return _('Psychoanalysis token');
+        default: return '';
+    }
+}
+
 export class PlayerAreas {
     /**
      * @param {PlayerAreasDeps} deps
@@ -184,11 +200,11 @@ export class PlayerAreas {
         }
         /** @type {Record<string, { root: HTMLElement, count: HTMLElement }>} */
         const els = {};
-        for (const { kind, sprite, name } of TOKEN_KINDS) {
+        for (const { kind, sprite } of TOKEN_KINDS) {
             const icon = el('span', { class: 'ir-token-icon', attrs: { 'aria-hidden': 'true' } });
             paintUiSprite(icon, sprite, this.imgUrl);
             const count = el('span', { class: 'ir-token-count' });
-            const root = el('span', { class: 'ir-token', data: { kind }, attrs: { title: _(name) } }, [icon, count]);
+            const root = el('span', { class: 'ir-token', data: { kind }, attrs: { title: tokenTitle(kind) } }, [icon, count]);
             holder.append(root);
             els[kind] = { root, count };
         }

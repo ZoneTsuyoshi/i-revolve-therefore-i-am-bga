@@ -9,6 +9,35 @@ import { paintUiSprite } from '../cards/card-face.js';
 import { ICONS, tokenizeText } from './icon-names.js';
 
 /**
+ * アイコンの読み上げ名（翻訳済み。`_()` は setup 以降に呼ぶ。抽出のため `_()` のリテラルで書く）。表に無い名前は英語の原文。
+ * @param {string} name `ICONS` のキー
+ * @param {string} fallback
+ * @returns {string}
+ */
+function iconLabel(name, fallback) {
+    switch (name) {
+        case 'light': return _('Psychic Light');
+        case 'draw': return _('Draw');
+        case 'open': return _('Open card');
+        case 'energy': return _('Energy');
+        case 'wisdom': return _('Wisdom key');
+        case 'will': return _('Will key');
+        case 'emotion': return _('Emotion key');
+        case 'wild': return _('Wild key');
+        case 'wildkey': return _('Omni-Move Key token');
+        case 'spirit': return _('Mind Track card');
+        case 'floor': return _('Floor card');
+        case 'score': return _('Construction Score');
+        case 'lock_wisdom': return _('Wisdom lock');
+        case 'lock_will': return _('Will lock');
+        case 'lock_emotion': return _('Emotion lock');
+        case 'token_compose': return _('Construction token');
+        case 'token_analysis': return _('Psychoanalysis token');
+        default: return fallback;
+    }
+}
+
+/**
  * アイコン 1 つの要素。画像があるものは UI スプライト、無いもの（精神カード・床カード）はインラインの svg。
  * @param {string} name `ICONS` のキー
  * @param {import('../cards/card-face.js').ImgUrl} imgUrl
@@ -19,7 +48,7 @@ export function createIcon(name, imgUrl) {
     const span = document.createElement('span');
     span.className = `ir-i ir-i-${name.replaceAll('_', '-')}`;
     span.setAttribute('role', 'img');
-    span.setAttribute('aria-label', def.label);
+    span.setAttribute('aria-label', iconLabel(name, def.label));
     if (def.sprite !== undefined) {
         paintUiSprite(span, def.sprite, imgUrl);
     } else {
