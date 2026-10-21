@@ -66,7 +66,7 @@ final class PublicViewTest extends TestCase
      */
     private static function cardIds(array $data): array
     {
-        return self::collect(array_diff_key($data, array_flip(['catalog', 'objectives', 'spirit', 'turn'])), 'id');
+        return self::collect(array_diff_key($data, array_flip(['catalog', 'objectives', 'myObjectiveStatus', 'spirit', 'turn'])), 'id');
     }
 
     /**

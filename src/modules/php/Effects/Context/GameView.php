@@ -77,6 +77,21 @@ interface GameView
     /** このターンの入室の回数（移動と想起効果の移動の合計。ワープ・スキップは含まない） */
     public function roomsEnteredCount(): int;
 
+    /** 心光の保有数（O005 の X） */
+    public function lightCount(int $player): int;
+
+    /** 万能移動鍵トークンの数（表向きと使用済みの合計。O001 の X。Q-13） */
+    public function wildMoveKeyTokens(int $player): int;
+
+    /** このターンに獲得した心光の合計（供給から得たもの全て。O005。Q-69） */
+    public function lightsGainedThisTurn(): int;
+
+    /** このターンに階層を上げた精神分析アクションの回数（O006。`via = ACTION` のみ） */
+    public function analysisActionsDone(): int;
+
+    /** 精神階層（0〜5。O006 の X） */
+    public function spiritTier(int $player): int;
+
     /** このターンのレベル 2 の部屋への入室回数 */
     public function lv2EntriesCount(): int;
 

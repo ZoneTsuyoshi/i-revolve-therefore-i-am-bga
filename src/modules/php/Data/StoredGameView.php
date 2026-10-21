@@ -122,6 +122,33 @@ final class StoredGameView implements GameView
         return $this->globals->turnContext()->roomsEnteredCount;
     }
 
+    public function lightCount(int $player): int
+    {
+        return $this->players->light($player);
+    }
+
+    public function wildMoveKeyTokens(int $player): int
+    {
+        return $this->players->wildUp($player) + $this->players->wildUsed($player);
+    }
+
+    public function lightsGainedThisTurn(): int
+    {
+        return $this->globals->turnContext()->lightsGained;
+    }
+
+    public function analysisActionsDone(): int
+    {
+        return $this->globals->turnContext()->analysisActionsDone;
+    }
+
+    public function spiritTier(int $player): int
+    {
+        $spirit = $this->players->spirit($player);
+
+        return $spirit === null ? 0 : $this->spirits->tierOf($spirit);
+    }
+
     public function lv2EntriesCount(): int
     {
         return $this->globals->turnContext()->lv2EntriesCount;

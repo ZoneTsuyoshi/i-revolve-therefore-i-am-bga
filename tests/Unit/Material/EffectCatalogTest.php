@@ -148,7 +148,7 @@ final class EffectCatalogTest extends TestCase
         self::assertSame(ComposeContext::BONUS_ANY, $this->firstParam('R4', 'ctx'));
     }
 
-    /** UT-05: 初期自我 8・強化自我 5 の効果が定義済み（目標 7 は I-10）。効果の種類は強化自我が card.csv と一致。 */
+    /** UT-05: 初期自我 8・強化自我 5 の効果が定義済み。効果の種類は強化自我が card.csv と一致。 */
     public function testEgoCardsAreDefined(): void
     {
         self::assertCount(13, EgoCards::all());
@@ -226,7 +226,7 @@ final class EffectCatalogTest extends TestCase
     {
         $ids = array_keys(EffectCatalog::all());
         self::assertSame($ids, array_values(array_unique($ids)));
-        self::assertCount(13 + 12 + 4 + 9 + 42 + 14, $ids);
+        self::assertCount(13 + 12 + 4 + 9 + 42 + 14 + 7, $ids);
     }
 
     /** UT-08 の後半: M052〜M054・M055〜M057・M064〜M066 の定義（条件と操作と修飾）が同一。 */

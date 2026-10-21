@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace IRevolveTests\Unit\Effects\Query;
 
+use Bga\Games\IRevolveThereforeIAm\Effects\Objective\ObjectiveEvaluator;
+use Bga\Games\IRevolveThereforeIAm\Effects\Objective\ObjectiveWindow;
 use Bga\Games\IRevolveThereforeIAm\Material\ActionContext;
 use Bga\Games\IRevolveThereforeIAm\Material\KeyType;
+use IRevolveTests\Support\ArrayCatalog;
 use IRevolveTests\Support\QueryKit;
 use PHPUnit\Framework\TestCase;
 
@@ -55,9 +58,23 @@ final class KeyViewQueryTest extends TestCase
         self::assertTrue($kit->move->canPayLock(2, KeyType::WISDOM, KeyType::WILL));
     }
 
-    /** UT-23: M096 / M094 を持つとき、O007 は 31 / 62 の中だけで獲得できる。目標カードの実装で有効化する。 */
+    /** UT-23: M096 / M094 を持つとき、O007 は 31 / 62 の中だけで獲得できる（51・60・81 などでは獲得できない。FAQ 行 29）。 */
     public function testObjectiveSevenUsesTheViewOfTheCurrentContext(): void
     {
-        self::markTestSkipped('UT-23: 目標カード（ObjectiveEvaluator。008 §11.2 の順 7）の実装で有効化する');
+        $kit = new QueryKit();
+        $evaluator = ObjectiveEvaluator::forView($kit->game, ArrayCatalog::withTestSpecs());
+        $met = static fn (ObjectiveEvaluator $e, ObjectiveWindow $w): bool => $e->evaluate('O007', 1, $w)->conditionMet;
+
+        $kit->game->giveTableau(1, ['M096', 'M001', 'M002']); // 意志 2、知恵 1、感情 1
+        self::assertTrue($met($evaluator, ObjectiveWindow::move()));
+        self::assertFalse($met($evaluator, ObjectiveWindow::analysis()));
+        self::assertFalse($met($evaluator, ObjectiveWindow::none()));
+
+        $other = new QueryKit();
+        $evaluator = ObjectiveEvaluator::forView($other->game, ArrayCatalog::withTestSpecs());
+        $other->game->giveTableau(1, ['M094', 'M003', 'M002']); // 知恵 2、意志 1、感情 1
+        self::assertTrue($met($evaluator, ObjectiveWindow::analysis()));
+        self::assertFalse($met($evaluator, ObjectiveWindow::move()));
+        self::assertFalse($met($evaluator, ObjectiveWindow::none()));
     }
 }

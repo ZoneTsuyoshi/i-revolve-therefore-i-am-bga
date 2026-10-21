@@ -62,6 +62,12 @@ final class ArrayGame implements GameView, GameMutator
 
     public int $lv2Entries = 0;
 
+    /** このターンに階層を上げた精神分析アクションの回数（O006） */
+    public int $analysisActions = 0;
+
+    /** このターンに獲得した心光の合計（O005）。`gainLight` が足す */
+    public int $lightsGained = 0;
+
     public int $composeActions = 0;
 
     /** @var list<KeyType> */
@@ -87,6 +93,9 @@ final class ArrayGame implements GameView, GameMutator
 
     /** @var array<int, array<string, int>> */
     public array $tokens = [];
+
+    /** @var array<int, int> 使用済み（裏向き）の万能移動鍵トークン */
+    public array $wildUsed = [];
 
     public bool $spiritLight = false;
 
@@ -278,6 +287,33 @@ final class ArrayGame implements GameView, GameMutator
         return $this->roomsEntered;
     }
 
+    public function lightCount(int $player): int
+    {
+        return $this->lights[$player] ?? 0;
+    }
+
+    public function wildMoveKeyTokens(int $player): int
+    {
+        return ($this->tokens[$player][TokenKind::WILD_MOVE_KEY->value] ?? 0) + ($this->wildUsed[$player] ?? 0);
+    }
+
+    public function lightsGainedThisTurn(): int
+    {
+        return $this->lightsGained;
+    }
+
+    public function analysisActionsDone(): int
+    {
+        return $this->analysisActions;
+    }
+
+    public function spiritTier(int $player): int
+    {
+        $spirit = $this->spirit[$player] ?? null;
+
+        return $spirit === null ? 0 : AnalysisCards::get($spirit)->floor;
+    }
+
     public function lv2EntriesCount(): int
     {
         return $this->lv2Entries;
@@ -344,6 +380,9 @@ final class ArrayGame implements GameView, GameMutator
     {
         $this->lights[$player] = ($this->lights[$player] ?? 0) + $count;
         $this->lightLog[] = [$player, $count, $origin?->value];
+        if ($player === $this->turnPlayer) {
+            $this->lightsGained += $count;
+        }
     }
 
     public function gainToken(int $player, TokenKind $token, int $count): void

@@ -27,6 +27,7 @@ use Bga\Games\IRevolveThereforeIAm\Setup\SetupPlanner;
  * - d 場札が 6 枚未満なら、6 枚になるまでレベル 1 の山札から表向きで補充する。
  * - 山札が足りなければ補充できるだけ補充して山札切れのフラグを立て、最後に判定する（Q-05、Q-24）。
  *   勝利が成立していれば勝利を優先し、そうでなければ全員敗北（`DECK_OUT`）。このとき 81 には入らない（Q-42）。
+ * - 山札切れでなく、O004 を獲得できる（場に残り、このターン未獲得で、手札が 6 枚以上）ときだけ 81 に入る（Q-30、006 §6.3）。
  */
 final class CleanupPhase
 {
@@ -37,11 +38,12 @@ final class CleanupPhase
         private readonly GlobalValues $globals,
         private readonly StoredGameMutator $mutator,
         private readonly \Closure $nameOf,
+        private readonly ObjectiveBoard $objectives,
     ) {
     }
 
     /**
-     * @return string 遷移名（`SKIP` = 82 へ、`GAME_END` = 95 へ）
+     * @return string 遷移名（`ASK` = 81 へ、`SKIP` = 82 へ、`GAME_END` = 95 へ）
      */
     public function run(): string
     {
@@ -70,13 +72,16 @@ final class CleanupPhase
             $this->refillOpen(),
             $this->mutator->decks(),
         )]);
-        // TODO(I-10): ターン終了時にだけ条件を満たせる目標 O004 を獲得できる状況なら ASK（81 TurnEnd。006 §6.3）。
-        //  山札切れが成立したときは O004 より先に全員敗北（Q-42）。
 
+        // 山札切れが成立したときは O004 より先に全員敗北（Q-42）
         $this->mutator->settleDeckOut();
 
         // 勝利が成立していた場合も終局（勝利を優先して判定済み）
-        return $this->globals->endReason() !== null ? Transition::GAME_END : Transition::SKIP;
+        if ($this->globals->endReason() !== null) {
+            return Transition::GAME_END;
+        }
+
+        return $this->objectives->turnEndClaimable($player) ? Transition::ASK : Transition::SKIP;
     }
 
     /**
