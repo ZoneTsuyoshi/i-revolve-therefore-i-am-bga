@@ -111,6 +111,7 @@ class HandLimitDiscard extends GameState
      */
     protected function irAfterFreeAction(int $playerId): ?string
     {
+        $this->game->irSend(...$this->game->irTurn()->mutator->drain());
         if ($this->game->irGlobals()->endReason() !== null) {
             return Transition::GAME_END;
         }

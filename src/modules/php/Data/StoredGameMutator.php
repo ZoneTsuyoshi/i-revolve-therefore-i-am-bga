@@ -74,6 +74,10 @@ final class StoredGameMutator implements GameMutator
     public function drawFromDeck(int $player, int $count, ?Origin $origin): int
     {
         $ids = $this->memory->drawFromDeck(1, $count, MemoryLocation::Hand, $player);
+        if (count($ids) < $count) {
+            // 山札から引く処理の共通の口: 足りなかった瞬間に山札切れのフラグを立てる（Q-05。判定は frame の終了時）
+            $this->flagDeckExhausted();
+        }
         if ($ids !== []) {
             $cards = array_map(fn (int $id): array => $this->ref($id), $ids);
             $reason = match ($origin) {
@@ -95,13 +99,39 @@ final class StoredGameMutator implements GameMutator
         return count($ids);
     }
 
-    public function flagDeckExhausted(): void
+    public function flagDeckExhausted(int $level = 1): void
     {
         $levels = $this->globals->deckOut();
-        if (!in_array(1, $levels, true)) {
-            $levels[] = 1;
+        if (!in_array($level, $levels, true)) {
+            $levels[] = $level;
             $this->globals->setDeckOut($levels);
         }
+    }
+
+    /**
+     * 立っている山札切れのフラグを判定する（frame・アクション・クリーンアップの終了時。006 §9）。
+     * 先に勝利判定を行い、勝利が成立していれば勝利を優先する（Q-05）。そうでなければ全員敗北（`DECK_OUT`）にして N30 を溜める。
+     *
+     * @return bool 山札切れで全員敗北が確定した
+     */
+    public function settleDeckOut(): bool
+    {
+        $levels = $this->globals->deckOut();
+        if ($this->globals->endReason() !== null || $levels === []) {
+            return false;
+        }
+        ($this->victoryCheck)();
+        if ($this->globals->endReason() !== null) {
+            return false;
+        }
+        sort($levels);
+        foreach ($levels as $level) {
+            $this->notices[] = Notification::deckOut($level);
+        }
+        $this->globals->setEndReason('DECK_OUT');
+        $this->globals->setWinnerId(null);
+
+        return true;
     }
 
     public function takeFromField(int $player, int $cardId): void
@@ -422,7 +452,7 @@ final class StoredGameMutator implements GameMutator
      *
      * @return array<int, array{count: int, top: ?string}>
      */
-    private function decks(): array
+    public function decks(): array
     {
         $out = [];
         foreach ([1, 2] as $level) {
