@@ -40,7 +40,7 @@ final class ActionFrames
         $head = $this->stack->peek();
         $kind = $op === Op::COMPOSE ? EffectFrame::KIND_COMPOSE : EffectFrame::KIND_ANALYZE;
         if ($head === null) {
-            throw new EffectViolation('There is nothing to do');
+            throw new EffectViolation(clienttranslate('There is nothing to do'));
         }
         if ($head->kind === $kind) {
             $pending = new PendingAction(
@@ -57,10 +57,10 @@ final class ActionFrames
             $data = ChoiceRequest::fromArray($head->choice)->data;
             $pending = new PendingAction($head, (string) ($data['ctx'] ?? ''), (int) ($data['discount'] ?? 0), true, null);
         } else {
-            throw new EffectViolation('That action is not pending');
+            throw new EffectViolation(clienttranslate('That action is not pending'));
         }
         if ($head->owner !== $player) {
-            throw new EffectViolation('It is not your action');
+            throw new EffectViolation(clienttranslate('It is not your action'));
         }
 
         return $pending;

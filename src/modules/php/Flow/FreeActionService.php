@@ -42,7 +42,7 @@ final class FreeActionService
     {
         $weight = 0;
         foreach ($cardIds as $id) {
-            $card = $this->memory->find($id) ?? throw new EffectViolation("Unknown card {$id}");
+            $card = $this->memory->find($id) ?? throw new EffectViolation(clienttranslate('Unknown card'));
             $weight += PublicView::definition($card->type)->level;
         }
 
@@ -59,19 +59,19 @@ final class FreeActionService
     public function discardForLight(int $player, array $cardIds): array
     {
         if ($cardIds === [] || count(array_unique($cardIds)) !== count($cardIds)) {
-            throw new EffectViolation('Choose cards to discard');
+            throw new EffectViolation(clienttranslate('Choose cards to discard'));
         }
         $refs = [];
         foreach ($cardIds as $id) {
             $card = $this->memory->find($id);
             if ($card === null || $card->location !== MemoryLocation::Hand || $card->locationArg !== $player) {
-                throw new EffectViolation("Card {$id} is not in your hand");
+                throw new EffectViolation(clienttranslate('A selected card is not in your hand'));
             }
             $refs[] = Notification::cardRef($id, $card->type);
         }
         $light = intdiv($this->weight($cardIds), 2);
         if ($light < 1) {
-            throw new EffectViolation('You need to discard at least two cards worth to gain inner light');
+            throw new EffectViolation(clienttranslate('You need to discard at least two cards worth to gain inner light'));
         }
         $name = ($this->nameOf)($player);
         foreach ($cardIds as $id) {

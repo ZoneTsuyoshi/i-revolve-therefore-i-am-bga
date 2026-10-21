@@ -53,17 +53,17 @@ abstract class AbstractOp implements OpHandler
     {
         $value = $answer->data[$key] ?? [];
         if (!is_array($value)) {
-            throw new EffectViolation("'{$key}' must be a list of ids");
+            throw new EffectViolation(clienttranslate('The selection must be a list of ids'));
         }
         $ids = [];
         foreach ($value as $item) {
             if (!is_int($item)) {
-                throw new EffectViolation("'{$key}' must contain integer ids only");
+                throw new EffectViolation(clienttranslate('The selection must contain ids only'));
             }
             $ids[] = $item;
         }
         if (count(array_unique($ids)) !== count($ids)) {
-            throw new EffectViolation("'{$key}' must not contain duplicates");
+            throw new EffectViolation(clienttranslate('The selection must not contain duplicates'));
         }
 
         return $ids;
@@ -78,7 +78,7 @@ abstract class AbstractOp implements OpHandler
     {
         foreach ($ids as $id) {
             if (!in_array($id, $allowed, true)) {
-                throw new EffectViolation("Card {$id} is not in {$what}");
+                throw new EffectViolation(clienttranslate('A selected card is not in the allowed place'));
             }
         }
     }
@@ -89,7 +89,7 @@ abstract class AbstractOp implements OpHandler
     protected function assertCount(int $actual, int $expected, string $what): void
     {
         if ($actual !== $expected) {
-            throw new EffectViolation("Expected {$expected} {$what}, got {$actual}");
+            throw new EffectViolation(clienttranslate('The number of selected cards is not correct'));
         }
     }
 }

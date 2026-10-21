@@ -97,6 +97,43 @@ final class PublicViewTest extends TestCase
         return array_map(static fn($c): int => $c->id, $this->cards->inLoc(MemoryLocation::Hand, $playerId));
     }
 
+    private function viewWith(?\Closure $heldEnergy, ?\Closure $roomsEntered): PublicView
+    {
+        return new PublicView(
+            $this->cards,
+            new RoomRepository($this->db),
+            new SpiritRepository($this->db),
+            $this->egos,
+            new ObjectiveRepository($this->db),
+            new PlayerValues($this->db),
+            new GlobalValues(new Globals()),
+            $heldEnergy,
+            $roomsEntered,
+        );
+    }
+
+    /** 本人の手札の energy は、現在のエネルギー（M098 込み）を計算する口があればそれを使う（I-09 の申し送り）。 */
+    public function testMyHandEnergyUsesTheCurrentValue(): void
+    {
+        $view = $this->viewWith(static fn(int $player, int $cardId): int => 99, null);
+
+        foreach ($view->allDatas(11)['myHand'] as $card) {
+            self::assertSame(99, $card['energy']);
+        }
+        foreach ($this->view->allDatas(11)['myHand'] as $card) {
+            self::assertNotSame(99, $card['energy'], '口が無ければ印刷の値');
+        }
+    }
+
+    /** N31 の results の rooms_entered は統計と同じ値（007 §14）。 */
+    public function testResultsCarryRoomsEntered(): void
+    {
+        $view = $this->viewWith(null, static fn(int $player): int => $player / 11);
+
+        self::assertSame([1, 2, 3], array_column($view->results(self::PLAYERS), 'rooms_entered'));
+        self::assertSame([0, 0, 0], array_column($this->view->results(self::PLAYERS), 'rooms_entered'));
+    }
+
     public function testPlayerSeesOnlyOwnHand(): void
     {
         $data = $this->view->allDatas(11);

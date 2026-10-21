@@ -13,8 +13,7 @@ use Bga\Games\IRevolveThereforeIAm\Data\GamePhase;
 
 /**
  * 通知の組み立て（仕様書 007 §10.2）。ログ文言（英語原文）はここに集める（翻訳の抽出のため）。
- * 今は N01〜N18、N24〜N26、N31 `gameEnded`、N33・N34 と、移動できなかったときの `moveBlocked` 。残り（N19〜N23、N27〜N30、N32、N35）は
- * 後続のタスクで足す。
+ * N01〜N35（N32 `decksChanged` を除く）と、移動できなかったときの `moveBlocked` 。
  */
 final class Notification
 {
@@ -572,6 +571,21 @@ final class Notification
     }
 
     /**
+     * N35: 手札の現在の自己構成エネルギー（M098 込み。008 MD-02）。本人にだけ送る。
+     *
+     * @param array<int, int> $energies card_id → エネルギー
+     */
+    public static function handEnergyUpdated(int $playerId, array $energies): Notice
+    {
+        $rows = [];
+        foreach ($energies as $cardId => $energy) {
+            $rows[] = ['card_id' => $cardId, 'energy' => $energy];
+        }
+
+        return new Notice('handEnergyUpdated', '', ['energies' => $rows], $playerId);
+    }
+
+    /**
      * N29: クリーンアップ（a〜d を 1 通知にまとめる。ターンプレイヤーの自己構成済みを縦に、万能移動鍵を表に戻し、部屋と場札を補充する）。
      *
      * @param list<int> $untapped 縦に戻した自己構成済みカードの card_id
@@ -665,7 +679,7 @@ final class Notification
     /**
      * N31: 終局。勝者または全員敗北の明示と得点の内訳。
      *
-     * @param list<array<string, int>> $results プレイヤーごとの内訳（player_id、memory_score、objective_score、attached_score、total、tier）
+     * @param list<array<string, int>> $results プレイヤーごとの内訳（player_id、memory_score、objective_score、attached_score、total、tier、rooms_entered）
      */
     public static function gameEnded(?string $reason, ?int $winnerId, ?string $winnerName, array $results): Notice
     {

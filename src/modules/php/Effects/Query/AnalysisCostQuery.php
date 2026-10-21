@@ -60,14 +60,14 @@ final class AnalysisCostQuery
         $total = array_sum($card->cost);
         $expected = min($reduction, $total);
         if (array_sum($removed) !== $expected) {
-            throw new EffectViolation("Must remove exactly {$expected} key(s) from the cost");
+            throw new EffectViolation(clienttranslate('You must remove exactly the number of keys the reduction allows'));
         }
 
         $remaining = [];
         foreach ($card->cost as $key => $count) {
             $take = $removed[$key] ?? 0;
             if ($take < 0 || $take > $count) {
-                throw new EffectViolation("Cannot remove {$take} {$key} key(s) from the cost");
+                throw new EffectViolation(clienttranslate('You cannot remove that many keys of that kind from the cost'));
             }
             if ($count - $take > 0) {
                 $remaining[$key] = $count - $take;
@@ -75,10 +75,10 @@ final class AnalysisCostQuery
         }
         foreach ($removed as $key => $take) {
             if (KeyType::tryFrom((string) $key) === null) {
-                throw new EffectViolation("Unknown key type: {$key}");
+                throw new EffectViolation(clienttranslate('Unknown key type'));
             }
             if ($take !== 0 && !isset($card->cost[$key])) {
-                throw new EffectViolation("The cost has no {$key} key to remove");
+                throw new EffectViolation(clienttranslate('The cost has no such key to remove'));
             }
         }
 

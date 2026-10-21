@@ -48,7 +48,7 @@ final class SwapComposedHand extends AbstractOp
         $tableauId = $answer->data['tableau'] ?? null;
         $handId = $answer->data['hand'] ?? null;
         if (!is_int($tableauId) || !is_int($handId) || !in_array([$tableauId, $handId], $this->pairs($context), true)) {
-            throw new EffectViolation('The pair cannot be swapped (cost, name or ownership mismatch)');
+            throw new EffectViolation(clienttranslate('The pair cannot be swapped (cost, name or ownership mismatch)'));
         }
         $context->mutator->swapComposedAndHand($context->owner, $tableauId, $handId);
 

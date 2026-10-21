@@ -146,6 +146,37 @@ final class ActionCardsTest extends TestCase
         $this->b->fx->kit->compose->architect(self::P, $old, $new);
     }
 
+    /** 61 の args: I03 の入れ替えの組は本人用だけ。許される組（エネルギー差・同名）だけが載る。I08 の上限、M095 の候補も載る。 */
+    public function testComposeArgsExposeArchitectPairsExtraMaxAndTapCandidates(): void
+    {
+        $this->b->ego('I03', 'I08');
+        [$old] = $this->b->fx->giveTableau(self::P, [1]);
+        [$new, $tooBig] = $this->b->fx->giveHand(self::P, [73, 85]);
+        $this->beginCompose();
+
+        $args = $this->b->fx->kit->compose->args(self::P);
+
+        self::assertSame([[$old, $new]], $args['private']['architectPairs']);
+        self::assertContains($tooBig, array_column($args['private']['hand'], 'id'));
+        self::assertArrayNotHasKey('architectPairs', $args['public']);
+        self::assertSame(2, $args['public']['extraMax']);
+        self::assertSame([], $args['public']['tapCandidates'], 'M095 を持たない');
+    }
+
+    /** 61 の args: 無料の文脈では入れ替えられない。M095 を持たなければ extraMax は 0。 */
+    public function testComposeArgsAreEmptyWithoutTheEffects(): void
+    {
+        $this->b->ego('I01');
+        $this->b->fx->giveTableau(self::P, [1]);
+        $this->b->fx->giveHand(self::P, [2]);
+        $this->beginCompose();
+
+        $args = $this->b->fx->kit->compose->args(self::P);
+
+        self::assertSame([], $args['private']['architectPairs']);
+        self::assertSame(0, $args['public']['extraMax']);
+    }
+
     // ---- 即時効果 ----
 
     /** UT-40: M089 は自己構成の直後に、エネルギー 0 でレベル 1 の想い出カードを 1 枚自己構成してよい。レベル 2 は不可。 */

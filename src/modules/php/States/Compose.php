@@ -46,7 +46,9 @@ class Compose extends GameState
 
     /**
      * 公開部分は文脈（`context`: PHASE / TOKEN / FLOOR / BONUS_LV1 / BONUS_ANY / EFFECT_FREE_LV1）、割引、心光の逓増、
-     * 手札の必要エネルギーは `_private[本人]`（`hand`: id / type / level / need / composable）。
+     * `tapCandidates`（M095 で横向きにできる自己構成済みカードの ID）、`extraMax`（I08 の追加支払いの上限）も公開。
+     * 手札の必要エネルギーは `_private[本人]`（`hand`: id / type / level / need / composable）と、
+     * `architectPairs`（I03 で入れ替えられる `[自己構成済みの ID, 手札の ID]` の組）。
      *
      * @return array<string, mixed>
      */

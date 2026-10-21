@@ -5,7 +5,8 @@
     "name": "Floor layout",
     "values": {
       "1": {
-        "name": "Fixed order (by ID)"
+        "name": "Fixed order (by ID)",
+        "description": "Floor cards are placed in the corridor in ID order (Level 2 floors in the corners)"
       },
       "2": {
         "name": "Random",

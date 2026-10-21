@@ -114,42 +114,42 @@ final class ComposePlanner
     public function plan(int $player, ComposeContext $context, int $discount, int $cardId, array $payment): ComposePlan
     {
         if (!in_array($cardId, $this->candidates($player, $context), true)) {
-            throw new EffectViolation('That card cannot be composed now (not in hand, same name already composed, or wrong level)');
+            throw new EffectViolation(clienttranslate('That card cannot be composed now (not in hand, same name already composed, or wrong level)'));
         }
         $extra = $this->ids($payment['extra'] ?? [], 'extra');
         $discard = $this->ids($payment['discard'] ?? [], 'discard');
         $taps = $this->ids($payment['tap'] ?? [], 'tap');
         $uses = $payment['light'] ?? 0;
         if (!is_int($uses) || $uses < 0) {
-            throw new EffectViolation("'light' must be a count of inner light uses");
+            throw new EffectViolation(clienttranslate('The inner light uses must be a count'));
         }
         if (count($extra) > $this->energy->extraPayMax($player)) {
-            throw new EffectViolation('You cannot pay that many extra cards');
+            throw new EffectViolation(clienttranslate('You cannot pay that many extra cards'));
         }
         if (!$context->paysEnergy() && ($discard !== [] || $taps !== [] || $uses > 0)) {
-            throw new EffectViolation('No energy is needed here, so nothing can be paid');
+            throw new EffectViolation(clienttranslate('No energy is needed here, so nothing can be paid'));
         }
         $hand = $this->view->handIds($player);
         $paid = $uses;
         foreach ($extra as $id) {
             if ($id === $cardId || in_array($id, $discard, true) || !in_array($id, $hand, true)) {
-                throw new EffectViolation("Card {$id} cannot be paid as an extra card");
+                throw new EffectViolation(clienttranslate('A selected card cannot be paid as an extra card'));
             }
         }
         foreach ($discard as $id) {
             if ($id === $cardId || !in_array($id, $hand, true)) {
-                throw new EffectViolation("Card {$id} cannot be discarded to pay");
+                throw new EffectViolation(clienttranslate('A selected card cannot be discarded to pay'));
             }
             $paid += MemoryCards::get($this->view->cardType($id))->level;
         }
         $this->energy->assertTaps($player, $cardId, $context, $taps, $discount);
         $need = $this->energy->need($player, $cardId, $context, $discount, count($taps));
         if ($paid < $need) {
-            throw new EffectViolation("Not enough energy: {$need} needed, {$paid} paid");
+            throw new EffectViolation(clienttranslate('Not enough energy was paid'));
         }
         $lights = $this->light->totalLights($player, ActionContext::COMPOSE, $uses);
         if ($lights > $this->players->light($player)) {
-            throw new EffectViolation('Not enough inner light');
+            throw new EffectViolation(clienttranslate('Not enough inner light'));
         }
 
         return new ComposePlan($cardId, $discard, $uses, $lights, $taps, $need, $extra);
@@ -180,17 +180,17 @@ final class ComposePlanner
     private function ids(mixed $value, string $key): array
     {
         if (!is_array($value) || !array_is_list($value)) {
-            throw new EffectViolation("'{$key}' must be a list of card ids");
+            throw new EffectViolation(clienttranslate('The selection must be a list of card ids'));
         }
         $ids = [];
         foreach ($value as $item) {
             if (!is_int($item)) {
-                throw new EffectViolation("'{$key}' must contain integer ids only");
+                throw new EffectViolation(clienttranslate('The selection must contain ids only'));
             }
             $ids[] = $item;
         }
         if (count(array_unique($ids)) !== count($ids)) {
-            throw new EffectViolation("'{$key}' must not contain duplicates");
+            throw new EffectViolation(clienttranslate('The selection must not contain duplicates'));
         }
 
         return $ids;

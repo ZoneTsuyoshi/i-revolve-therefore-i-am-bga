@@ -75,6 +75,7 @@ final class AnalysisAction
                 'discount' => $pending->discount,
                 'reduction' => $this->planner->reduction($player, $pending->discount),
                 'destinations' => $destinations,
+                'keyServes' => $this->planner->keyServes($player),
                 'tableau' => $tableau,
                 'light' => $this->players->light($player),
                 'lightTotals' => $lightTotals,
@@ -94,7 +95,7 @@ final class AnalysisAction
     {
         $pending = $this->frames->current(Op::ANALYZE, $player);
         if ($pending->context === 'TOKEN' && $this->players->analysisTokens($player) < 1) {
-            throw new EffectViolation('You have no analysis token');
+            throw new EffectViolation(clienttranslate('You have no analysis token'));
         }
         $plan = $this->planner->plan($player, $pending->discount, $destination, $payment);
         $name = ($this->nameOf)($player);

@@ -52,6 +52,7 @@ class TurnStart extends GameState
         $context->startPos = $this->game->irPlayerValues()->persona($turnPlayer);
         $globals->setTurnContext($context);
 
+        $this->game->irStats()->turnStarted($turnPlayer);
         $this->game->irSend(Notification::turnStarted($turnPlayer, $this->game->getPlayerNameById($turnPlayer), $turnNo));
         $this->game->gamestate->changeActivePlayer($turnPlayer);
         // ターンプレイヤーが変わり、ターンの記録が初期化されたので、目標の状況（獲得できるか）を本人に送り直す（N23）

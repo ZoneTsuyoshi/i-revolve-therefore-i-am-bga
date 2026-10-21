@@ -88,16 +88,6 @@ class HandLimitDiscard extends GameState
     }
 
     /**
-     * 仮の操作（UI ができるまで）: zombie と同じく、超過枚数分、レベル 1 を優先して手札の後ろから捨てる。
-     * TODO(UI): 手札の選択 UI の導入時に、このアクションとクライアントの仮のボタンを削除する。
-     */
-    #[PossibleAction]
-    public function actDiscardExcessAuto(int $activePlayerId): string
-    {
-        return $this->zombie($activePlayerId);
-    }
-
-    /**
      * 超過枚数分、レベル 1 を優先して手札の後ろから捨てる（006 §10）。
      */
     public function zombie(int $playerId): string

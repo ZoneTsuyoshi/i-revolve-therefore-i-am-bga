@@ -51,7 +51,7 @@ final class SwapRoomMemory extends AbstractOp
             !is_int($a) || !is_int($b) || $a === $b || !in_array($a, $rooms, true) || !in_array($b, $rooms, true)
             || Corridor::levelOf($a) !== Corridor::levelOf($b)
         ) {
-            throw new EffectViolation('Choose two different rooms of the same level');
+            throw new EffectViolation(clienttranslate('Choose two different rooms of the same level'));
         }
         $context->mutator->swapRoomCards($context->owner, $a, $b);
 

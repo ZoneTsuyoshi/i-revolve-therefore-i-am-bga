@@ -51,7 +51,7 @@ class Analysis extends GameState
 
     /**
      * 公開部分は文脈（`context`: FLOOR / TOKEN）、割引、進む先ごとのコスト（`destinations`）、軽減できる鍵の個数（`reduction`）、
-     * 心光の逓増、自己構成済みカードの鍵（`tableau`）、払えるか（`canAnalyze`）。手札の鍵は `_private[本人]`（`hand`）。
+     * 心光の逓増、自己構成済みカードの鍵（`tableau`）、持つ鍵の種類ごとに払えるコスト（`keyServes`。M094 の読み替え込み）、払えるか（`canAnalyze`）。手札の鍵は `_private[本人]`（`hand`）。
      *
      * @return array<string, mixed>
      */

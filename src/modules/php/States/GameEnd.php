@@ -13,9 +13,12 @@ use Bga\GameFramework\GameResult\GameResult;
 use Bga\GameFramework\StateType;
 use Bga\GameFramework\States\GameState;
 use Bga\Games\IRevolveThereforeIAm\Data\GamePhase;
+use Bga\Games\IRevolveThereforeIAm\Data\MemoryLocation;
+use Bga\Games\IRevolveThereforeIAm\Data\PublicView;
 use Bga\Games\IRevolveThereforeIAm\Flow\Notification;
 use Bga\Games\IRevolveThereforeIAm\Flow\StateId;
 use Bga\Games\IRevolveThereforeIAm\Game;
+use Bga\Games\IRevolveThereforeIAm\Material\KeyType;
 
 /**
  * 95: 終局。勝者または全員敗北に応じてスコアを確定し、GameResult を返す（006 §9）。
@@ -48,14 +51,40 @@ class GameEnd extends GameState
             $this->bga->playerScore->set($playerId, $playerId === $winnerId ? 1 : 0, null);
         }
 
+        $results = $this->game->irPublicView()->results($seats);
+        $stats = $this->game->irStats();
+        $stats->turnFinished($globals->turnContext()->roomsEnteredCount);
+        $stats->finalize($reason, $results, $this->irKeyCounts($seats));
+
         $this->game->irSend(Notification::gameEnded(
             $reason,
             $winnerId,
             $winnerId === null ? null : $this->game->getPlayerNameById($winnerId),
-            $this->game->irPublicView()->results($seats),
+            $results,
         ));
 
-        // TODO(I-11): 統計 end_reason・final_score などの確定
         return GameResult::individualRanking();
+    }
+
+    /**
+     * 自己構成済みカードの鍵の本数（プレイヤー ID → 鍵の種類ごと。統計 key_*）。
+     *
+     * @param list<int> $seats
+     * @return array<int, array<string, int>>
+     */
+    private function irKeyCounts(array $seats): array
+    {
+        $counts = [];
+        foreach ($seats as $playerId) {
+            $held = [KeyType::WISDOM->value => 0, KeyType::WILL->value => 0, KeyType::EMOTION->value => 0, KeyType::WILD->value => 0];
+            foreach ($this->game->irMemoryCards()->inLoc(MemoryLocation::Tableau, $playerId) as $card) {
+                foreach (PublicView::definition($card->type)->keys as $key) {
+                    $held[$key->value]++;
+                }
+            }
+            $counts[$playerId] = $held;
+        }
+
+        return $counts;
     }
 }

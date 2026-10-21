@@ -42,7 +42,7 @@ final class SwapRoomFloor extends AbstractOp
         $b = $answer->data['b'] ?? null;
         $rooms = $this->rooms();
         if (!is_int($a) || !is_int($b) || $a === $b || !in_array($a, $rooms, true) || !in_array($b, $rooms, true)) {
-            throw new EffectViolation('Choose two different level 1 rooms');
+            throw new EffectViolation(clienttranslate('Choose two different level 1 rooms'));
         }
         $context->mutator->swapRoomFloors($context->owner, $a, $b);
 

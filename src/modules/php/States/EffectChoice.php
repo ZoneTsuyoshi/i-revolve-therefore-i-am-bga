@@ -101,16 +101,6 @@ class EffectChoice extends GameState
     }
 
     /**
-     * 仮の操作（U-3〜U-5 で選択の UI ができるまで）: zombie と同じ既定の答えで進める。
-     * TODO(UI): 選択の UI の導入時に、このアクションとクライアントの仮のボタンを削除する。
-     */
-    #[PossibleAction]
-    public function actResolveAuto(int $activePlayerId): string
-    {
-        return $this->zombie($activePlayerId);
-    }
-
-    /**
      * スキップ可の種類はスキップ、必須の選択は種類ごとの既定（006 §10、008 §6.4）。
      */
     public function zombie(int $playerId): string

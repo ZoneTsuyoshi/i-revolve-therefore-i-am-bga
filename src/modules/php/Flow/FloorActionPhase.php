@@ -105,7 +105,7 @@ final class FloorActionPhase
             $kind = $options[0]['kind'];
         }
         if (!in_array($kind, array_column($options, 'kind'), true)) {
-            throw new EffectViolation("That floor action is not available: {$kind}");
+            throw new EffectViolation(clienttranslate('That floor action is not available'));
         }
         $this->globals->setResume(StateId::CONSTRUCT);
 

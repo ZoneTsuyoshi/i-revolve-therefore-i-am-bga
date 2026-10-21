@@ -43,17 +43,17 @@ final class ObjectiveService
     public function claim(int $player, int $objectiveId, ObjectiveWindow $window): array
     {
         if ($this->globals->turnPlayer() !== $player) {
-            throw new EffectViolation('Only the turn player can claim a goal card');
+            throw new EffectViolation(clienttranslate('Only the turn player can claim a goal card'));
         }
         $turn = $this->globals->turnContext();
         if (!$this->board->mayClaim($player)) {
-            throw new EffectViolation('You have already claimed a goal card this turn');
+            throw new EffectViolation(clienttranslate('You have already claimed a goal card this turn'));
         }
         $status = $this->board->status($player, $objectiveId, $window)
-            ?? throw new EffectViolation('That goal card is not available');
+            ?? throw new EffectViolation(clienttranslate('That goal card is not available'));
         $cardId = ObjectiveEvaluator::cardId($objectiveId);
         if (!$status->conditionMet) {
-            throw new EffectViolation('You do not meet the condition of that goal card');
+            throw new EffectViolation(clienttranslate('You do not meet the condition of that goal card'));
         }
 
         $this->objectives->claim($objectiveId, $player, $this->globals->turnNo());
