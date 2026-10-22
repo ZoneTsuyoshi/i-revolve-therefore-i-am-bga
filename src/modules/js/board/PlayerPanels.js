@@ -191,8 +191,8 @@ export class PlayerPanels {
         const row = (/** @type {HTMLElement[]} */ ...items) => el('div', { class: 'ir-pp-row' }, items);
         const keys = KEY_KINDS.map(({ kind, sprite }) => item(`key${kind}`, keyTitle(kind), sprite));
         const root = el('div', { class: 'ir-pp', data: { player: playerId } }, [
-            row(item('score', _('Self-composition score'), 'icon_score'), item('hand', _('Hand (cards)'), null, 'ir-hand-icon'), item('light', _('Inner light'), 'token_light')),
-            row(item('wild', _('Wild move key (face up + used)'), 'token_wildkey'), item('compose', _('Self-composition token'), 'token_compose'), item('analysis', _('Psychoanalysis token'), 'token_analysis')),
+            row(item('score', _('Construction score'), 'icon_score'), item('hand', _('Hand (cards)'), null, 'ir-hand-icon'), item('light', _('Psychic Light'), 'token_light')),
+            row(item('wild', _('Omni-Move Key (face up + used)'), 'token_wildkey'), item('compose', _('Construct token'), 'token_compose'), item('analysis', _('Psychoanalysis token'), 'token_analysis')),
             row(item('tier', _('Psyche tier'), null, 'ir-tier-icon'), ...keys),
         ]);
         host.append(root);

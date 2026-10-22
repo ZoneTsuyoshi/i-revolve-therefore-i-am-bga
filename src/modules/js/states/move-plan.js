@@ -501,9 +501,9 @@ export function lockName(key) {
 function describePayment(board, item, tr) {
   switch (item.src) {
     case SRC.LIGHT:
-      return tr('Inner light');
+      return tr('Psychic Light');
     case SRC.TOKEN:
-      return tr('Wild move key');
+      return tr('Omni-Move Key');
     case SRC.EFFECT:
       return tr('Effect key');
     default: {

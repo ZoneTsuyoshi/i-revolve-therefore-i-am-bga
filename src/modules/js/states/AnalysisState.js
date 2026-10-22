@@ -101,7 +101,7 @@ export class AnalysisState extends ActionState {
       ...solution.unused.hand.map((id) => cardLabel(this.getDeps(), 'HAND', id)),
     ];
     if (solution.unused.light > 0) {
-      unused.push(`${_('Inner light')} × ${solution.unused.light}`);
+      unused.push(`${_('Psychic Light')} × ${solution.unused.light}`);
     }
     let status = statusText({ paid: solution.paid, total: solution.total, needed: neededText(solution.needed), unused: unused.join(', '), keys: true });
     const removed = neededText(Object.fromEntries(Object.entries(solution.state.removed).filter(([, n]) => n > 0)));
@@ -138,7 +138,7 @@ export class AnalysisState extends ActionState {
     if (board.maxLightUses > 0 && board.light > 0) {
       const next = sel.light + 1;
       const step = lightCost(board, next) - lightCost(board, sel.light);
-      this.button(_('Inner light +1 (selected ${count}, cost ${cost})').replace('${count}', String(sel.light)).replace('${cost}', Number.isFinite(step) ? String(step) : '-'), () => {
+      this.button(_('Psychic Light +1 (selected ${count}, cost ${cost})').replace('${count}', String(sel.light)).replace('${cost}', Number.isFinite(step) ? String(step) : '-'), () => {
         this.selection = { ...sel, light: stepQuantity(sel.light, 1, board.maxLightUses) };
         this.render();
       }, {
@@ -147,7 +147,7 @@ export class AnalysisState extends ActionState {
         tooltip: _('Pay 1 key with Psychic Light. The nth use in an action costs more'),
       });
       if (sel.light > 0) {
-        this.button(_('Inner light -1'), () => {
+        this.button(_('Psychic Light -1'), () => {
           this.selection = { ...sel, light: sel.light - 1 };
           this.render();
         }, { color: 'secondary' });

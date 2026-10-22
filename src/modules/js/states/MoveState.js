@@ -191,10 +191,10 @@ export class MoveState {
       ...u.hand.map((id) => cardLabel(deps, 'HAND', id)),
     ];
     if (u.light > 0) {
-      parts.push(`${_('Inner light')} × ${u.light}`);
+      parts.push(`${_('Psychic Light')} × ${u.light}`);
     }
     if (u.token > 0) {
-      parts.push(`${_('Wild move key')} × ${u.token}`);
+      parts.push(`${_('Omni-Move Key')} × ${u.token}`);
     }
     if (u.effect > 0) {
       parts.push(`${_('Effect key')} × ${u.effect}`);
@@ -259,11 +259,11 @@ export class MoveState {
     };
     if (board.light + extras.light > 0) {
       const next = lightCostOf(board, this.selection.light + 1);
-      quantity('light', _('Inner light +1 (selected ${count})'), _('Inner light -1'), total,
+      quantity('light', _('Psychic Light +1 (selected ${count})'), _('Psychic Light -1'), total,
         _('Pay 1 key with Psychic Light. The nth use in an action costs more') + ` (${next})`);
     }
     if (board.wildUp + extras.token > 0) {
-      quantity('token', _('Wild move key +1 (selected ${count})'), _('Wild move key -1'), total, _('Pay 1 lock with a Wild move key'));
+      quantity('token', _('Omni-Move Key +1 (selected ${count})'), _('Omni-Move Key -1'), total, _('Pay 1 lock with a Omni-Move Key'));
     }
     if (extras.effectKeys > 0) {
       quantity('effect', _('Effect key +1 (selected ${count})'), _('Effect key -1'), extras.effectKeys, _('Pay 1 lock of the first level 2 room with a Wild key from a card effect'));

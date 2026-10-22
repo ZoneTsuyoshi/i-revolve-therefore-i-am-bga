@@ -50,10 +50,10 @@ export const CLASS_PENDING = 'ir-pending';
  */
 function tokenTitle(kind) {
     switch (kind) {
-        case 'light': return _('Inner light');
-        case 'wildUp': return _('Wild move key');
-        case 'wildUsed': return _('Wild move key (used)');
-        case 'compose': return _('Self-composition token');
+        case 'light': return _('Psychic Light');
+        case 'wildUp': return _('Omni-Move Key');
+        case 'wildUsed': return _('Omni-Move Key (used)');
+        case 'compose': return _('Construct token');
         case 'analysis': return _('Psychoanalysis token');
         default: return '';
     }
