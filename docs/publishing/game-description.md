@@ -2,11 +2,11 @@
 
 BoardGameGeek（BGG）のゲーム登録と、BGA の Game Metadata Manager の説明文に使う英語の紹介文。ルールの内容はルールブック（`data/rulebook/rulebook_web.pdf`）と公式ページ <https://danjiri-concerto.github.io/i-revolve-therefore-i-am/index.html> に基づく。
 
-BGG に未登録であることを作者が確認したうえで、2026-10-20 に作者が申請済み。承認後に BGG_ID をここと `src/gameinfos.jsonc` に記録する。
+BGG に未登録であることを作者が確認したうえで、2026-10-20 に作者が申請し、2026-10-22 に承認された（<https://boardgamegeek.com/boardgame/481968/i-revolve-therefore-i-am>）。BGG_ID は `src/gameinfos.jsonc` に設定済み。BGA のライセンス申請は [bga-license.md](bga-license.md)。
 
 | 項目 | 値 |
 | --- | --- |
-| BGG_ID | 承認待ち（2026-10-20 申請） |
+| BGG_ID | 481968（2026-10-22 承認） |
 
 ## 登録の手順
 

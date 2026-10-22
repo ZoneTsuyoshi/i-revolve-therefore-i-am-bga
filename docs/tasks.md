@@ -37,7 +37,7 @@
 | S-2 | 同期の段階 2・3（sync・削除リスト・lint 連携・`push` トリガー）、初回同期と Express Start の確認 | 005 | I-02、C-2 | 完了（#23・本 PR） |
 | I-03 | セットアップ（人数別の除外、回廊の配置オプション、配札）と状態機械の骨格（006 の全状態・遷移・zombie・進行度。雛形のサンプル状態の置き換え） | 001 §4、006、007 | I-01、I-02 | 完了 |
 | I-04 | 初期自我の秘密ドラフトとミープル配置 | 001 §4、006 | I-03 | 完了 |
-| I-05 | 効果エンジンの基盤（`EffectSpec`・`EffectCatalog`（想起・床・精神・周遊）、`Query`、基本の操作、`EffectEngine`）と PHPUnit の導入（CI 第 4 段階） | 008 §11.2 の 1〜3 | I-01 | 実装中 |
+| I-05 | 効果エンジンの基盤（`EffectSpec`・`EffectCatalog`（想起・床・精神・周遊）、`Query`、基本の操作、`EffectEngine`）と PHPUnit の導入（CI 第 4 段階） | 008 §11.2 の 1〜3 | I-01 | 完了（#25） |
 | I-06 | 移動（`actMove` の経路検証、支払い a〜d、スキップと周遊ボーナス、刹那の追憶） | 001 §6、006、008 | I-03、I-05 | 完了 |
 | I-07 | 想起・床アクション・自己構成・精神分析・トークン・フリーアクション・手札上限 | 001 §7〜§12、006、008 §11.2 の 4 | I-06 | 完了 |
 | I-08 | クリーンアップと終局（補充、山札切れの全員敗北、勝利判定、終局表示） | 001 §13〜§15、006 | I-07 | 完了 |
@@ -59,9 +59,9 @@
 
 | 項目 | 必要になる時期 | 状態 |
 | --- | --- | --- |
-| BGG へのゲーム登録（手順と紹介文は [publishing/game-description.md](publishing/game-description.md)。承認後に BGG_ID をエージェントに伝え、`src/gameinfos.jsonc` に設定する） | 公開の準備まで（承認に数週間かかるため早めに） | 申請済み（2026-10-20。承認後に BGG_ID を設定） |
+| BGG へのゲーム登録（手順と紹介文は [publishing/game-description.md](publishing/game-description.md)。承認後に BGG_ID をエージェントに伝え、`src/gameinfos.jsonc` に設定する） | 公開の準備まで（承認に数週間かかるため早めに） | 済（2026-10-22 承認。BGG_ID 481968 を設定） |
 | BGA Studio の開発者アカウント取得 | T-005 まで | 済（姉妹プロジェクトと共通） |
 | BGA Studio でのプロジェクト作成（プロジェクト名 `irevolvethereforeiam`） | T-003 まで | 済（2026-10-20） |
 | SSH 鍵の BGA Studio への登録、GitHub への Secrets / Variables の登録 | T-005 の導入時 | 鍵は姉妹プロジェクトと共通で接続確認済み（2026-10-20）。Secrets / Variables の登録は T-005 で |
 | GitHub リポジトリの設定（ブランチ自動削除、squash merge のみ許可。`main` の保護は任意） | T-004 の導入時 | 済（2026-10-20。エージェントが設定。`main` の保護はしない） |
-| BGA のライセンス確認（作者が権利者であることを BGA に示す。[Pre-release checklist](https://en.doc.boardgamearena.com/Pre-release_checklist)） | アルファ申請まで | 未着手 |
+| BGA のライセンス確認（作者が権利者であることを BGA に示す。[Pre-release checklist](https://en.doc.boardgamearena.com/Pre-release_checklist)） | アルファ申請まで | 公式サイトに告知を公開（2026-10-22）。X への投稿と申請フォームの送信は作者（手順と記入例は [publishing/bga-license.md](publishing/bga-license.md)） |
