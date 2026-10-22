@@ -15,13 +15,13 @@
     "publisher": "Danjiri Concerto",
 
     // Url of game publisher website
-    "publisher_website": "https://danjiri-concerto.github.io/index.html",
+    "publisher_website": "https://danjiri-concerto.github.io/i-revolve-therefore-i-am/index-en.html",
 
     // Board Game Geek ID of the publisher
-    "publisher_bgg_id": 0,
+    "publisher_bgg_id": 64662,
 
     // Board game geek ID of the game
-    "bgg_id": 0,
+    "bgg_id": 481968,
 
     // Players configuration that can be played (ex: 2 to 4 players)
     "players": [2, 3, 4],
