@@ -45,6 +45,11 @@
     --ir-slot-bg: rgb(0 0 0 / 4%);
     --ir-slot-border: #9a948a;
     --ir-turn-border: #c0392b;
+    --ir-pending: #1f5fd1;
+    --ir-zone-hand-bg: rgb(70 120 200 / 10%);
+    --ir-zone-hand-border: #5b86c9;
+    --ir-zone-composed-bg: rgb(200 150 60 / 12%);
+    --ir-zone-composed-border: #b88a3a;
     --ir-tip-bg: #fffdf8;
     --ir-tip-border: #8a8478;
     --ir-tip-shadow: rgb(0 0 0 / 35%);
@@ -59,6 +64,11 @@ html[data-theme="dark"] {
     --ir-slot-bg: rgb(255 255 255 / 6%);
     --ir-slot-border: #7a776f;
     --ir-turn-border: #ff7b6b;
+    --ir-pending: #6cb6ff;
+    --ir-zone-hand-bg: rgb(90 140 220 / 14%);
+    --ir-zone-hand-border: #5f86c4;
+    --ir-zone-composed-bg: rgb(220 170 80 / 12%);
+    --ir-zone-composed-border: #a98443;
     --ir-tip-bg: #25252a;
     --ir-tip-border: #7a776f;
     --ir-tip-shadow: rgb(0 0 0 / 70%);
@@ -351,6 +361,36 @@ html[data-theme="dark"] {
     min-height: var(--ir-h);
 }
 
+/* 手札と自己構成済みエリアの区画: 見出し・背景色・枠・間隔で分ける（009 §3.10） */
+.ir-zone {
+    margin-top: 12px;
+    padding: 6px 8px 8px;
+    border: 2px solid var(--ir-zone-border);
+    border-radius: 6px;
+    background: var(--ir-zone-bg);
+}
+
+.ir-zone-hand {
+    --ir-zone-bg: var(--ir-zone-hand-bg);
+    --ir-zone-border: var(--ir-zone-hand-border);
+}
+
+.ir-zone-composed {
+    --ir-zone-bg: var(--ir-zone-composed-bg);
+    --ir-zone-border: var(--ir-zone-composed-border);
+}
+
+.ir-zone-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 6px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid var(--ir-zone-border);
+    font-size: 14px;
+    font-weight: bold;
+}
+
 /* 手札の枚数（本人: 上限との比。超えたら印と文言も出す。他人: 枚数チップ。009 §3.10・§3.11） */
 .ir-hand-info,
 .ir-hand-count {
@@ -481,12 +521,13 @@ html[data-theme="dark"] {
 }
 
 /*
- * 横向き（使用済み。009 §4.2）: 90 度回して 0.718（= 280 / 390）に縮め、スロットに収める。「Used」の帯を重ねる（色だけにしない）。
- * 移動のアニメーションが card 要素の transform を使うので、回すのは中の面（.bga-cards_card-sides）にする。
+ * 使用済み（009 §4.2）: 向きも大きさも変えず、グレーアウトする（白黒 + 暗く + 薄く）。「Used」の帯を重ねる（色だけにしない）。
+ * 移動のアニメーションが card 要素の transform を使うので、フィルタは中の面（.bga-cards_card-sides）にかける。
  */
 .ir-card.ir-tapped [class*="card-sides"] {
-    transform: rotate(90deg) scale(0.718);
-    transition: transform 0.4s;
+    filter: grayscale(1) brightness(0.7);
+    opacity: 0.6;
+    transition: filter 0.4s, opacity 0.4s;
 }
 
 .ir-used-band {
@@ -494,7 +535,7 @@ html[data-theme="dark"] {
     right: 0;
     bottom: 40%;
     left: 0;
-    z-index: 1;
+    z-index: 3;
     padding: 1px 0;
     background: var(--ir-panel-bg);
     border-top: 1px solid var(--ir-panel-border);
@@ -552,8 +593,24 @@ html[data-theme="dark"] {
 
 /* 操作 UI（U-10。states/ActionState.js）: 自己構成するカードとして選んだ手札の印、一時的な候補のカード置き場（初期自我のドラフト、強化自我の選択） */
 .ir-card.ir-pending {
-    outline: 3px dashed var(--ir-turn-border);
-    outline-offset: -3px;
+    z-index: 2;
+    outline: 5px solid var(--ir-pending);
+    outline-offset: -5px;
+    box-shadow: 0 0 0 2px var(--ir-panel-bg), 0 0 10px 3px var(--ir-pending);
+}
+
+.ir-card.ir-pending::after {
+    content: "\2605";
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    z-index: 4;
+    width: 1.4em;
+    border-radius: 50%;
+    background: var(--ir-pending);
+    color: #fff;
+    font-size: 12px;
+    text-align: center;
 }
 
 .ir-pick-panel {

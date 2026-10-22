@@ -61,7 +61,7 @@ test('setup: 手札・自己構成済み・横向き・下のカード・自我�
 
   // 手札はレベル→エネルギー→番号の順（M002 e1, M001 e3, M060 L2）に stock へ入る
   assert.deepEqual(stockOf(areas, P1).hand.getCards().map((/** @type {any} */ c) => c.key), ['M002', 'M001', 'M060']);
-  assert.equal(mine.handInfo.textContent, 'Hand: 3 / 8');
+  assert.equal(mine.handInfo.textContent, '3 / 8');
   assert.equal(mine.handInfo.hasClass('ir-over-limit'), false);
 
   // 自己構成済み: 横向きと Used 帯、I08 の下の枚数バッジ。下のカードの中身（本人）
@@ -87,7 +87,7 @@ test('setup: 手札・自己構成済み・横向き・下のカード・自我�
 
   // 他人は手札の Stock を持たず枚数チップだけ
   assert.equal(theirs.hand, null);
-  assert.equal(theirs.handCount.querySelector('.ir-hand-count-text')?.textContent, 'Hand: 5');
+  assert.equal(theirs.handCount.querySelector('.ir-hand-count-text')?.textContent, '5');
   assert.equal(stockOf(areas, P2).hand, null);
   assert.equal(stockOf(areas, P2).under, null);
 });
@@ -102,7 +102,7 @@ test('setup: 空・欠けた gamedatas、観戦者でも例外を出さない', 
   areas.setup(/** @type {any} */ (gamedatas()));
   await areas.ready;
   assert.equal(areas.isMine(P1), false);
-  assert.equal(board.playerAreas.get(P1)?.handCount?.querySelector('.ir-hand-count-text')?.textContent, 'Hand: 3');
+  assert.equal(board.playerAreas.get(P1)?.handCount?.querySelector('.ir-hand-count-text')?.textContent, '3');
 });
 
 test('通知: 手札・自己構成・横向き・トークン・下のカード・捨札・クリーンアップ', async () => {
@@ -116,14 +116,14 @@ test('通知: 手札・自己構成・横向き・トークン・下のカード
   await cn.notif_cardsDrawn({ player_id: P1, level: 1, decks: {}, _private: { cards: [{ id: 33, type: 7 }] } });
   assert.deepEqual(hand().includes(33), true);
   await cn.notif_cardsDrawn({ player_id: P2, level: 1, count: 2, hand_count: 7 });
-  assert.equal(board.playerAreas.get(P2)?.handCount?.querySelector('.ir-hand-count-text')?.textContent, 'Hand: 7');
+  assert.equal(board.playerAreas.get(P2)?.handCount?.querySelector('.ir-hand-count-text')?.textContent, '7');
 
   // 上限を超えると印と文言
   for (let i = 0; i < 5; i += 1) {
     await cn.notif_cardsDrawn({ player_id: P1, level: 1, cards: [{ id: 40 + i, type: 1 }] });
   }
   assert.equal(hand().length, 9);
-  assert.equal(board.playerAreas.get(P1)?.handInfo?.textContent, 'Hand: 9 / 8 (over the limit)');
+  assert.equal(board.playerAreas.get(P1)?.handInfo?.textContent, '9 / 8 (over the limit)');
   assert.equal(board.playerAreas.get(P1)?.handInfo?.hasClass('ir-over-limit'), true);
 
   // N18 自己構成: 手札から自己構成済みへ
@@ -132,7 +132,7 @@ test('通知: 手札・自己構成・横向き・トークン・下のカード
   assert.equal(stockOf(areas, P1).composed.getCards().some((/** @type {any} */ c) => c.id === 33), true);
   await pn.notif_cardComposed({ player_id: P2, card: { id: 61, type: 2 }, hand_count: 6 });
   assert.deepEqual(keysIn(board.playerAreas.get(P2)?.composed), ['M001', 'M002']);
-  assert.equal(board.playerAreas.get(P2)?.handCount?.querySelector('.ir-hand-count-text')?.textContent, 'Hand: 6');
+  assert.equal(board.playerAreas.get(P2)?.handCount?.querySelector('.ir-hand-count-text')?.textContent, '6');
 
   // N17 横向き → クリーンアップで戻る（N29）
   await pn.notif_cardsTapped({ card_ids: [51, 61], tapped: true });
