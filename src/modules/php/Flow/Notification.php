@@ -75,8 +75,8 @@ final class Notification
     /**
      * N06: 部屋に入室した。支払った資源の変化は N15〜N17 が先に続く（006 §5.1 の流れ）。
      *
-     * @param array{tapped: list<int>, discarded: list<array{id: int, type: int}>, light: int, wild_tokens: int, granted_keys: int} $payment
-     *        `light` は払った心光の個数、`wild_tokens` は裏返した万能移動鍵トークンの数、`granted_keys` は MD-06 の万能鍵の数
+     * @param array{tapped: list<int>, discarded: list<array{id: int, type: int}>, light: int, wild_tokens: int, lock_reduction: int} $payment
+     *        `light` は払った心光の個数、`wild_tokens` は裏返した万能移動鍵トークンの数、`lock_reduction` は MD-06 で減らした錠前の数
      */
     public static function roomEntered(
         int $playerId,

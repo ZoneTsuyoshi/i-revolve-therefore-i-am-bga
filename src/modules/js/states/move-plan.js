@@ -10,7 +10,7 @@ import { int } from '../ui/dom.js';
 export const ROOM_COUNT = 12;
 
 /** 支払いの src（Effects/Query/KeyPayment と同じ綴り） */
-export const SRC = { TABLEAU: 'TABLEAU', HAND: 'HAND', LIGHT: 'LIGHT', TOKEN: 'TOKEN', EFFECT: 'EFFECT' };
+export const SRC = { TABLEAU: 'TABLEAU', HAND: 'HAND', LIGHT: 'LIGHT', TOKEN: 'TOKEN' };
 
 /** 拒否の理由（Flow/MoveViolation と同じ綴り） */
 export const REASON = {
@@ -19,7 +19,6 @@ export const REASON = {
   KEY_MISMATCH: 'KEY_MISMATCH',
   BAD_CARD: 'BAD_CARD',
   SPLIT_CARD: 'SPLIT_CARD',
-  BAD_GRANT: 'BAD_GRANT',
   NOT_ENOUGH_RESOURCES: 'NOT_ENOUGH_RESOURCES',
   TOO_LONG: 'TOO_LONG',
 };
@@ -27,7 +26,7 @@ export const REASON = {
 /**
  * @typedef {object} PayItem
  * @property {string} src SRC のどれか
- * @property {number} [card] カード ID（TABLEAU・HAND・EFFECT）
+ * @property {number} [card] カード ID（TABLEAU・HAND）
  * @property {number} [key] カードの鍵の番号（TABLEAU・HAND）
  */
 
@@ -61,7 +60,7 @@ export const REASON = {
  * @property {number} light
  * @property {number} wildUp
  * @property {number[]} lightCosts n 回目の心光の行使の個数（n = 1 から）
- * @property {number} grantedKeys MD-06 の万能鍵（このターン最初のレベル 2 の入室にだけ使える数。0 なら使えない）
+ * @property {number} lockReduction MD-06（M064〜M066）の錠前の軽減数（このターン最初のレベル 2 の入室の錠前の数を減らす。0 なら減らない）
  * @property {Record<string, string[]>} keyServes 持つ鍵 → 払える錠前の種類
  * @property {number} maxRooms
  * @property {boolean} canMove
@@ -121,7 +120,7 @@ export function boardFromArgs(args) {
     light: int(res.light),
     wildUp: int(res.wildUp),
     lightCosts: Array.isArray(res.lightCosts) ? res.lightCosts.map(int) : [],
-    grantedKeys: int(res.grantedKeys),
+    lockReduction: int(res.lockReduction),
     keyServes,
     maxRooms: int(a.maxRooms) || 24,
     canMove: a.canMove === true || a.canMove === 1 || a.canMove === '1',
@@ -155,6 +154,29 @@ export function endPosition(board, steps) {
  */
 export function canServe(board, lock, held) {
   return (board.keyServes[held] ?? []).includes(lock);
+}
+
+/**
+ * 部屋の錠前の数。このターン最初のレベル 2 の入室（`lv2Seen` が 0）だけ MD-06 の軽減（最大 2）を引く。
+ * @param {MoveBoard} board
+ * @param {BoardRoom} room
+ * @param {number} lv2Seen この入室より前に経路に入ったレベル 2 の部屋の数
+ * @returns {number}
+ */
+export function locksOf(board, room, lv2Seen) {
+  const reduction = room.level === 2 && lv2Seen === 0 ? Math.min(Math.max(board.lockReduction, 0), 2) : 0;
+  return room.level - reduction;
+}
+
+/**
+ * 経路の `index` 番目の入室より前の、レベル 2 の部屋の数。
+ * @param {MoveBoard} board
+ * @param {Step[]} steps
+ * @param {number} index
+ * @returns {number}
+ */
+function lv2Before(board, steps, index) {
+  return steps.slice(0, index).filter((s) => board.rooms.get(s.pos)?.level === 2).length;
 }
 
 /**
@@ -194,8 +216,6 @@ export function checkPlan(board, steps, { partial = false } = {}) {
   let shortage = null;
   /** @type {Set<string>} */
   const usedSlots = new Set();
-  /** @type {Set<number>} */
-  const effectUsed = new Set();
   /** @type {Map<number, number[]>} */
   const cardEntries = new Map();
 
@@ -214,11 +234,10 @@ export function checkPlan(board, steps, { partial = false } = {}) {
     }
     const isLast = index === steps.length - 1;
     const count = step.payments.length;
-    if (count > room.level || (count < room.level && !(partial && isLast))) {
-      return fail(REASON.LOCK_COUNT, `room ${step.pos} needs ${room.level}`);
+    const locks = locksOf(board, room, lv2Seen);
+    if (count > locks || (count < locks && !(partial && isLast))) {
+      return fail(REASON.LOCK_COUNT, `room ${step.pos} needs ${locks}`);
     }
-    const grants = room.level === 2 && lv2Seen === 0 ? Math.min(board.grantedKeys, 2) : 0;
-    let effects = 0;
     let stepLights = 0;
     let stepTokens = 0;
     for (const item of step.payments) {
@@ -245,19 +264,9 @@ export function checkPlan(board, steps, { partial = false } = {}) {
         stepLights++;
       } else if (item.src === SRC.TOKEN) {
         stepTokens++;
-      } else if (item.src === SRC.EFFECT) {
-        const card = board.tableau.get(item.card ?? -1);
-        if (card === undefined || effectUsed.has(card.id)) {
-          return fail(REASON.BAD_GRANT, `card ${item.card}`);
-        }
-        effectUsed.add(card.id);
-        effects++;
       } else {
         return fail(REASON.BAD_CARD, `src ${item.src}`);
       }
-    }
-    if (effects > grants) {
-      return fail(REASON.BAD_GRANT, `too many granted keys for room ${step.pos}`);
     }
     // 資源は 1 部屋ずつ順に: スキップした部屋のボーナス → 支払い → 入った部屋のボーナス
     if (skipped !== null) {
@@ -326,7 +335,7 @@ export function isComplete(board, steps) {
 export function pendingRoom(board, steps) {
   const last = steps[steps.length - 1];
   const room = last === undefined ? undefined : board.rooms.get(last.pos);
-  return room !== undefined && last.payments.length < room.level ? room : null;
+  return room !== undefined && last.payments.length < locksOf(board, room, lv2Before(board, steps, steps.length - 1)) ? room : null;
 }
 
 /**
@@ -369,7 +378,6 @@ export function canComplete(board, steps) {
 
 /**
  * 最後の入室の次の錠前に使える支払い。仮検証を通るものだけ。カードは鍵の番号ごと（同じカードの 2 本目の鍵も別の選択肢）。
- * 万能鍵（EFFECT）は、まだ使っていない自己構成済みカードのうち ID が最小のもの 1 枚分。
  * @param {MoveBoard} board
  * @param {Step[]} steps 最後の入室は支払いの途中でよい
  * @returns {PayItem[]}
@@ -390,10 +398,6 @@ export function payOptions(board, steps) {
         candidates.push({ src, card: card.id, key });
       }
     }
-  }
-  const effectCard = [...board.tableau.keys()].sort((x, y) => x - y).find((id) => !steps.some((s) => s.payments.some((p) => p.src === SRC.EFFECT && p.card === id)));
-  if (effectCard !== undefined) {
-    candidates.push({ src: SRC.EFFECT, card: effectCard });
   }
   return candidates.filter((item) => {
     const trial = steps.map((s, i) => (i === steps.length - 1 ? { pos: s.pos, payments: [...s.payments, item] } : s));
@@ -479,7 +483,7 @@ export function describePlan(board, steps, tr = (s) => s) {
   return steps.map((step) => {
     const room = board.rooms.get(step.pos);
     const paid = step.payments.map((p) => describePayment(board, p, tr)).join(', ');
-    const lock = room?.lock === null || room === undefined ? '' : ` (${tr(lockName(room.lock))} x${room.level})`;
+    const lock = room?.lock === null || room === undefined ? '' : ` (${tr(lockName(room.lock))} x${locksOf(board, room, lv2Before(board, steps, steps.indexOf(step)))})`;
     return `${tr('Room')} ${step.pos}${lock}: ${paid === '' ? '...' : paid}`;
   }).join(' / ');
 }
@@ -504,8 +508,6 @@ function describePayment(board, item, tr) {
       return tr('Psychic Light');
     case SRC.TOKEN:
       return tr('Omni-Move Key');
-    case SRC.EFFECT:
-      return tr('Effect key');
     default: {
       const card = (item.src === SRC.HAND ? board.hand : board.tableau).get(item.card ?? -1);
       const kind = card === undefined ? '' : tr(lockName(card.keys[item.key ?? 0] ?? ''));
@@ -522,7 +524,6 @@ function describePayment(board, item, tr) {
  * @property {Iterable<number>} [hand] 選んだ手札
  * @property {number} [light] 心光の行使の回数（上限）
  * @property {number} [token] 万能移動鍵トークンの数（上限）
- * @property {number} [effect] 効果の万能鍵の数（上限）
  */
 
 /**
@@ -532,7 +533,7 @@ function describePayment(board, item, tr) {
  * @property {number} total 錠前の総数
  * @property {number} paid 払えた錠前の数
  * @property {Record<string, number>} needed 払えていない錠前の種類 → 個数
- * @property {{ tableau: number[], hand: number[], light: number, token: number, effect: number }} unused 使われなかった選択
+ * @property {{ tableau: number[], hand: number[], light: number, token: number }} unused 使われなかった選択
  * @property {boolean} aborted 探索の上限に達した（最良ではないかもしれない）
  */
 
@@ -542,9 +543,9 @@ const SEARCH_LIMIT = 150000;
 const HOLE_WEIGHT = 1000000;
 /** 選ばれたのに使われなかった資源 1 つの重み（余りを減らす） */
 const UNUSED_WEIGHT = 1000;
-/** 資源の「高価さ」（小さいほど先に使う。自己構成済み < 手札 < 心光 < トークン < 効果の鍵） */
+/** 資源の「高価さ」（小さいほど先に使う。自己構成済み < 手札 < 心光 < トークン） */
 /** @type {Record<string, number>} */
-const COST = { TABLEAU: 1, HAND: 3, LIGHT: 4, TOKEN: 6, EFFECT: 8 };
+const COST = { TABLEAU: 1, HAND: 3, LIGHT: 4, TOKEN: 6 };
 
 /**
  * @typedef {object} KeySupply
@@ -555,14 +556,17 @@ const COST = { TABLEAU: 1, HAND: 3, LIGHT: 4, TOKEN: 6, EFFECT: 8 };
  */
 
 /**
- * 経路を、錠前 1 個ごとの並び（部屋の順、部屋の中は錠前の数だけ）にする。経路が崩れていれば null。
+ * 経路を、錠前 1 個ごとの並び（部屋の順、部屋の中は軽減後の錠前の数だけ）にする。経路が崩れていれば null。
+ * 錠前が 0 個になった部屋（MD-06 が 2 枚以上）は並びに出ず、その周遊ボーナスは次の錠前の前に得る（`pre`）。
  * @param {MoveBoard} board
  * @param {number[]} route 入る部屋の位置を順に
- * @returns {{ slots: { step: number, lock: string, first: boolean, last: boolean, skipBonus: string | undefined, bonus: string, lv2First: boolean }[], levels: number[] } | null}
+ * @returns {{ slots: { step: number, lock: string, first: boolean, last: boolean, pre: (string | undefined)[], bonus: string }[], levels: number[] } | null}
  */
 function lockSlots(board, route) {
   let pos = board.position;
   let lv2Seen = 0;
+  /** @type {(string | undefined)[]} 次の錠前の前に得る周遊ボーナス（錠前が 0 個の部屋の分を含む） */
+  let pending = [];
   /** @type {ReturnType<typeof lockSlots> & {}} */
   const out = { slots: [], levels: [] };
   for (const [index, target] of route.entries()) {
@@ -572,14 +576,21 @@ function lockSlots(board, route) {
     if (room === undefined || room.lock === null || (skipped !== null && (board.rooms.get(next)?.level !== 2 || target !== after(next)))) {
       return null;
     }
-    const lv2First = room.level === 2 && lv2Seen === 0;
-    for (let i = 0; i < room.level; i++) {
+    const locks = locksOf(board, room, lv2Seen);
+    pending = [...pending, ...(skipped === null ? [] : [board.rooms.get(skipped)?.bonus])];
+    for (let i = 0; i < locks; i++) {
       out.slots.push({
-        step: index, lock: room.lock, first: i === 0, last: i === room.level - 1,
-        skipBonus: skipped === null ? undefined : board.rooms.get(skipped)?.bonus, bonus: room.bonus, lv2First,
+        step: index, lock: room.lock, first: i === 0, last: i === locks - 1,
+        pre: i === 0 ? pending : [], bonus: room.bonus,
       });
+      if (i === 0) {
+        pending = [];
+      }
     }
-    out.levels.push(room.level);
+    if (locks === 0) {
+      pending = [...pending, room.bonus];
+    }
+    out.levels.push(locks);
     if (room.level === 2) {
       lv2Seen++;
     }
@@ -602,7 +613,7 @@ export function lockTotal(board, route) {
  * まとめて選んだ資源を、経路の各錠前に規則を守って自動で割り当てる（全探索のバックトラック）。
  * 優先順位: 払えない錠前が少ない → 選んだのに使わない資源が少ない → 高価な資源を使わない。
  * 規則: 鍵の種類（`keyServes`）、複数鍵カードの分割禁止（連続する入室なら可）、心光の逓増（`lightCosts`）、
- * 周遊ボーナスで得た資源を後の部屋で使える、効果の万能鍵は最初のレベル 2 の入室だけ。
+ * 周遊ボーナスで得た資源を後の部屋で使える、最初のレベル 2 の入室だけ錠前が軽減される（MD-06）。
  * 結果は `checkPlan` に通して二重に確かめる。
  * @param {MoveBoard} board
  * @param {number[]} route 入る部屋の位置を順に
@@ -614,11 +625,10 @@ export function solveMovePayment(board, route, selection, { feasibleOnly = false
   const layout = lockSlots(board, route);
   const lightMax = Math.max(0, Math.floor(selection.light ?? 0));
   const tokenMax = Math.max(0, Math.floor(selection.token ?? 0));
-  const effectIds = [...board.tableau.keys()].sort((x, y) => x - y).slice(0, Math.max(0, Math.floor(selection.effect ?? 0)));
   const tableauIds = [...new Set(selection.tableau ?? [])].filter((id) => board.tableau.get(id)?.tapped === false);
   const handIds = [...new Set(selection.hand ?? [])].filter((id) => board.hand.has(id));
   if (layout === null) {
-    return { steps: [], complete: false, total: 0, paid: 0, needed: {}, unused: { tableau: tableauIds, hand: handIds, light: lightMax, token: tokenMax, effect: effectIds.length }, aborted: false };
+    return { steps: [], complete: false, total: 0, paid: 0, needed: {}, unused: { tableau: tableauIds, hand: handIds, light: lightMax, token: tokenMax }, aborted: false };
   }
   const { slots } = layout;
 
@@ -651,20 +661,18 @@ export function solveMovePayment(board, route, selection, { feasibleOnly = false
    * @param {number} tokens
    * @param {number} uses 心光の行使
    * @param {number} tokenUses
-   * @param {number} effects 使った効果の万能鍵（全体）
-   * @param {number} stepEffects この部屋で使った効果の万能鍵
    * @param {number} cost
    * @param {number} holes
    */
-  const advance = (i, lights, tokens, uses, tokenUses, effects, stepEffects, cost, holes) => {
+  const advance = (i, lights, tokens, uses, tokenUses, cost, holes) => {
     if (slots[i].last) {
       [lights, tokens] = applyBonus(slots[i].bonus, lights, tokens);
     }
-    search(i + 1, lights, tokens, uses, tokenUses, effects, stepEffects, cost, holes);
+    search(i + 1, lights, tokens, uses, tokenUses, cost, holes);
   };
 
-  /** @param {number} i @param {number} lights @param {number} tokens @param {number} uses @param {number} tokenUses @param {number} effects @param {number} stepEffects @param {number} cost @param {number} holes */
-  const search = (i, lights, tokens, uses, tokenUses, effects, stepEffects, cost, holes) => {
+  /** @param {number} i @param {number} lights @param {number} tokens @param {number} uses @param {number} tokenUses @param {number} cost @param {number} holes */
+  const search = (i, lights, tokens, uses, tokenUses, cost, holes) => {
     if (done || aborted) {
       return;
     }
@@ -677,7 +685,7 @@ export function solveMovePayment(board, route, selection, { feasibleOnly = false
     }
     if (i === slots.length) {
       const usedCards = cardCount.size;
-      const unusedCount = (selectedCardCount - usedCards) + (lightMax - uses) + (tokenMax - tokenUses) + (effectIds.length - effects);
+      const unusedCount = (selectedCardCount - usedCards) + (lightMax - uses) + (tokenMax - tokenUses);
       const score = holes * HOLE_WEIGHT + unusedCount * UNUSED_WEIGHT + cost;
       if (score < bestScore) {
         bestScore = score;
@@ -690,8 +698,9 @@ export function solveMovePayment(board, route, selection, { feasibleOnly = false
     }
     const slot = slots[i];
     if (slot.first) {
-      [lights, tokens] = applyBonus(slot.skipBonus, lights, tokens);
-      stepEffects = 0;
+      for (const bonus of slot.pre) {
+        [lights, tokens] = applyBonus(bonus, lights, tokens);
+      }
     }
     // 鍵（カード）。同じカードの同じ種類の鍵は、番号の小さい未使用のものだけ試す
     /** @type {Set<string>} */
@@ -713,7 +722,7 @@ export function solveMovePayment(board, route, selection, { feasibleOnly = false
       cardLast.set(sup.card, slot.step);
       cardCount.set(cardKey, (cardCount.get(cardKey) ?? 0) + 1);
       current[i] = { src: sup.src, card: sup.card, key: sup.key };
-      advance(i, lights, tokens, uses, tokenUses, effects, stepEffects, cost + (firstUse ? COST[sup.src] : 0), holes);
+      advance(i, lights, tokens, uses, tokenUses, cost + (firstUse ? COST[sup.src] : 0), holes);
       usedSupply[s] = false;
       if (last === undefined) {
         cardLast.delete(sup.card);
@@ -730,29 +739,23 @@ export function solveMovePayment(board, route, selection, { feasibleOnly = false
     // 心光
     if (uses < lightMax && lights - lightCostOf(board, uses + 1) >= 0) {
       current[i] = { src: SRC.LIGHT };
-      advance(i, lights - lightCostOf(board, uses + 1), tokens, uses + 1, tokenUses, effects, stepEffects, cost + COST.LIGHT, holes);
+      advance(i, lights - lightCostOf(board, uses + 1), tokens, uses + 1, tokenUses, cost + COST.LIGHT, holes);
       current[i] = null;
     }
     // 万能移動鍵トークン
     if (tokenUses < tokenMax && tokens >= 1) {
       current[i] = { src: SRC.TOKEN };
-      advance(i, lights, tokens - 1, uses, tokenUses + 1, effects, stepEffects, cost + COST.TOKEN, holes);
-      current[i] = null;
-    }
-    // 効果の万能鍵（最初のレベル 2 の入室だけ、持つ数まで）
-    if (slot.lv2First && effects < effectIds.length && stepEffects < Math.min(board.grantedKeys, 2)) {
-      current[i] = { src: SRC.EFFECT, card: effectIds[effects] };
-      advance(i, lights, tokens, uses, tokenUses, effects + 1, stepEffects + 1, cost + COST.EFFECT, holes);
+      advance(i, lights, tokens - 1, uses, tokenUses + 1, cost + COST.TOKEN, holes);
       current[i] = null;
     }
     // 払えない錠前として残す（充足を最優先にしているので、払い切れる割り当てがあればそちらが勝つ）
     if (!feasibleOnly) {
       current[i] = null;
-      advance(i, lights, tokens, uses, tokenUses, effects, stepEffects, cost, holes + 1);
+      advance(i, lights, tokens, uses, tokenUses, cost, holes + 1);
     }
   };
 
-  search(0, board.light, board.wildUp, 0, 0, 0, 0, 0, 0);
+  search(0, board.light, board.wildUp, 0, 0, 0, 0);
 
   const picked = /** @type {(PayItem | null)[]} */ (best ?? slots.map(() => null));
   /** @type {Step[]} */
@@ -768,16 +771,15 @@ export function solveMovePayment(board, route, selection, { feasibleOnly = false
       steps[slots[i].step].payments.push(item);
     }
   });
-  const usedCards = new Set(picked.filter((p) => p !== null && p.card !== undefined && p.src !== SRC.EFFECT).map((p) => `${p?.src}:${p?.card}`));
+  const usedCards = new Set(picked.filter((p) => p !== null && p.card !== undefined).map((p) => `${p?.src}:${p?.card}`));
   const usedOf = (/** @type {string} */ src) => picked.filter((p) => p?.src === src).length;
   const unused = {
     tableau: tableauIds.filter((id) => !usedCards.has(`${SRC.TABLEAU}:${id}`)),
     hand: handIds.filter((id) => !usedCards.has(`${SRC.HAND}:${id}`)),
     light: lightMax - usedOf(SRC.LIGHT),
     token: tokenMax - usedOf(SRC.TOKEN),
-    effect: effectIds.length - usedOf(SRC.EFFECT),
   };
-  const complete = slots.length > 0 && paid === slots.length && checkPlan(board, steps).ok;
+  const complete = route.length > 0 && paid === slots.length && checkPlan(board, steps).ok;
   return { steps, complete, total: slots.length, paid, needed, unused, aborted };
 }
 
@@ -789,7 +791,7 @@ export function solveMovePayment(board, route, selection, { feasibleOnly = false
  */
 export function everythingSelected(board, locks) {
   const free = (/** @type {Map<number, BoardCard>} */ cards) => [...cards.values()].filter((c) => !c.tapped && c.keys.length > 0).map((c) => c.id);
-  return { tableau: free(board.tableau), hand: free(board.hand), light: locks, token: locks, effect: Math.min(board.grantedKeys, 2) };
+  return { tableau: free(board.tableau), hand: free(board.hand), light: locks, token: locks };
 }
 
 /**
@@ -832,13 +834,12 @@ export function routeOf(steps) {
  * 経路で得られる周遊ボーナスの心光・万能移動鍵の数（スキップした部屋と入った部屋の分）。「−／＋」ボタンを出すかの目安。
  * @param {MoveBoard} board
  * @param {number[]} route
- * @returns {{ light: number, token: number, effectKeys: number }} effectKeys: 効果の万能鍵を使える数（最初のレベル 2 の入室があるときだけ）
+ * @returns {{ light: number, token: number }}
  */
 export function routeExtras(board, route) {
   let pos = board.position;
   let light = 0;
   let token = 0;
-  let hasLv2 = false;
   for (const target of route) {
     const next = after(pos);
     const rooms = target === next ? [target] : [next, target];
@@ -847,8 +848,7 @@ export function routeExtras(board, route) {
       light += bonus === 'LIGHT' ? 1 : 0;
       token += bonus === 'WILD_MOVE_KEY' ? 1 : 0;
     }
-    hasLv2 = hasLv2 || board.rooms.get(target)?.level === 2;
     pos = target;
   }
-  return { light, token, effectKeys: hasLv2 ? Math.min(board.grantedKeys, 2, board.tableau.size) : 0 };
+  return { light, token };
 }

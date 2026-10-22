@@ -122,7 +122,7 @@ final class MovePhaseTest extends TestCase
         ));
         self::assertSame('HESTIA', $entered[1]->args['room_name']);
         self::assertSame(
-            ['tapped' => [], 'discarded' => [['id' => $hand, 'type' => 3]], 'light' => 0, 'wild_tokens' => 1, 'granted_keys' => 0],
+            ['tapped' => [], 'discarded' => [['id' => $hand, 'type' => 3]], 'light' => 0, 'wild_tokens' => 1, 'lock_reduction' => 0],
             $entered[1]->args['payment'],
         );
 
@@ -314,6 +314,37 @@ final class MovePhaseTest extends TestCase
 
     // ---- 移動終了のイベント ----
 
+    /** Q-71: スキップした四隅（レベル 2）の部屋に他の人格がいる場合も「通過」として EV-04 を起こす。 */
+    public function testSkippedCornerRoomWithAnotherPersonaCountsAsPassed(): void
+    {
+        $fx = $this->fx;
+        $fx->place(self::P, 6);
+        $fx->place(22, 7);   // スキップする四隅（レベル 2）に他の人格
+        $fx->lock(8, KeyType::WISDOM);
+        [$tab] = $fx->giveTableau(self::P, [1]);
+
+        $result = $this->move(['rooms' => [8], 'payments' => [[['src' => 'TABLEAU', 'card' => $tab, 'key' => 0]]]]);
+
+        $passed = array_values(array_filter($result->events, static fn($e): bool => $e->event === Event::PERSONA_PASSED_OTHER));
+        self::assertCount(1, $passed);
+        self::assertSame(['room' => 7], $passed[0]->payload);
+        self::assertContains(Event::MOVE_ENDED, array_map(static fn($e): Event => $e->event, $result->events));
+    }
+
+    /** Q-71: スキップした四隅に誰もいなければ起こさない。止まった部屋では起こさない（FAQ 行 36）。 */
+    public function testSkippedCornerRoomWithoutOthersDoesNotCountAsPassed(): void
+    {
+        $fx = $this->fx;
+        $fx->place(self::P, 6);
+        $fx->place(22, 8);   // 止まる部屋にだけ他の人格
+        $fx->lock(8, KeyType::WISDOM);
+        [$tab] = $fx->giveTableau(self::P, [1]);
+
+        $result = $this->move(['rooms' => [8], 'payments' => [[['src' => 'TABLEAU', 'card' => $tab, 'key' => 0]]]]);
+
+        self::assertSame([], array_values(array_filter($result->events, static fn($e): bool => $e->event === Event::PERSONA_PASSED_OTHER)));
+    }
+
     public function testMoveEndedEventCarriesTheSummaryAndPassingOthersIsReported(): void
     {
         $fx = $this->fx;
@@ -343,20 +374,6 @@ final class MovePhaseTest extends TestCase
         self::assertSame(8, $result->events[2]->payload['room']);
     }
 
-    public function testSkippedRoomOccupiedByAnotherPersonaIsNotPassing(): void
-    {
-        $fx = $this->fx;
-        $fx->place(self::P, 6);
-        $fx->place(22, 7);   // スキップする 7 にいる（Q-63: 通過に含まない）
-        $fx->tokens(self::P, wildUp: 1);
-
-        $result = $this->move(['rooms' => [8], 'payments' => [[self::TOKEN]]]);
-        self::assertSame(
-            [Event::MOVE_ENDED, Event::PERSONA_STOPPED],
-            array_map(static fn($e): Event => $e->event, $result->events),
-        );
-    }
-
     // ---- 手札上限 ----
 
     /** Q-41: 移動中に手札が増えても、移動フェイズ全体の後に確認する。上限以内なら何も積まない。 */
@@ -380,23 +397,23 @@ final class MovePhaseTest extends TestCase
 
     // ---- MD-06 ----
 
-    public function testGrantedKeyMarksTheCardEffectAsUsedThisTurn(): void
+    /** Q-70: M064 はこのターン最初のレベル 2 の部屋の錠前を 1 つ減らす。トークンや万能鍵は増えない（FAQ 行 22）。 */
+    public function testLockReductionLowersTheCostOfTheFirstLevel2Room(): void
     {
         $fx = $this->fx;
         $fx->place(self::P, 3);
-        [$m064] = $fx->giveTableau(self::P, [64]);
+        $fx->giveTableau(self::P, [64]);
         $fx->tokens(self::P, wildUp: 1);
 
         $result = $this->move([
             'rooms' => [4],
-            'payments' => [[['src' => 'EFFECT', 'card' => $m064], self::TOKEN]],
+            'payments' => [[self::TOKEN]],
         ]);
 
         $ctx = $fx->globals->turnContext();
-        self::assertTrue($ctx->isOnceUsed(self::P, 'M064.1'));
         self::assertSame(1, $ctx->lv2EntriesCount);
         self::assertSame(1, $ctx->moveSummary['wild_tokens_used']);
-        self::assertSame(1, self::ofType($result, 'roomEntered')[0]->args['payment']['granted_keys']);
+        self::assertSame(1, self::ofType($result, 'roomEntered')[0]->args['payment']['lock_reduction']);
         self::assertSame([], $ctx->moveSummary['key_kinds_paid']);
         // FAQ 行 22: M064〜M066 は万能移動鍵トークンを増やさない（使った 1 つが裏になっただけ）
         self::assertSame(0, $fx->players->wildUp(self::P));

@@ -35,9 +35,6 @@ final class MoveViolation extends \DomainException
     /** 複数の鍵を持つカードを、連続しない入室に分けて使っている */
     public const SPLIT_CARD = 'SPLIT_CARD';
 
-    /** 万能鍵（カード効果）が使えない、または使いすぎ */
-    public const BAD_GRANT = 'BAD_GRANT';
-
     /** 心光または万能移動鍵トークンが足りない */
     public const NOT_ENOUGH_RESOURCES = 'NOT_ENOUGH_RESOURCES';
 

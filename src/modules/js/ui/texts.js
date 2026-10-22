@@ -144,15 +144,15 @@ export function buildCardTexts() {
             },
             M064: {
                 name: _('Preserved Moment'),
-                effect: _('In the Move phase, the first time you enter a level 2 room this turn, you get 1 Wild key {wild} toward the move cost'),
+                effect: _('In the Move phase, the first time you enter a level 2 room this turn, the move cost of that room is reduced by 1'),
             },
             M065: {
                 name: _('Amid Contemplation'),
-                effect: _('In the Move phase, the first time you enter a level 2 room this turn, you get 1 Wild key {wild} toward the move cost'),
+                effect: _('In the Move phase, the first time you enter a level 2 room this turn, the move cost of that room is reduced by 1'),
             },
             M066: {
                 name: _('Great Leader'),
-                effect: _('In the Move phase, the first time you enter a level 2 room this turn, you get 1 Wild key {wild} toward the move cost'),
+                effect: _('In the Move phase, the first time you enter a level 2 room this turn, the move cost of that room is reduced by 1'),
             },
             M067: {
                 name: _('Great Mind\'s Inspiration'),

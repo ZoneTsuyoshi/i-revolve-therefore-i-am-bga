@@ -244,6 +244,9 @@ final class StoredGameMutator implements GameMutator
         );
     }
 
+    /**
+     * N26 の向きは HAND_OPEN と同じ: `out` は手札から出るカード（自己構成済みへ）、`in` は手札へ入るカード（自己構成済みから）。
+     */
     public function swapComposedAndHand(int $player, int $tableauCardId, int $handCardId): void
     {
         $under = array_map(fn (MemoryCard $c): array => $this->ref($c->id), $this->memory->inLoc(MemoryLocation::UnderCard, $tableauCardId));
@@ -252,7 +255,7 @@ final class StoredGameMutator implements GameMutator
             $player,
             ($this->nameOf)($player),
             'TABLEAU_HAND',
-            [['out' => $this->ref($tableauCardId), 'in' => $this->ref($handCardId)]],
+            [['out' => $this->ref($handCardId), 'in' => $this->ref($tableauCardId)]],
             $this->memory->count(MemoryLocation::Hand, $player),
         );
         if ($under !== []) {

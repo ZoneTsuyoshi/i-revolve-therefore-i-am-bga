@@ -58,7 +58,7 @@ class Move extends GameState
 
     /**
      * クライアントが経路を計画するための情報（007 §8.3、006 §5.1）。公開部分は部屋ごとの錠前（`rooms`: pos / level / lock / locks /
-     * bonus）、資源（`resources`: 心光・表向きの万能移動鍵トークン・心光の逓増 `lightCosts`・MD-06 の万能鍵 `grantedKeys`）、
+     * bonus）、資源（`resources`: 心光・表向きの万能移動鍵トークン・心光の逓増 `lightCosts`・MD-06 の錠前の軽減数 `lockReduction`。このターン最初のレベル 2 の入室の錠前の数を減らす。`rooms[].locks` は軽減前）、
      * 自己構成済みカード（`tableau`）、鍵の読み替え（`keyServes`: 持つ鍵 → 払える錠前の種類）、`canMove`（払える移動があるか）。
      * 手札は `_private[ターンプレイヤー].hand` にだけ入れる。
      *
@@ -80,7 +80,7 @@ class Move extends GameState
      * 経路と支払いを確定する。
      *
      * 入力: {"rooms": [入室する部屋の位置...], "payments": [[{"src", "card", "key"}...]...]}。
-     * `src` は TABLEAU / HAND / LIGHT / TOKEN / EFFECT。`rooms` が空なのは、払える移動が 1 つも無いときだけ（Q-38）。
+     * `src` は TABLEAU / HAND / LIGHT / TOKEN。レベル 2 の部屋の支払いの数は `lockReduction` の分だけ減る。`rooms` が空なのは、払える移動が 1 つも無いときだけ（Q-38）。
      *
      * @param array<string, mixed> $plan
      */
@@ -130,7 +130,6 @@ class Move extends GameState
             MoveViolation::KEY_MISMATCH => clienttranslate('That key does not fit the lock'),
             MoveViolation::BAD_CARD => clienttranslate('You cannot use that card for payment'),
             MoveViolation::SPLIT_CARD => clienttranslate('A card with several keys can only pay for consecutive rooms'),
-            MoveViolation::BAD_GRANT => clienttranslate('You cannot use that effect key'),
             MoveViolation::NOT_ENOUGH_RESOURCES => clienttranslate('You do not have enough inner light or wild move keys'),
             default => clienttranslate('Invalid move'),
         };

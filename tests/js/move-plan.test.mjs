@@ -14,14 +14,14 @@ const BONUS = { 1: 'ANALYSIS_TOKEN', 4: 'LIGHT', 7: 'WILD_MOVE_KEY', 10: 'COMPOS
 const SERVES = { WISDOM: [W], WILL: [F], EMOTION: [E], WILD: [W, F, E] };
 
 /** MoveBoards::board と同じ既定（四隅がレベル 2、錠前は既定で知恵） */
-function board({ position = 1, locks = {}, hand = [], tableau = [], light = 0, wildUp = 0, grantedKeys = 0, keyServes = SERVES, lightCosts = [1, 2, 3, 4, 5, 6], canMove = true } = {}) {
+function board({ position = 1, locks = {}, hand = [], tableau = [], light = 0, wildUp = 0, lockReduction = 0, keyServes = SERVES, lightCosts = [1, 2, 3, 4, 5, 6], canMove = true } = {}) {
   const rooms = [];
   for (let pos = 1; pos <= 12; pos++) {
     rooms.push({ pos, level: [1, 4, 7, 10].includes(pos) ? 2 : 1, lock: locks[pos] ?? W, locks: 1, bonus: BONUS[pos] ?? 'NONE' });
   }
   const args = {
     position, rooms, maxRooms: 24, canMove,
-    resources: { light, wildUp, lightCosts, grantedKeys }, keyServes, tableau,
+    resources: { light, wildUp, lightCosts, lockReduction }, keyServes, tableau,
     _private: { 99: { hand } },
   };
   return boardFromArgs(args);
@@ -138,16 +138,35 @@ test('周遊ボーナス: スキップした部屋のボーナスは次の入室
   assert.equal(reason(board({ position: 3 }), plan([5], [[LIGHT]])), 'OK');
 });
 
-test('万能鍵（MD-06）: このターン最初のレベル 2 の入室にだけ、持つ枚数まで。同じカードは 2 度使えない', () => {
-  const two = board({ position: 3, grantedKeys: 2, tableau: [card(1, W), card(2, W)] });
-  assert.equal(reason(two, plan([4], [[{ src: 'EFFECT', card: 1 }, { src: 'EFFECT', card: 2 }]])), 'OK');
-  assert.equal(reason(two, plan([4], [[{ src: 'EFFECT', card: 1 }, { src: 'EFFECT', card: 1 }]])), REASON.BAD_GRANT);
-  // 最初のレベル 2 を過ぎたあとの 2 つ目のレベル 2 には使えない
-  const route = plan([4, 5, 6, 7], [[{ src: 'EFFECT', card: 1 }, { src: 'EFFECT', card: 2 }], [LIGHT], [LIGHT], [{ src: 'EFFECT', card: 1 }, TOKEN]]);
-  assert.equal(reason(board({ position: 3, grantedKeys: 2, light: 9, wildUp: 1, tableau: [card(1, W), card(2, W)] }), route), REASON.BAD_GRANT);
-  // 持っていなければ使えない、レベル 1 の部屋にも使えない
-  assert.equal(reason(board({ position: 3, tableau: [card(1, W)] }), plan([4], [[{ src: 'EFFECT', card: 1 }, TOKEN]])), REASON.BAD_GRANT);
-  assert.equal(reason(board({ position: 4, grantedKeys: 1, tableau: [card(1, W)] }), plan([5], [[{ src: 'EFFECT', card: 1 }]])), REASON.BAD_GRANT);
+test('錠前の軽減（MD-06・Q-70）: このターン最初のレベル 2 の入室の錠前の数だけを減らす（最大 2）', () => {
+  // 1 枚: 錠前 1 個
+  const one = board({ position: 3, lockReduction: 1, light: 9 });
+  assert.equal(reason(one, plan([4], [[LIGHT]])), 'OK');
+  assert.equal(reason(one, plan([4], [[LIGHT, LIGHT]])), REASON.LOCK_COUNT);
+  assert.equal(reason(one, plan([4], [[]])), REASON.LOCK_COUNT);
+  // 3 枚でも 2 個までしか減らず、錠前 0 個で入れる
+  const three = board({ position: 3, lockReduction: 2 });
+  assert.equal(reason(three, plan([4], [[]])), 'OK');
+  assert.equal(reason(three, plan([4], [[LIGHT]])), REASON.LOCK_COUNT);
+  assert.equal(reason(board({ position: 3, lockReduction: 3 }), plan([4], [[]])), 'OK', 'args が 3 でも 2 個まで');
+  // 最初のレベル 2 を過ぎたあとの 2 つ目のレベル 2 は軽減されない
+  const route = plan([4, 5, 6, 7], [[LIGHT], [LIGHT], [LIGHT], [LIGHT, LIGHT]]);
+  assert.equal(reason(board({ position: 3, lockReduction: 1, light: 30 }), route), 'OK');
+  assert.equal(reason(board({ position: 3, lockReduction: 1, light: 30 }), plan([4, 5, 6, 7], [[LIGHT], [LIGHT], [LIGHT], [LIGHT]])), REASON.LOCK_COUNT);
+  // 軽減が無ければ減らない、レベル 1 の部屋も減らない、すでに入っていれば args の軽減は 0
+  assert.equal(reason(board({ position: 3 }), plan([4], [[LIGHT]])), REASON.LOCK_COUNT);
+  assert.equal(reason(board({ position: 4, lockReduction: 1 }), plan([5], [[]])), REASON.LOCK_COUNT);
+  // 'EFFECT' の支払い手段は無い
+  assert.equal(reason(board({ position: 3, lockReduction: 1 }), plan([4], [[{ src: 'EFFECT', card: 1 }]])), REASON.BAD_CARD);
+});
+
+test('錠前の軽減: 錠前が 0 個の部屋は支払い待ちにならず、そのまま次へ進める。周遊ボーナスは次の支払いに使える', () => {
+  const b = board({ position: 3, lockReduction: 2 });
+  assert.equal(pendingRoom(b, [{ pos: 4, payments: [] }]), null);
+  assert.deepEqual(nextRooms(b, [{ pos: 4, payments: [] }]), [5], '4 の次は 5（レベル 1）');
+  // 4 の周遊ボーナス（心光 1）は、5 の支払いに使える
+  assert.equal(reason(b, plan([4, 5], [[], [LIGHT]])), 'OK');
+  assert.equal(isComplete(b, plan([4], [[]])), true);
 });
 
 test('Q-38: 空の経路は canMove が false のときだけ確定できる', () => {

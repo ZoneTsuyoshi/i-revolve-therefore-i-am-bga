@@ -111,6 +111,29 @@ final class ComposeActionTest extends TestCase
         self::assertSame(0, $fx->memory->count(MemoryLocation::Hand, self::P));
     }
 
+    /** Q-72（M077）: 手札にある間は未稼働。M077 自身を自己構成するときの自己構成エネルギー（4）は下がらない。 */
+    public function testM077DoesNotLowerItsOwnComposeEnergy(): void
+    {
+        [$target, $a, $b, $c, $d] = $this->fx->giveHand(self::P, [77, 1, 2, 3, 4]); // M077 のエネルギーは 4
+        $this->begin();
+
+        $this->assertRejected($target, ['discard' => [$a, $b, $c]], 'Not enough energy');
+
+        $this->compose($target, ['discard' => [$a, $b, $c, $d]]);
+        self::assertSame(MemoryLocation::Tableau, $this->fx->memory->find($target)?->location);
+    }
+
+    /** M077 は自己構成済みになってから、感情鍵のカードの自己構成エネルギーを下げる。 */
+    public function testM077LowersTheEnergyOfEmotionCardsOnceComposed(): void
+    {
+        $this->fx->giveTableau(self::P, [77]);
+        [$target, $a] = $this->fx->giveHand(self::P, [2, 1]); // M002（感情鍵）のエネルギーは 2 → 1
+        $this->begin();
+
+        $this->compose($target, ['discard' => [$a]]);
+        self::assertSame(MemoryLocation::Tableau, $this->fx->memory->find($target)?->location);
+    }
+
     public function testNotEnoughEnergyIsRejected(): void
     {
         [$target, $a] = $this->fx->giveHand(self::P, [1, 2]);

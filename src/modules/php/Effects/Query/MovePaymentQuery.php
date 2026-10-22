@@ -22,7 +22,7 @@ use Bga\Games\IRevolveThereforeIAm\Material\Modifier;
  */
 final class MovePaymentQuery
 {
-    /** レベル 2 の部屋の錠前の数。MD-06 の万能鍵で使えるのは 1 つの錠前に 1 つ（008 §6.2 の 3） */
+    /** レベル 2 の部屋の錠前の数。MD-06 の軽減の上限（008 §6.2 の 3） */
     public const LEVEL2_LOCKS = 2;
 
     public function __construct(
@@ -41,27 +41,27 @@ final class MovePaymentQuery
     }
 
     /**
-     * MD-06（M064〜M066）が与える万能鍵の数。このターン最初のレベル 2 の部屋への入室のときだけ、持っているカードの枚数。
-     * トークンは得ない（FAQ 行 22）。
+     * MD-06（M064〜M066）による錠前の軽減数。このターン最初のレベル 2 の部屋への入室のときだけ、持っているカードの枚数
+     * （重ねて働く）。錠前の数（レベル 2 は 2 個）を超えては減らない。トークンも万能鍵も得ない（Q-70。FAQ 行 22 の「移動コスト -1」）。
      */
-    public function grantedWildKeys(int $player, int $enteringLevel): int
+    public function lockReduction(int $player, int $enteringLevel): int
     {
+        if ($enteringLevel !== 2) {
+            return 0;
+        }
         $context = new ConditionContext($player, null, ['entering_level' => $enteringLevel]);
+        $total = 0;
+        foreach ($this->active->modifiers($player, Modifier::MOVE_LOCK_REDUCTION, $context) as $spec) {
+            $reduction = $spec->params['reduction'] ?? 1;
+            $total += is_int($reduction) ? $reduction : 1;
+        }
 
-        return count($this->active->modifiers($player, Modifier::MOVE_PAYMENT_GRANT, $context));
-    }
-
-    /**
-     * 実際に支払いに使える万能鍵の数（錠前の数が上限。レベル 2 の部屋は 2 つ）。
-     */
-    public function usableGrantedWildKeys(int $player, int $enteringLevel): int
-    {
-        return min($this->grantedWildKeys($player, $enteringLevel), self::LEVEL2_LOCKS);
+        return min($total, self::LEVEL2_LOCKS);
     }
 
     /**
      * 支払いで使った鍵の種類（CD-02 / M061）。手札・自己構成済みカードの印刷された非万能鍵だけを数える。
-     * 心光・万能移動鍵トークン・MD-06 の万能鍵は数えない（FAQ 行 19・20）。
+     * 心光・万能移動鍵トークンは数えない（FAQ 行 19・20）。
      *
      * @param list<KeyPayment> $payments
      * @return list<KeyType>

@@ -28,7 +28,7 @@ use Bga\Games\IRevolveThereforeIAm\Material\FloorBonus;
  *
  * 検証の手順:
  * 1. 形（V-1）。2. 経路: 各入室は現在位置の次の部屋か、次がレベル 2 のときのその次（スキップ。V-2）。
- * 3. 錠前の数と鍵の種類（MD-05 込み）、カード・鍵の所有と二重使用の禁止、MD-06 の万能鍵。
+ * 3. 錠前の数（MD-06 で軽減した後。このターン最初のレベル 2 の部屋だけ）と鍵の種類（MD-05 込み）、カード・鍵の所有と二重使用の禁止。
  * 4. 同じカードを使う入室は、入室した部屋の列で連続している（スキップを挟んでも連続。Q-07）。
  * 5. 心光と万能移動鍵トークン: 経路の順に 1 部屋ずつ、周遊ボーナスで得た分を後の支払いに使えるとして数える（T8-5）。
  */
@@ -38,7 +38,7 @@ final class MovePlanner
     public const MAX_ROOMS = 24;
 
     /** 支払いの `src`（006 §5.1） */
-    private const SOURCES = [KeyPayment::TABLEAU, KeyPayment::HAND, KeyPayment::LIGHT, KeyPayment::TOKEN, KeyPayment::EFFECT];
+    private const SOURCES = [KeyPayment::TABLEAU, KeyPayment::HAND, KeyPayment::LIGHT, KeyPayment::TOKEN];
 
     public function __construct(
         private readonly MovePaymentQuery $payments,
@@ -67,7 +67,6 @@ final class MovePlanner
         $allPayments = [];
         $usedSlots = [];
         $cardEntries = [];
-        $effectUsed = [];
         $lightUses = 0;
         $lv2Seen = 0;
         $pos = $board->position;
@@ -83,16 +82,16 @@ final class MovePlanner
             }
             $room = $board->room($target);
             $lock = $room->lock ?? throw new MoveViolation(MoveViolation::INVALID_ROUTE, "room $target has no memory card");
-            if (count($payments[$index]) !== $room->level) {
-                throw new MoveViolation(MoveViolation::LOCK_COUNT, "room $target needs {$room->level}");
-            }
-            $grants = ($room->level === 2 && $board->priorLv2Entries === 0 && $lv2Seen === 0)
-                ? $this->payments->usableGrantedWildKeys($board->player, 2)
+            $reduction = ($room->level === 2 && $board->priorLv2Entries === 0 && $lv2Seen === 0)
+                ? $this->payments->lockReduction($board->player, 2)
                 : 0;
+            $locks = $room->level - $reduction;
+            if (count($payments[$index]) !== $locks) {
+                throw new MoveViolation(MoveViolation::LOCK_COUNT, "room $target needs $locks");
+            }
 
             $tapped = [];
             $discarded = [];
-            $effectCards = [];
             $paid = [];
             $stepLights = 0;
             $stepTokens = 0;
@@ -134,20 +133,7 @@ final class MovePlanner
                         $stepTokens++;
                         $paid[] = new KeyPayment(KeyPayment::TOKEN);
                         break;
-
-                    case KeyPayment::EFFECT:
-                        $card = $board->tableau[$item['card']] ?? null;
-                        if ($card === null || isset($effectUsed[$card->id])) {
-                            throw new MoveViolation(MoveViolation::BAD_GRANT, "card {$item['card']}");
-                        }
-                        $effectUsed[$card->id] = true;
-                        $effectCards[] = $card->id;
-                        $paid[] = new KeyPayment(KeyPayment::EFFECT);
-                        break;
                 }
-            }
-            if (count($effectCards) > $grants) {
-                throw new MoveViolation(MoveViolation::BAD_GRANT, 'too many granted keys for room ' . $target);
             }
 
             $lightsPaid = 0;
@@ -166,7 +152,7 @@ final class MovePlanner
                 $room->bonus,
                 $tapped,
                 $discarded,
-                $effectCards,
+                $reduction,
                 $stepLights,
                 $lightsPaid,
                 $stepTokens,
@@ -201,7 +187,7 @@ final class MovePlanner
 
     /**
      * 1 部屋でも移動できるか（Q-38）。次の部屋に入るか、次がレベル 2 ならスキップしてその次に入る。
-     * 1 つの部屋の支払いの可否は、使える鍵の数（錠前に合う鍵、万能移動鍵トークン、MD-06 の万能鍵）と、
+     * 1 つの部屋の支払いの可否は、使える鍵の数（錠前に合う鍵、万能移動鍵トークン）と、MD-06 で軽減した後の錠前の数、
      * 足りない分を心光の行使で払えるかで決まる（スキップの周遊ボーナスは先に得る）。
      */
     public function canMove(MoveBoard $board): bool
@@ -212,9 +198,7 @@ final class MovePlanner
                 continue;
             }
             $units = $board->wildUp + ($skipBonus === FloorBonus::WILD_MOVE_KEY ? 1 : 0);
-            if ($room->level === 2 && $board->priorLv2Entries === 0) {
-                $units += $this->payments->usableGrantedWildKeys($board->player, 2);
-            }
+            $locks = $room->level - ($room->level === 2 && $board->priorLv2Entries === 0 ? $this->payments->lockReduction($board->player, 2) : 0);
             foreach ([$board->tableau, $board->hand] as $cards) {
                 foreach ($cards as $card) {
                     if ($card->tapped) {
@@ -228,7 +212,7 @@ final class MovePlanner
                 }
             }
             $lights = $board->lights + ($skipBonus === FloorBonus::LIGHT ? 1 : 0);
-            $shortfall = max(0, $room->level - $units);
+            $shortfall = max(0, $locks - $units);
             if ($lights >= $this->light->totalLights($board->player, ActionContext::MOVE, $shortfall)) {
                 return true;
             }
@@ -238,7 +222,7 @@ final class MovePlanner
     }
 
     /**
-     * zombie の移動（006 §10）。次の部屋（レベル 2 でもスキップしない）まで 1 部屋だけ、万能鍵（カード効果）→ 万能移動鍵トークン →
+     * zombie の移動（006 §10）。次の部屋（レベル 2 でもスキップしない）まで 1 部屋だけ、万能移動鍵トークン →
      * 自己構成済みカードの鍵 → 心光の順で払えるなら移動する。手札は捨てない。払えなければ、次がレベル 2 のときだけスキップして
      * その次の部屋を試す。それも払えなければ移動しない（空の入力）。
      *
@@ -285,10 +269,7 @@ final class MovePlanner
             ? FloorBonus::NONE
             : $board->room(MoveBoard::after($board->position))->bonus;
         $items = [];
-        $effect = ($room->level === 2 && $board->priorLv2Entries === 0)
-            ? $this->payments->usableGrantedWildKeys($board->player, 2)
-            : 0;
-        $effectCards = $effect > 0 ? $this->effectCardIds($board) : [];
+        $locks = $room->level - (($room->level === 2 && $board->priorLv2Entries === 0) ? $this->payments->lockReduction($board->player, 2) : 0);
         $tokens = $board->wildUp + ($skipBonus === FloorBonus::WILD_MOVE_KEY ? 1 : 0);
         $slots = [];
         foreach ($board->tableau as $card) {
@@ -301,11 +282,8 @@ final class MovePlanner
                 }
             }
         }
-        for ($i = 0; $i < $room->level; $i++) {
-            if ($effect > 0 && $effectCards !== []) {
-                $items[] = ['src' => KeyPayment::EFFECT, 'card' => array_shift($effectCards)];
-                $effect--;
-            } elseif ($tokens > 0) {
+        for ($i = 0; $i < $locks; $i++) {
+            if ($tokens > 0) {
                 $items[] = ['src' => KeyPayment::TOKEN];
                 $tokens--;
             } elseif ($slots !== []) {
@@ -316,20 +294,6 @@ final class MovePlanner
         }
 
         return $items;
-    }
-
-    /**
-     * 万能鍵（MD-06）を与えるカードの候補。効果の定義は I-09 で入るので、いまは自己構成済みカードを昇順に並べるだけ。
-     * 検証側は個数の上限（`usableGrantedWildKeys`）だけを見るので、与えるカードかどうかはここでは決めない。
-     *
-     * @return list<int>
-     */
-    private function effectCardIds(MoveBoard $board): array
-    {
-        $ids = array_keys($board->tableau);
-        sort($ids);
-
-        return $ids;
     }
 
     /**
@@ -381,7 +345,7 @@ final class MovePlanner
                 if (($card !== null && !is_int($card)) || ($key !== null && !is_int($key))) {
                     throw new MoveViolation(MoveViolation::BAD_INPUT, "payment in room #$i");
                 }
-                $needsCard = $src === KeyPayment::TABLEAU || $src === KeyPayment::HAND || $src === KeyPayment::EFFECT;
+                $needsCard = $src === KeyPayment::TABLEAU || $src === KeyPayment::HAND;
                 if ($needsCard && $card === null) {
                     throw new MoveViolation(MoveViolation::BAD_INPUT, "payment in room #$i needs a card");
                 }

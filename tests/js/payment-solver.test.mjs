@@ -22,13 +22,13 @@ const SERVES = { WISDOM: [W], WILL: [F], EMOTION: [E], WILD: [W, F, E] };
 const card = (id, ...keys) => ({ id, type: id, keys, tapped: false });
 const tapped = (id, ...keys) => ({ ...card(id, ...keys), tapped: true });
 
-function board({ position = 1, locks = {}, hand = [], tableau = [], light = 0, wildUp = 0, grantedKeys = 0, keyServes = SERVES, lightCosts = [1, 2, 3, 4, 5, 6], canMove = true } = {}) {
+function board({ position = 1, locks = {}, hand = [], tableau = [], light = 0, wildUp = 0, lockReduction = 0, keyServes = SERVES, lightCosts = [1, 2, 3, 4, 5, 6], canMove = true } = {}) {
   const rooms = [];
   for (let pos = 1; pos <= 12; pos++) {
     rooms.push({ pos, level: [1, 4, 7, 10].includes(pos) ? 2 : 1, lock: locks[pos] ?? W, bonus: BONUS[pos] ?? 'NONE' });
   }
   return boardFromArgs({
-    position, rooms, maxRooms: 24, canMove, resources: { light, wildUp, lightCosts, grantedKeys }, keyServes, tableau, _private: { 99: { hand } },
+    position, rooms, maxRooms: 24, canMove, resources: { light, wildUp, lightCosts, lockReduction }, keyServes, tableau, _private: { 99: { hand } },
   });
 }
 
@@ -142,18 +142,31 @@ test('移動: 周遊ボーナス（スキップした部屋のボーナスは次
   assert.equal(solveMovePayment(board({ position: 6 }), [7], { token: 2 }).complete, false);
 });
 
-test('移動: 効果の万能鍵（MD-06）は最初のレベル 2 の入室にだけ、持つ数まで', () => {
-  const b = board({ position: 3, grantedKeys: 2, tableau: [card(1, W), card(2, W)] });
-  const result = solveMovePayment(b, [4], { effect: 2 });
+test('移動: 錠前の軽減（MD-06）は最初のレベル 2 の入室の錠前だけを減らす', () => {
+  const b = board({ position: 3, lockReduction: 1, tableau: [card(1, W)] });
+  const result = solveMovePayment(b, [4], { tableau: [1] });
   assert.equal(result.complete, true);
-  assert.deepEqual(result.steps[0].payments, [{ src: 'EFFECT', card: 1 }, { src: 'EFFECT', card: 2 }]);
+  assert.equal(result.total, 1, '軽減後の錠前の数');
+  assert.deepEqual(result.steps[0].payments, [{ src: 'TABLEAU', card: 1, key: 0 }]);
   assert.equal(checkPlan(b, result.steps).ok, true);
-  // レベル 1 の部屋には使えない
-  assert.equal(solveMovePayment(board({ position: 4, grantedKeys: 1, tableau: [card(1, W)] }), [5], { effect: 1 }).complete, false);
-  // 2 つ目のレベル 2 には使えない
-  const later = board({ position: 3, grantedKeys: 2, light: 9, wildUp: 0, tableau: [card(1, W), card(2, W)] });
-  const second = solveMovePayment(later, [4, 5, 6, 7], { effect: 2, light: 9 });
-  assert.ok(second.steps[3].payments.every((p) => p.src !== 'EFFECT'));
+  assert.equal(lockTotal(b, [4]), 1);
+  // 2 枚分の軽減（錠前 0 個）は何も選ばずに完了する
+  const zero = board({ position: 3, lockReduction: 2 });
+  const free = solveMovePayment(zero, [4], {});
+  assert.equal(free.complete, true);
+  assert.deepEqual(free.steps, [{ pos: 4, payments: [] }]);
+  assert.equal(lockTotal(zero, [4]), 0);
+  // レベル 1 の部屋は減らない
+  assert.equal(lockTotal(board({ position: 4, lockReduction: 1 }), [5]), 1);
+  // 2 つ目のレベル 2 は減らない: 4（-1 → 1 個）+ 5 + 6 + 7（2 個）
+  const later = board({ position: 3, lockReduction: 1, light: 30 });
+  assert.equal(lockTotal(later, [4, 5, 6, 7]), 1 + 1 + 1 + 2);
+  // 錠前 0 個の部屋の周遊ボーナス（4 は心光）は、次の部屋の支払いに使える
+  const chain = board({ position: 3, lockReduction: 2 });
+  assert.equal(solveMovePayment(chain, [4, 5], { light: 1 }).complete, true);
+  // 軽減のある盤では、軽減の無い盤で払えなかった部屋を選べる
+  assert.deepEqual(reachableRooms(board({ position: 3, lockReduction: 2 }), []), [4, 5]);
+  assert.deepEqual(reachableRooms(board({ position: 3, lockReduction: 0, tableau: [card(5, W)] }), []), [5]);
 });
 
 test('移動: 使用済み・選んでいないカードは使わない。空の経路・崩れた経路は完了にならない', () => {
@@ -180,10 +193,10 @@ test('移動: reachableRooms は持っている資源をすべて使っても払
   assert.deepEqual(reachableRooms(board({ position: 2, tableau: [card(1, W)] }), [3]), [5]);
 });
 
-test('移動: routeExtras は経路の周遊ボーナスと万能鍵を使える数を返す', () => {
-  const b = board({ position: 3, grantedKeys: 2, tableau: [card(1, W), card(2, W), card(3, W)] });
-  assert.deepEqual(routeExtras(b, [4, 5]), { light: 1, token: 0, effectKeys: 2 });
-  assert.deepEqual(routeExtras(b, [5]), { light: 1, token: 0, effectKeys: 0 }, '4 はスキップだが周遊ボーナスは得る');
+test('移動: routeExtras は経路の周遊ボーナスの数を返す', () => {
+  const b = board({ position: 3, tableau: [card(1, W), card(2, W), card(3, W)] });
+  assert.deepEqual(routeExtras(b, [4, 5]), { light: 1, token: 0 });
+  assert.deepEqual(routeExtras(b, [5]), { light: 1, token: 0 }, '4 はスキップだが周遊ボーナスは得る');
   assert.equal(routeExtras(board({ position: 5 }), [6]).token, 0);
   assert.equal(routeExtras(board({ position: 5 }), [6, 7, 8]).token, 1, '7 に入る（万能移動鍵）');
   assert.equal(routeExtras(board({ position: 5 }), [6, 8]).token, 1, '7 をスキップしても得る');

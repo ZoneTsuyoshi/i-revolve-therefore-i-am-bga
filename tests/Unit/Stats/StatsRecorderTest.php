@@ -45,7 +45,7 @@ final class StatsRecorderTest extends TestCase
 
     public function testMovementCounters(): void
     {
-        $payment = ['tapped' => [], 'discarded' => [], 'light' => 0, 'wild_tokens' => 0, 'granted_keys' => 0];
+        $payment = ['tapped' => [], 'discarded' => [], 'light' => 0, 'wild_tokens' => 0, 'lock_reduction' => 0];
         $this->stats->record(Notification::roomEntered(self::P, 'P', 1, 2, 'HERMES', 1, $payment, 1));
         $this->stats->record(Notification::roomSkipped(self::P, 'P', 4, 'ARES'));
         $this->stats->record(Notification::personaMoved(self::P, 'P', 2, 5, 'ATHENA', 'RECALL', true));

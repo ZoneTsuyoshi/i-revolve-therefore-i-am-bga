@@ -20,10 +20,9 @@ final readonly class KeyPayment
     public const HAND = 'HAND';
     public const LIGHT = 'LIGHT';
     public const TOKEN = 'TOKEN';
-    public const EFFECT = 'EFFECT';
 
     /**
-     * @param string $source `TABLEAU` / `HAND` / `LIGHT` / `TOKEN` / `EFFECT`
+     * @param string $source `TABLEAU` / `HAND` / `LIGHT` / `TOKEN`
      * @param KeyType|null $printedKey カードに印刷された鍵の種類（`TABLEAU` / `HAND` のとき。使った鍵 1 本）
      */
     public function __construct(

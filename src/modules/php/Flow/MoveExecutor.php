@@ -16,13 +16,10 @@ use Bga\Games\IRevolveThereforeIAm\Data\PlayerValues;
 use Bga\Games\IRevolveThereforeIAm\Data\PublicView;
 use Bga\Games\IRevolveThereforeIAm\Data\RoomRepository;
 use Bga\Games\IRevolveThereforeIAm\Data\TurnContext;
-use Bga\Games\IRevolveThereforeIAm\Effects\Catalog\SpecSource;
 use Bga\Games\IRevolveThereforeIAm\Effects\Context\GameEvent;
 use Bga\Games\IRevolveThereforeIAm\Material\Event;
 use Bga\Games\IRevolveThereforeIAm\Material\FloorBonus;
 use Bga\Games\IRevolveThereforeIAm\Material\KeyType;
-use Bga\Games\IRevolveThereforeIAm\Material\Mechanism;
-use Bga\Games\IRevolveThereforeIAm\Material\Modifier;
 
 /**
  * 検証済みの移動（`MoveOutcome`）を DB に適用する（仕様書 006 §5.1 の 4、008 §6.2 の 5）。
@@ -35,7 +32,6 @@ final class MoveExecutor
         private readonly MemoryCardRepository $memoryCards,
         private readonly PlayerValues $players,
         private readonly GlobalValues $globals,
-        private readonly SpecSource $specs,
     ) {
     }
 
@@ -106,13 +102,10 @@ final class MoveExecutor
      * 支払いを確定する（横向き・捨札・心光・万能移動鍵トークン）。
      *
      * @param list<Notice> $notices
-     * @return array{tapped: list<int>, discarded: list<array{id: int, type: int}>, light: int, wild_tokens: int, granted_keys: int}
+     * @return array{tapped: list<int>, discarded: list<array{id: int, type: int}>, light: int, wild_tokens: int, lock_reduction: int}
      */
     private function pay(int $player, string $playerName, MoveStep $step, TurnContext $ctx, array &$notices): array
     {
-        foreach ($step->effectCards as $cardId) {
-            $this->markGrantUsed($player, $cardId, $ctx);
-        }
         if ($step->tapped !== []) {
             $this->memoryCards->setTapped($step->tapped, true);
             $notices[] = Notification::cardsTapped($player, $playerName, $step->tapped, true);
@@ -157,24 +150,8 @@ final class MoveExecutor
             'discarded' => $discarded,
             'light' => $step->lightsPaid,
             'wild_tokens' => $step->tokens,
-            'granted_keys' => count($step->effectCards),
+            'lock_reduction' => $step->lockReduction,
         ];
-    }
-
-    /**
-     * 万能鍵（MD-06）を与えたカードの効果を、このターンの使用済みにする（`ONCE_PER_TURN`。008 の `once_used`）。
-     */
-    private function markGrantUsed(int $player, int $cardId, TurnContext $ctx): void
-    {
-        $card = $this->memoryCards->find($cardId);
-        if ($card === null) {
-            return;
-        }
-        foreach ($this->specs->forCard(sprintf('M%03d', $card->type)) as $spec) {
-            if ($spec->mechanism === Mechanism::MODIFIER && $spec->modifier === Modifier::MOVE_PAYMENT_GRANT) {
-                $ctx->markOnceUsed($player, $spec->id);
-            }
-        }
     }
 
     /**
@@ -233,7 +210,8 @@ final class MoveExecutor
     }
 
     /**
-     * 移動で起きたイベント（008 §4.1。誘発の収集は I-09）。EV-04 は経路の途中の入室のうち他の人格がいる部屋、
+     * 移動で起きたイベント（008 §4.1。誘発の収集は I-09）。EV-04 は経路の途中の入室のうち他の人格がいる部屋と、
+     * スキップした四隅（レベル 2）の部屋のうち他の人格がいる部屋（Q-71。スキップしても「通過」）、
      * EV-02 は移動の終了（移動しなかったときも）、EV-03 は最後に止まった部屋。
      *
      * @return list<GameEvent>
@@ -243,6 +221,9 @@ final class MoveExecutor
         $events = [];
         $last = count($outcome->steps) - 1;
         foreach ($outcome->steps as $index => $step) {
+            if ($step->skipped !== null && $board->room($step->skipped)->othersPresent) {
+                $events[] = new GameEvent(Event::PERSONA_PASSED_OTHER, $board->player, ['room' => $step->skipped]);
+            }
             if ($index !== $last && $board->room($step->pos)->othersPresent) {
                 $events[] = new GameEvent(Event::PERSONA_PASSED_OTHER, $board->player, ['room' => $step->pos]);
             }

@@ -204,6 +204,11 @@ test('通知: 場札・部屋・交換・目標・自我が手札と領域に届
   await cn.notif_cardsExchanged({ player_id: P1, kind: 'TABLEAU_HAND', pairs: [{ out: { id: 32, type: 2 }, in: { id: 50, type: 7 } }] });
   assert.equal(hand().includes(50), true);
   assert.equal(stockOf(areas, P1).composed.getCardElement({ id: 32 }).hasClass('ir-tapped'), true);
+  // `out` は手札から自己構成済みへ、`in` は自己構成済みから手札へ（HAND_OPEN と同じ向き）。元の場所には残らない
+  assert.equal(stockOf(areas, P1).hand.getCards().some((/** @type {{ id: number }} */ c) => c.id === 32), false);
+  assert.equal(stockOf(areas, P1).composed.getCards().some((/** @type {{ id: number }} */ c) => c.id === 50), false);
+  assert.equal(stockOf(areas, P1).hand.getCards().filter((/** @type {{ id: number }} */ c) => c.id === 50).length, 1);
+  assert.equal(stockOf(areas, P1).composed.getCards().filter((/** @type {{ id: number }} */ c) => c.id === 32).length, 1);
 
   // N27 I05: 部屋のカードが手札へ（本人は券面）、手札のカードが部屋へ
   await cn.notif_roomCardSwappedWithHand({ player_id: P1, pos: 2, room_card_id: 101, hand_card_id: 31, back: '1F', _private: { room_card: { id: 101, type: 2 } } });

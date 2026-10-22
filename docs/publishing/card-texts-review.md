@@ -35,7 +35,7 @@
 3. **目標カードの名前案の不揃い**: 002 の名前案は Level 2 Composed Goal、Light Goal、Analysis Floor Goal など、本文の用語（Construction、Psychic Light、Psychoanalysis、Mind Track）とずれています。本文の用語に揃えるか、002 の案のままか。
 4. **場札**: open cards としました（Memory deck に対して、表向きに並ぶカード）。紹介文の案に無いので、別の呼び方があれば。
 5. **M058（観測前夜）**: 「[心光]が配置されていない[精神]を精神分析したとき」を "When you Psychoanalyze a Mind Track card that has no Psychic Light on it" としました。「その精神カードに進んだとき」の意味で合っているか。
-6. **M064・M065・M066**: 原文は「…入る場合、[万能鍵]」と鍵のアイコンだけです。FAQ 行 22（移動コストを 1 減らすのと同等）に沿って "you get 1 Wild key toward the move cost" と補いました。補いすぎでないか。
+6. **M064・M065・M066**: 原文（`card.csv`）は「…入る場合、[移動コスト]-1」です（作者の裁定。Q-70）。英語は "the move cost of that room is reduced by 1" としました。
 7. **M069（希望の篝火）**: 原文は「4歩以上」ですが、M067・M068 と同じ意味（Q-35）なので "4 or more rooms" にそろえました。
 8. **M061（没頭する刻）**: 鍵の並びは印刷どおり Will, Wisdom, Emotion の順です。
 9. **E04（気まぐれな）・E05（真面目な）**: 原文は個数を書いていませんが、"gain 1 ..." としました（008 の定義が 1）。
@@ -61,9 +61,9 @@
 | M061 没頭する刻 | 移動フェイズで移動コストとして3種類全ての鍵([意志鍵]、[知恵鍵]、[感情鍵])を使用していれば、移動フェイズの終了時に[山札]+1 | If you paid move costs with all 3 types of key (Will {will}, Wisdom {wisdom}, Emotion {emotion}) in the Move phase, draw 1 Memory card {draw} at the end of the Move phase |
 | M062 自己矛盾 | 他の人格がいる部屋で移動フェイズを終えたとき、想起効果を2回発動できる | When you end the Move phase in a room with another personality, you can activate the recall effect twice |
 | M063 閉じたアルバム | 移動フェイズで、1/2/3/4/5回目の心光の行使は[心光]を1/1/2/2/3個支払えばよい | In the Move phase, the 1st/2nd/3rd/4th/5th use of Psychic Light {light} costs only 1/1/2/2/3 {light} |
-| M064 瞬間の保存 | 移動フェイズで、このターンに初めてレベル2の部屋に入る場合、[万能鍵] | In the Move phase, the first time you enter a level 2 room this turn, you get 1 Wild key {wild} toward the move cost |
-| M065 思惟の渦中 | 移動フェイズで、このターンに初めてレベル2の部屋に入る場合、[万能鍵] | In the Move phase, the first time you enter a level 2 room this turn, you get 1 Wild key {wild} toward the move cost |
-| M066 偉大なる指導者 | 移動フェイズで、このターンに初めてレベル2の部屋に入る場合、[万能鍵] | In the Move phase, the first time you enter a level 2 room this turn, you get 1 Wild key {wild} toward the move cost |
+| M064 瞬間の保存 | 移動フェイズで、このターンに初めてレベル2の部屋に入る場合、[移動コスト]-1 | In the Move phase, the first time you enter a level 2 room this turn, the move cost of that room is reduced by 1 |
+| M065 思惟の渦中 | 移動フェイズで、このターンに初めてレベル2の部屋に入る場合、[移動コスト]-1 | In the Move phase, the first time you enter a level 2 room this turn, the move cost of that room is reduced by 1 |
+| M066 偉大なる指導者 | 移動フェイズで、このターンに初めてレベル2の部屋に入る場合、[移動コスト]-1 | In the Move phase, the first time you enter a level 2 room this turn, the move cost of that room is reduced by 1 |
 | M067 偉人のひらめき | 1ターンに4部屋以上移動したら[心光]+1 | When you have moved 4 or more rooms in a turn, gain 1 Psychic Light {light} |
 | M068 夏至の午後 | 1ターンに4部屋以上移動していれば、そのターン内で最初の自己構成時の[エネルギー]-1 | If you have moved 4 or more rooms in a turn, reduce energy {energy} by 1 the first time you construct that turn |
 | M069 希望の篝火 | 1ターンに4歩以上移動したら[場札]+1 | When you have moved 4 or more rooms in a turn, take 1 open card {open} |
