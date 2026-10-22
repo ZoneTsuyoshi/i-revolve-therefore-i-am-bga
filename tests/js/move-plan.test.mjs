@@ -206,5 +206,5 @@ test('describePlan: 部屋・錠前・支払いを並べる', () => {
   const b = board({ position: 5, locks: { 6: F }, tableau: [card(2, F)], wildUp: 1 });
   assert.equal(describePlan(b, plan([6], [[tab(2)]])), 'Room 6 (Will x1): Composed #2 Will');
   assert.equal(describePlan(b, [{ pos: 6, payments: [] }]), 'Room 6 (Will x1): ...');
-  assert.equal(describePlan(b, plan([6], [[TOKEN]])), 'Room 6 (Will x1): Wild move key');
+  assert.equal(describePlan(b, plan([6], [[TOKEN]])), 'Room 6 (Will x1): Omni-Move Key');
 });

@@ -303,3 +303,84 @@ export function architectTableau(board) {
 export function architectHand(board, tableauId) {
   return board.architectPairs.filter(([t]) => t === tableauId).map(([, h]) => h);
 }
+
+// ---- まとめて選んだ資源の自動割り当て ----
+
+/**
+ * @typedef {object} ComposeSelection
+ * @property {number[]} [hand] エネルギーの支払いに選んだ手札
+ * @property {number[]} [tap] M095 で横向きにするために選んだ自己構成済みカード
+ * @property {number} [light] 心光の行使の回数（上限）
+ * @property {number[]} [extra] I08 の追加支払いに選んだ手札（エネルギーには数えない）
+ */
+
+/**
+ * @typedef {object} ComposeSolution
+ * @property {ComposePayment} payment 割り当ての結果
+ * @property {boolean} complete 必要なエネルギーを払い、仮検証（checkPayment）も通る
+ * @property {number} need 払うエネルギー（選んだ横向きの分は引かない）
+ * @property {number} paid 払えたエネルギー（横向きの分も含む）
+ * @property {number} shortfall 足りないエネルギー
+ * @property {{ hand: number[], tap: number[], light: number }} unused 使われなかった選択
+ */
+
+/**
+ * 選んだ手札・横向きにする自己構成済みカード・心光の回数から、規則を守って支払いを自動で決める（全探索。手札の部分集合 × 心光の回数 × 横向きの枚数）。
+ * 優先順位: 足りないエネルギーが少ない → 過払いが少ない → 選んだのに使わない資源が少ない → 高価な資源（心光・捨てる手札）を使わない。
+ * 結果は `checkPayment` に通して二重に確かめる。
+ * @param {ComposeBoard} board
+ * @param {number | null} cardId 自己構成するカード
+ * @param {ComposeSelection} selection
+ * @returns {ComposeSolution}
+ */
+export function solveComposePayment(board, cardId, selection) {
+  const entry = cardId === null ? undefined : board.hand.get(cardId);
+  const extra = [...new Set(selection.extra ?? [])].filter((id) => id !== cardId && board.hand.has(id));
+  const handPool = [...new Set(selection.hand ?? [])].filter((id) => id !== cardId && board.hand.has(id) && !extra.includes(id));
+  const tapPool = [...new Set(selection.tap ?? [])].filter((id) => board.tapCandidates.includes(id));
+  const lightMax = board.paysEnergy ? Math.min(Math.max(0, Math.floor(selection.light ?? 0)), board.maxLightUses) : 0;
+  /** @param {number[]} discard @param {number} light @param {number[]} tap */
+  const build = (discard, light, tap) => ({ cardId, discard, light, tap, extra });
+  if (entry === undefined || !board.paysEnergy) {
+    const payment = build([], 0, []);
+    return {
+      payment, complete: entry !== undefined && checkPayment(board, payment).ok, need: 0, paid: 0, shortfall: 0,
+      unused: { hand: handPool, tap: tapPool, light: lightMax },
+    };
+  }
+  const base = entry.need;
+  /** @type {{ score: number, discard: number[], light: number, tap: number[], paid: number, shortfall: number } | null} */
+  let best = null;
+  const pool = handPool.slice(0, 16);
+  for (let mask = 0; mask < (1 << pool.length); mask++) {
+    const discard = pool.filter((_id, i) => (mask & (1 << i)) !== 0);
+    const levels = discard.reduce((sum, id) => sum + (board.hand.get(id)?.level ?? 0), 0);
+    for (let taps = 0; taps <= Math.min(tapPool.length, base); taps++) {
+      const target = Math.max(0, base - taps);
+      for (let light = 0; light <= lightMax; light++) {
+        if (lightCost(board, light) > board.light) {
+          break;
+        }
+        const paid = levels + light;
+        const short = Math.max(0, target - paid);
+        const waste = Math.max(0, paid - target);
+        const unusedCount = (pool.length - discard.length) + (tapPool.length - taps) + (lightMax - light);
+        const cost = discard.length * 3 + light * 4 + taps;
+        const score = short * 1000000 + waste * 10000 + unusedCount * 100 + cost;
+        if (best === null || score < best.score) {
+          best = { score, discard, light, tap: tapPool.slice(0, taps), paid: paid + taps, shortfall: short };
+        }
+      }
+    }
+  }
+  const chosen = best ?? { score: 0, discard: [], light: 0, tap: [], paid: 0, shortfall: base };
+  const payment = build(chosen.discard, chosen.light, chosen.tap);
+  return {
+    payment, complete: chosen.shortfall === 0 && checkPayment(board, payment).ok, need: base, paid: chosen.paid, shortfall: chosen.shortfall,
+    unused: {
+      hand: handPool.filter((id) => !chosen.discard.includes(id)),
+      tap: tapPool.filter((id) => !chosen.tap.includes(id)),
+      light: lightMax - chosen.light,
+    },
+  };
+}
