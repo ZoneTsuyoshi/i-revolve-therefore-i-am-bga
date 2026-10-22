@@ -57,7 +57,7 @@ const OPEN_SLOTS = 6;
  * @property {HTMLElement} ownedGoals 獲得した目標カード
  * @property {HTMLElement | null} hand 自分の領域だけ（他は枚数チップ）
  * @property {HTMLElement | null} handCount 他プレイヤー・観戦時の手札の枚数
- * @property {HTMLElement | null} handInfo 自分の領域だけ。手札の枚数と上限（Hand: N / 8）
+ * @property {HTMLElement | null} handInfo 自分の領域だけ。手札の枚数と上限（N / 8。見出し「Hand」の横に出す）
  * @property {HTMLElement | null} under 自分の領域だけ。I08 の下のカード（中身）
  * @property {HTMLElement} composed 自己構成済みエリア
  */
@@ -188,11 +188,16 @@ function buildPlayerArea(playerId, player, mine) {
     }, [
         el('header', { class: 'ir-player-header' }, [name]),
         el('div', { class: 'ir-player-top' }, [ego, enhEgo, tokens, ownedGoals]),
-        ...(handInfo === null ? [] : [handInfo]),
-        ...(hand === null ? [] : [hand]),
-        ...(handCount === null ? [] : [handCount]),
-        composed,
-        ...(under === null ? [] : [under]),
+        // 手札と自己構成済みエリアは、見出し付きの別の区画に分ける（009 §3.10）
+        el('div', { class: 'ir-zone ir-zone-hand' }, [
+            el('h4', { class: 'ir-zone-title' }, [el('span', { class: 'ir-zone-name' }, [_('Hand')]), ...(handInfo === null ? [] : [handInfo]), ...(handCount === null ? [] : [handCount])]),
+            ...(hand === null ? [] : [hand]),
+        ]),
+        el('div', { class: 'ir-zone ir-zone-composed' }, [
+            el('h4', { class: 'ir-zone-title' }, [el('span', { class: 'ir-zone-name' }, [_('Constructed')])]),
+            composed,
+            ...(under === null ? [] : [under]),
+        ]),
     ]);
     return { area, ego, enhEgo, tokens, ownedGoals, hand, handCount, handInfo, under, composed };
 }

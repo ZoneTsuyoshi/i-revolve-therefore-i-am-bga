@@ -279,7 +279,7 @@ export class PlayerAreas {
         }
         const text = holder.querySelector('.ir-hand-count-text');
         if (text !== null) {
-            text.textContent = _('Hand: ${n}').replace('${n}', String(n));
+            text.textContent = String(n);
         }
     }
 
@@ -291,7 +291,7 @@ export class PlayerAreas {
             return;
         }
         const state = handCountState(mine.hand.getCards().length, true);
-        let text = _('Hand: ${n} / ${max}').replace('${n}', String(state.count)).replace('${max}', String(HAND_LIMIT));
+        let text = _('${n} / ${max}').replace('${n}', String(state.count)).replace('${max}', String(HAND_LIMIT));
         if (state.over) {
             text += ` ${_('(over the limit)')}`;
         }
