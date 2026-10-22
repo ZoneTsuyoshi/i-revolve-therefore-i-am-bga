@@ -2,36 +2,18 @@
  * 状態 31 `Move`: ターンプレイヤーが経路と支払いを計画し、`actMove` で 1 回送る（仕様書 009 §3.1、006 §5.1）。
  * 規則は move-plan.js の純粋関数に任せ、ここは回廊の部屋・手札・自己構成済みカード・ステータスバーのボタンをつなぐだけ。
  *
- * 流れ: 入れる部屋が光る → 部屋を選ぶ → その部屋の錠前の数だけ支払い手段（自己構成済みカード、手札、心光、万能移動鍵、効果の万能鍵）を選ぶ
- * → 繰り返し → 「Confirm move」。「Undo last room」で最後の部屋を取り消し、「Reset」で最初から。
+ * 流れ:
+ * 1. 入る部屋を順にクリックして経路を作る（入れる部屋が光る。「Undo last room」で最後の部屋を取り消す）
+ * 2. 払うものをまとめて選ぶ: 自己構成済みカード・手札をクリックで選択のオン・オフ（鍵は順不同）、心光・万能移動鍵・効果の万能鍵は「+1／-1」の数量
+ * 3. 選んだ資源は規則を守って各部屋の錠前に自動で割り当てられる（`solveMovePayment`）。ステータスバーに充足・不足・余りが出る
+ * 4. 全部の錠前が払えたら「Confirm move」（割り当ての結果を `{rooms, payments}` にして送る）。「Reset」で選択を全部外す
  * 払える移動が無いときは「Stay」で空の経路を送る（Q-38）。
  * © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
  */
 import {
-  SRC, addPayment, boardFromArgs, cardChoices, describePlan, isComplete, lightCostOf, lightUsesOf, nextRooms, payOptions, pendingRoom, toInput,
-  undoRoom,
+  boardFromArgs, lightCostOf, lockTotal, reachableRooms, routeExtras, solveMovePayment, toInput,
 } from './move-plan.js';
-
-/**
- * 経路の要約の文言（move-plan.js の `describePlan` の `tr`）。抽出のため `_()` のリテラルで書く。`_()` は setup 以降に呼ぶ。
- * @param {string} key 英語の原文
- * @returns {string}
- */
-function translatePlan(key) {
-  switch (key) {
-    case 'Room': return _('Room');
-    case 'Inner light': return _('Inner light');
-    case 'Wild move key': return _('Wild move key');
-    case 'Effect key': return _('Effect key');
-    case 'Hand': return _('Hand');
-    case 'Composed': return _('Composed');
-    case 'Wisdom': return _('Wisdom');
-    case 'Will': return _('Will');
-    case 'Emotion': return _('Emotion');
-    case 'Wild': return _('Wild');
-    default: return key;
-  }
-}
+import { cardLabel, neededText, statusText, stepQuantity } from './payment-ui.js';
 
 /** 入れる部屋の印 */
 export const CLASS_ROOM_SELECTABLE = 'ir-room-selectable';
@@ -43,7 +25,13 @@ export const CLASS_ROOM_ROUTE = 'ir-room-route';
  * @property {import('../board/PlayerAreas.js').PlayerAreas | null} playerAreas
  * @property {import('../board/Board.js').BoardRefs | null} refs
  * @property {number | null} me 自分のプレイヤー ID（観戦なら null）
+ * @property {import('../ui/texts.js').CardTexts | null} [texts] カード名（余りの表示用）
  */
+
+/** @returns {{ tableau: number[], hand: number[], light: number, token: number, effect: number }} */
+function emptySelection() {
+  return { tableau: [], hand: [], light: 0, token: 0, effect: 0 };
+}
 
 export class MoveState {
   /**
@@ -55,8 +43,11 @@ export class MoveState {
     this.getDeps = getDeps;
     /** @type {import('./move-plan.js').MoveBoard | null} */
     this.board = null;
-    /** @type {import('./move-plan.js').Step[]} */
-    this.steps = [];
+    /** @type {number[]} 入る部屋の位置を順に */
+    this.route = [];
+    this.selection = emptySelection();
+    /** @type {import('./move-plan.js').MoveSolution | null} */
+    this.solution = null;
     this.active = false;
     /** @type {Array<[HTMLElement, () => void]>} */
     this.listeners = [];
@@ -67,7 +58,9 @@ export class MoveState {
    * @param {boolean} isCurrentPlayerActive
    */
   onEnteringState(args, isCurrentPlayerActive) {
-    this.steps = [];
+    this.route = [];
+    this.selection = emptySelection();
+    this.solution = null;
     this.active = isCurrentPlayerActive;
     if (!isCurrentPlayerActive) {
       return;
@@ -84,7 +77,9 @@ export class MoveState {
     this.active = false;
     this.clearMarks();
     this.getDeps().playerAreas?.clearSelection();
-    this.steps = [];
+    this.route = [];
+    this.selection = emptySelection();
+    this.solution = null;
     this.board = null;
   }
 
@@ -101,7 +96,7 @@ export class MoveState {
     }
   }
 
-  /** 計画の今の形に合わせて、画面（部屋・カード・ボタン・タイトル）を作り直す */
+  /** 経路・選択の今の形に合わせて、画面（部屋・カード・ボタン・タイトル）を作り直す */
   render() {
     const board = this.board;
     if (!this.active || board === null) {
@@ -114,126 +109,164 @@ export class MoveState {
     const bar = this.bga.statusBar;
     bar.removeActionButtons();
 
-    // 経路の印
-    this.steps.forEach((step, i) => {
-      const room = refs?.rooms.get(step.pos);
+    const route = this.route;
+    this.solution = route.length === 0 ? null : solveMovePayment(board, route, this.selection);
+    const solution = this.solution;
+
+    // 経路の印と、次に入れる部屋
+    route.forEach((pos, i) => {
+      const room = refs?.rooms.get(pos);
       if (room !== undefined) {
         room.classList.add(CLASS_ROOM_ROUTE);
         room.dataset.order = String(i + 1);
       }
     });
-
-    const summary = describePlan(board, this.steps, translatePlan);
-    const pending = pendingRoom(board, this.steps);
-    if (pending !== null) {
-      this.renderPayment(board, pending, summary, playerAreas, me);
-    } else {
-      this.renderRooms(board, summary, refs);
-    }
-
-    if (this.steps.length > 0 && isComplete(board, this.steps)) {
-      bar.addActionButton(_('Confirm move'), () => this.confirm());
-    }
-    if (this.steps.length === 0 && !board.canMove) {
-      bar.addActionButton(_('Stay'), () => this.confirm());
-    }
-    if (this.steps.length > 0) {
-      bar.addActionButton(_('Undo last room'), () => {
-        this.steps = undoRoom(this.steps);
-        this.render();
-      }, { color: 'secondary' });
-      bar.addActionButton(_('Reset'), () => {
-        this.steps = [];
-        this.render();
-      }, { color: 'alert' });
-    }
-  }
-
-  /**
-   * 支払い待ちの部屋がないとき: 次に入れる部屋を光らせる。
-   * @param {import('./move-plan.js').MoveBoard} board
-   * @param {string} summary
-   * @param {import('../board/Board.js').BoardRefs | null} refs
-   */
-  renderRooms(board, summary, refs) {
-    const rooms = nextRooms(board, this.steps);
-    if (this.steps.length === 0 && !board.canMove) {
-      this.bga.statusBar.setTitle(_('${you} cannot afford to move'));
-    } else if (this.steps.length === 0) {
-      this.bga.statusBar.setTitle(_('${you} must choose the next room to enter'));
-    } else {
-      this.bga.statusBar.setTitle(_('Route: ${route}'), { route: summary });
-    }
-    for (const pos of rooms) {
+    for (const pos of reachableRooms(board, route)) {
       const element = refs?.rooms.get(pos);
       if (element === undefined) {
         continue;
       }
       element.classList.add(CLASS_ROOM_SELECTABLE);
       const handler = () => {
-        this.steps = [...this.steps, { pos, payments: [] }];
+        this.route = [...this.route, pos];
         this.render();
       };
       element.addEventListener('click', handler);
       this.listeners.push([element, handler]);
     }
+
+    if (route.length === 0) {
+      bar.setTitle(board.canMove ? _('${you} must choose the next room to enter') : _('${you} cannot afford to move'));
+    } else if (solution !== null) {
+      bar.setTitle(_('Route: ${route}. ${status}'), {
+        route: route.map((pos) => `${_('Room')} ${pos}`).join(' > '),
+        status: statusText({
+          paid: solution.paid,
+          total: solution.total,
+          needed: neededText(solution.needed),
+          unused: this.unusedText(solution),
+        }),
+      });
+      this.drawResources(board, playerAreas, me);
+    }
+
+    if (solution?.complete === true) {
+      bar.addActionButton(_('Confirm move'), () => this.confirm());
+    } else if (route.length > 0) {
+      bar.addActionButton(_('Confirm move'), () => {}, { disabled: true, tooltip: _('Select enough resources to pay for every lock') });
+    }
+    if (route.length === 0 && !board.canMove) {
+      bar.addActionButton(_('Stay'), () => this.confirm());
+    }
+    if (route.length > 0) {
+      bar.addActionButton(_('Undo last room'), () => {
+        this.route = this.route.slice(0, -1);
+        this.render();
+      }, { color: 'secondary' });
+    }
+    if (this.hasSelection()) {
+      bar.addActionButton(_('Reset'), () => {
+        this.selection = emptySelection();
+        this.render();
+      }, { color: 'alert', tooltip: _('Deselect every resource') });
+    }
+  }
+
+  /** @returns {boolean} 何か選んでいるか */
+  hasSelection() {
+    const s = this.selection;
+    return s.tableau.length + s.hand.length + s.light + s.token + s.effect > 0;
   }
 
   /**
-   * 支払い待ちの部屋があるとき: 使える手段だけ選べるようにする。
+   * 使われなかった選択の文言。
+   * @param {import('./move-plan.js').MoveSolution} solution
+   * @returns {string}
+   */
+  unusedText(solution) {
+    const deps = this.getDeps();
+    const u = solution.unused;
+    const parts = [
+      ...u.tableau.map((id) => cardLabel(deps, 'TABLEAU', id)),
+      ...u.hand.map((id) => cardLabel(deps, 'HAND', id)),
+    ];
+    if (u.light > 0) {
+      parts.push(`${_('Inner light')} × ${u.light}`);
+    }
+    if (u.token > 0) {
+      parts.push(`${_('Wild move key')} × ${u.token}`);
+    }
+    if (u.effect > 0) {
+      parts.push(`${_('Effect key')} × ${u.effect}`);
+    }
+    return parts.join(', ');
+  }
+
+  /**
+   * 払う資源をまとめて選ぶ: カードはクリックで選択のオン・オフ、心光・トークン・効果の鍵は数量のボタン。
    * @param {import('./move-plan.js').MoveBoard} board
-   * @param {import('./move-plan.js').BoardRoom} pending
-   * @param {string} summary
    * @param {import('../board/PlayerAreas.js').PlayerAreas | null} playerAreas
    * @param {number | null} me
    */
-  renderPayment(board, pending, summary, playerAreas, me) {
-    const options = payOptions(board, this.steps);
-    const paid = this.steps[this.steps.length - 1].payments.length;
-    this.bga.statusBar.setTitle(_('Pay for room ${room} (${paid} of ${locks}): ${route}'), {
-      room: pending.pos, paid, locks: pending.level, route: summary,
-    });
-    /** @param {import('./move-plan.js').PayItem} item */
-    const pay = (item) => {
-      this.steps = addPayment(this.steps, item);
-      this.render();
-    };
-    for (const [src, select] of /** @type {const} */ ([[SRC.TABLEAU, 'composed'], [SRC.HAND, 'hand']])) {
-      const choices = cardChoices(options, src);
-      if (choices.size === 0 || playerAreas === null || me === null) {
-        continue;
-      }
-      /** @type {import('../cards/selection.js').SelectionOptions} */
-      const config = {
-        ids: choices.keys(),
-        mode: 'single',
+  drawResources(board, playerAreas, me) {
+    const free = (/** @type {Map<number, import('./move-plan.js').BoardCard>} */ cards) => [...cards.values()].filter((c) => !c.tapped && c.keys.length > 0).map((c) => c.id);
+    const tableau = free(board.tableau);
+    const hand = free(board.hand);
+    if (tableau.length > 0 && me !== null) {
+      playerAreas?.selectComposed(me, {
+        ids: tableau,
+        mode: 'multiple',
+        selected: this.selection.tableau,
         onChange: (ids) => {
-          const item = ids.length === 0 ? undefined : choices.get(Number(ids[0]));
-          if (item !== undefined) {
-            pay(item);
-          }
+          this.selection = { ...this.selection, tableau: ids.map(Number) };
+          this.render();
         },
-      };
-      if (select === 'composed') {
-        playerAreas.selectComposed(me, config);
-      } else {
-        playerAreas.selectHand(config);
-      }
+      });
     }
+    if (hand.length > 0) {
+      playerAreas?.selectHand({
+        ids: hand,
+        mode: 'multiple',
+        selected: this.selection.hand,
+        onChange: (ids) => {
+          this.selection = { ...this.selection, hand: ids.map(Number) };
+          this.render();
+        },
+      });
+    }
+    const total = lockTotal(board, this.route);
+    const extras = routeExtras(board, this.route);
     const bar = this.bga.statusBar;
-    const find = (/** @type {string} */ src) => options.find((o) => o.src === src);
-    const light = find(SRC.LIGHT);
-    if (light !== undefined) {
-      const cost = lightCostOf(board, lightUsesOf(this.steps) + 1);
-      bar.addActionButton(_('Inner light (${cost})').replace('${cost}', String(cost)), () => pay(light), { color: 'secondary' });
+    /**
+     * @param {'light' | 'token' | 'effect'} kind
+     * @param {string} plus
+     * @param {string} minus
+     * @param {number} max
+     * @param {string} tooltip
+     */
+    const quantity = (kind, plus, minus, max, tooltip) => {
+      const now = this.selection[kind];
+      bar.addActionButton(plus.replace('${count}', String(now)), () => {
+        this.selection = { ...this.selection, [kind]: stepQuantity(now, 1, max) };
+        this.render();
+      }, { color: 'secondary', disabled: now >= max, tooltip });
+      if (now > 0) {
+        bar.addActionButton(minus, () => {
+          this.selection = { ...this.selection, [kind]: stepQuantity(now, -1, max) };
+          this.render();
+        }, { color: 'secondary' });
+      }
+    };
+    if (board.light + extras.light > 0) {
+      const next = lightCostOf(board, this.selection.light + 1);
+      quantity('light', _('Inner light +1 (selected ${count})'), _('Inner light -1'), total,
+        _('Pay 1 key with Psychic Light. The nth use in an action costs more') + ` (${next})`);
     }
-    const token = find(SRC.TOKEN);
-    if (token !== undefined) {
-      bar.addActionButton(_('Wild move key'), () => pay(token), { color: 'secondary' });
+    if (board.wildUp + extras.token > 0) {
+      quantity('token', _('Wild move key +1 (selected ${count})'), _('Wild move key -1'), total, _('Pay 1 lock with a Wild move key'));
     }
-    const effect = find(SRC.EFFECT);
-    if (effect !== undefined) {
-      bar.addActionButton(_('Effect key'), () => pay(effect), { color: 'secondary' });
+    if (extras.effectKeys > 0) {
+      quantity('effect', _('Effect key +1 (selected ${count})'), _('Effect key -1'), extras.effectKeys, _('Pay 1 lock of the first level 2 room with a Wild key from a card effect'));
     }
   }
 
@@ -242,6 +275,7 @@ export class MoveState {
     if (this.board === null) {
       return;
     }
-    this.bga.actions.performAction('actMove', { plan: JSON.stringify(toInput(this.steps)) });
+    const steps = this.solution?.complete === true ? this.solution.steps : [];
+    this.bga.actions.performAction('actMove', { plan: JSON.stringify(toInput(steps)) });
   }
 }

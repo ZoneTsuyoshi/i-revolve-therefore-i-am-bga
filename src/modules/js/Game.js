@@ -70,6 +70,7 @@ export class Game {
             playerAreas: this.playerAreas,
             refs: this.board,
             me: bga.players.isCurrentPlayerSpectator() ? null : int(bga.players.getCurrentPlayerId()),
+            texts: this.texts,
         })));
     }
 

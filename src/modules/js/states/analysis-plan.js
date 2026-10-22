@@ -567,3 +567,168 @@ export function undo(state) {
   }
   return { ...state, destination: null };
 }
+
+// ---- まとめて選んだ資源の自動割り当て ----
+
+/**
+ * @typedef {object} AnalysisSelection
+ * @property {Iterable<number>} [tableau] 選んだ自己構成済みカード（縦向き）
+ * @property {Iterable<number>} [hand] 選んだ手札
+ * @property {number} [light] 心光の行使の回数（上限）
+ */
+
+/**
+ * @typedef {object} AnalysisSolution
+ * @property {AnalysisState} state 割り当ての結果（complete が false なら送れない）
+ * @property {boolean} complete コストをちょうど払い、仮検証（checkAnalysis）も通る
+ * @property {number} total 払うべきコストの鍵の総数（軽減のあと）
+ * @property {number} paid 払えた鍵の数
+ * @property {Record<string, number>} needed 払えていない鍵の種類 → 個数
+ * @property {{ tableau: number[], hand: number[], light: number }} unused 使われなかった選択
+ * @property {boolean} aborted 探索の上限に達した
+ */
+
+const SEARCH_LIMIT = 300000;
+const HOLE_WEIGHT = 1000000;
+const UNUSED_WEIGHT = 1000;
+/** 資源の「高価さ」（自己構成済み < 手札 < 心光） */
+/** @type {Record<string, number>} */
+const COST = { TABLEAU: 1, HAND: 3, LIGHT: 4 };
+
+/**
+ * 選んだ進む先のコストを、選んだ資源で払う割り当てを探す（全探索）。軽減で取り除く鍵もすべての選び方を試す。
+ * 優先順位: 払えない鍵が少ない → 選んだのに使わない資源が少ない → 高価な資源（心光・手札）を使わない。
+ * 万能鍵・M094 の読み替えは `serves` の規則どおり。結果は `checkAnalysis` に通して二重に確かめる。
+ * @param {AnalysisBoard} board
+ * @param {string | null} destinationId
+ * @param {AnalysisSelection} selection
+ * @param {{ feasibleOnly?: boolean }} [options] feasibleOnly: 払い切れる割り当てが見つかった時点で打ち切る
+ * @returns {AnalysisSolution}
+ */
+export function solveAnalysisPayment(board, destinationId, selection, { feasibleOnly = false } = {}) {
+  const destination = destinationOf(board, destinationId);
+  const lightMax = Math.min(Math.max(0, Math.floor(selection.light ?? 0)), board.maxLightUses);
+  const tableauIds = [...new Set(selection.tableau ?? [])].filter((id) => board.tableau.get(id)?.tapped === false);
+  const handIds = [...new Set(selection.hand ?? [])].filter((id) => board.hand.has(id));
+  const unusedAll = { tableau: tableauIds, hand: handIds, light: lightMax };
+  if (destination === undefined) {
+    return { state: emptyState(), complete: false, total: 0, paid: 0, needed: {}, unused: unusedAll, aborted: false };
+  }
+  /** @type {{ src: string, card: number, key: number, held: string }[]} */
+  const supplies = [];
+  for (const [src, ids, cards] of /** @type {const} */ ([[SRC.TABLEAU, tableauIds, board.tableau], [SRC.HAND, handIds, board.hand]])) {
+    for (const id of ids) {
+      cards.get(id)?.keys.forEach((held, key) => supplies.push({ src, card: id, key, held }));
+    }
+  }
+  const selectedCardCount = tableauIds.length + handIds.length;
+  let aborted = false;
+  let nodes = 0;
+  let bestScore = Infinity;
+  /** @type {{ removed: Record<string, number>, picks: (KeyPay | null)[], slots: string[] } | null} */
+  let best = null;
+  let done = false;
+
+  for (const removed of removals(destination.cost, removalCount(board, destination))) {
+    /** @type {string[]} */
+    const slots = [];
+    for (const [key, count] of Object.entries(remainingCost(destination, removed))) {
+      for (let i = 0; i < count; i++) {
+        slots.push(key);
+      }
+    }
+    const used = supplies.map(() => false);
+    const picks = slots.map(() => /** @type {KeyPay | null} */ (null));
+    /** @type {Map<string, number>} */
+    const cardCount = new Map();
+
+    /**
+     * @param {number} i
+     * @param {number} lights 行使の回数
+     * @param {number} cost
+     * @param {number} holes
+     */
+    const search = (i, lights, cost, holes) => {
+      if (done || aborted || cost + holes * HOLE_WEIGHT >= bestScore) {
+        return;
+      }
+      if (++nodes > SEARCH_LIMIT) {
+        aborted = true;
+        return;
+      }
+      if (i === slots.length) {
+        const unusedCount = (selectedCardCount - cardCount.size) + (lightMax - lights);
+        const score = holes * HOLE_WEIGHT + unusedCount * UNUSED_WEIGHT + cost;
+        if (score < bestScore) {
+          bestScore = score;
+          best = { removed, picks: picks.slice(), slots };
+          done = feasibleOnly && holes === 0;
+        }
+        return;
+      }
+      /** @type {Set<string>} */
+      const tried = new Set();
+      for (let s = 0; s < supplies.length; s++) {
+        const sup = supplies[s];
+        const signature = `${sup.src}:${sup.card}:${sup.held}`;
+        if (used[s] || tried.has(signature) || !serves(board, sup.held, slots[i])) {
+          continue;
+        }
+        tried.add(signature);
+        const cardKey = `${sup.src}:${sup.card}`;
+        const firstUse = !cardCount.has(cardKey);
+        used[s] = true;
+        cardCount.set(cardKey, (cardCount.get(cardKey) ?? 0) + 1);
+        picks[i] = { src: sup.src, card: sup.card, key: sup.key, for: slots[i] };
+        search(i + 1, lights, cost + (firstUse ? COST[sup.src] : 0), holes);
+        used[s] = false;
+        picks[i] = null;
+        if (firstUse) {
+          cardCount.delete(cardKey);
+        } else {
+          cardCount.set(cardKey, /** @type {number} */ (cardCount.get(cardKey)) - 1);
+        }
+      }
+      if (lights < lightMax && lightCost(board, lights + 1) <= board.light) {
+        picks[i] = { src: SRC.LIGHT, for: slots[i] };
+        search(i + 1, lights + 1, cost + COST.LIGHT, holes);
+        picks[i] = null;
+      }
+      if (!feasibleOnly) {
+        search(i + 1, lights, cost, holes + 1);
+      }
+    };
+    search(0, 0, 0, 0);
+  }
+
+  const found = /** @type {{ removed: Record<string, number>, picks: (KeyPay | null)[], slots: string[] } | null} */ (best);
+  if (found === null) {
+    const first = removals(destination.cost, removalCount(board, destination))[0] ?? {};
+    const slots = Object.entries(remainingCost(destination, first)).flatMap(([key, count]) => Array.from({ length: count }, () => key));
+    /** @type {Record<string, number>} */
+    const needed = {};
+    for (const key of slots) {
+      needed[key] = (needed[key] ?? 0) + 1;
+    }
+    return { state: { destination: destination.id, removed: first, keys: [] }, complete: false, total: slots.length, paid: 0, needed, unused: unusedAll, aborted };
+  }
+  const keys = found.picks.filter((p) => p !== null);
+  /** @type {Record<string, number>} */
+  const needed = {};
+  found.picks.forEach((p, i) => {
+    if (p === null) {
+      needed[found.slots[i]] = (needed[found.slots[i]] ?? 0) + 1;
+    }
+  });
+  const state = { destination: destination.id, removed: found.removed, keys };
+  const usedCards = new Set(keys.filter((k) => k.src !== SRC.LIGHT).map((k) => `${k.src}:${k.card}`));
+  const complete = found.slots.length === keys.length && isComplete(board, state) && checkAnalysis(board, state).ok;
+  return {
+    state, complete, total: found.slots.length, paid: keys.length, needed, aborted,
+    unused: {
+      tableau: tableauIds.filter((id) => !usedCards.has(`${SRC.TABLEAU}:${id}`)),
+      hand: handIds.filter((id) => !usedCards.has(`${SRC.HAND}:${id}`)),
+      light: lightMax - lightUses(state),
+    },
+  };
+}
