@@ -522,9 +522,10 @@ html[data-theme="dark"] {
 
 /*
  * 使用済み（009 §4.2）: 向きも大きさも変えず、グレーアウトする（白黒 + 暗く + 薄く）。「Used」の帯を重ねる（色だけにしない）。
- * 移動のアニメーションが card 要素の transform を使うので、フィルタは中の面（.bga-cards_card-sides）にかける。
+ * 移動のアニメーションが card 要素の transform を使うので、フィルタは中の面（.bga-cards_card-sides と、スプライトを描く data-ir-key の要素の両方）にかける。
  */
-.ir-card.ir-tapped [class*="card-sides"] {
+.ir-card.ir-tapped [class*="card-sides"],
+.ir-card.ir-tapped [data-ir-key] {
     filter: grayscale(1) brightness(0.7);
     opacity: 0.6;
     transition: filter 0.4s, opacity 0.4s;
