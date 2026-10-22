@@ -2,9 +2,10 @@
  * カードのツールチップ・拡大表示・想起中の案内パネル（仕様書 009 §3.9、§7）。
  * 画像は日本語の印刷のままなので、英語の名前・効果文・想起効果を添える（中身は `card-info-model.js`、文字列は `texts.js`）。
  *
- * - ツールチップ: マウスを 0.4 秒乗せると、カードの横に英語のテキストを出す（タッチでは出さない）。
- * - 拡大表示: クリック（スマホはタップ）で、拡大画像と英語テキストを並べて出す。スマホは 0.5 秒の長押しでも開く。
- *   選択モードのカード（`ir-selectable`・`ir-selected`）はクリックが「選ぶ」なので、拡大は長押しだけ。拡大の中に Select ボタンを出す（009 §7.3）。
+ * - ツールチップ: マウスを 0.4 秒乗せると、カードの横に、拡大画像と英語のテキストを出す（タッチでは出さない）。
+ *   PC では、クリックでは拡大を開かない。クリックは選択などの操作だけに使う（拡大が選択の邪魔をしないように）。
+ * - 拡大表示: タッチ端末の 0.5 秒の長押しだけで開く（タップは選択などの操作）。拡大画像と英語テキストを並べて出す。
+ *   選択モードのカードなら、拡大の中に Select ボタンを出す（009 §7.3）。
  *   `document.body` 直下に出し（CSS zoom や transform の祖先を避ける）、高さの基準は `window.innerHeight`（003 §13）。
  *   ステータスバー（`#page-title`）の下から始め、ボタンを隠さない。
  * - 想起中の案内パネル: 想起フェイズ中、環の上（`#ir-recall-panel`）に、部屋のカードの拡大画像と英語の想起効果を出す。
@@ -14,7 +15,7 @@
 import { paintCardFace } from '../cards/card-face.js';
 import { renderText } from './icons.js';
 import { describeCard, indexCatalog, isLandscapeKey, keyKind } from './card-info-model.js';
-import { tooltipPosition, zoomLayout } from './zoom-math.js';
+import { tooltipImageSize, tooltipPosition, zoomLayout } from './zoom-math.js';
 
 /** マウスを乗せてからツールチップを出すまで（009 §7.1: 300〜500 ms） */
 const HOVER_DELAY_MS = 400;
@@ -96,7 +97,7 @@ export class CardInfo {
     }
 
     /**
-     * ログの中のカード名（`span.ir-log-card`）にも、ホバー・長押し・クリックの説明を付ける。1 回だけ呼ぶ。
+     * ログの中のカード名（`span.ir-log-card`）にも、ホバー・長押しの説明を付ける。1 回だけ呼ぶ。
      * ログは盤面の外で、後から要素が増えるので、document で受けて対象を絞る。
      */
     attachLog() {
@@ -217,7 +218,14 @@ export class CardInfo {
         const tip = document.createElement('div');
         tip.className = 'ir-tip';
         tip.setAttribute('role', 'tooltip');
-        tip.append(this.buildInfo(model));
+        const size = tooltipImageSize({ landscape: isLandscapeKey(target.key), vw: window.innerWidth, vh: window.innerHeight });
+        const image = document.createElement('div');
+        image.className = 'ir-tip-image';
+        image.style.width = `${size.imageW}px`;
+        image.style.height = `${size.imageH}px`;
+        paintCardFace(image, target.key, this.deps.imgUrl, 'zoom');
+        tip.classList.toggle('ir-tip-stacked', size.stacked);
+        tip.append(image, this.buildInfo(model));
         document.body.append(tip);
         this.tip = tip;
         const position = tooltipPosition({
@@ -245,21 +253,18 @@ export class CardInfo {
         this.removeTip();
     }
 
-    // ---- クリック・タップ・長押し ----
+    // ---- 長押し（タッチ） ----
 
-    /** @param {MouseEvent} event */
+    /**
+     * クリックでは拡大を開かない（選択などの操作に任せる）。長押しで拡大を開いた直後の click だけ、選択として働かないよう止める。
+     * @param {MouseEvent} event
+     */
     handleClick(event) {
         if (this.suppressClick) {
             this.suppressClick = false;
             event.preventDefault();
             event.stopPropagation();
-            return;
         }
-        const target = this.targetOf(event.target);
-        if (target === null || target.selectionMode) {
-            return;
-        }
-        this.openZoom(target);
     }
 
     /** @param {PointerEvent} event */

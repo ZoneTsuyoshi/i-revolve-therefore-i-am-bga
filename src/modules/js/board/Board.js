@@ -89,11 +89,17 @@ export function buildBoard(host, { players = {}, playerOrder = [], me = null } =
         const pos = index + 1;
         const floor = slot('ir-slot-l ir-room-floor');
         const card = slot('ir-slot-room-card ir-room-card');
+        // Stock の要素（floor・card）は bga-cards の CSS が position を上書きすることがある。
+        // 配置（abs）は Stock の外の箱に持たせ、Stock は箱の中の通常の流れに置く（009 §3.1）。
         const room = el('div', {
             id: `ir-room-${pos}`,
             class: 'ir-room',
             data: { pos, level: CORNER_POSITIONS.includes(pos) ? 2 : 1 },
-        }, [floor, card, el('div', { class: 'ir-room-meeples' })]);
+        }, [
+            el('div', { class: 'ir-room-floor-box' }, [floor]),
+            el('div', { class: 'ir-room-card-box' }, [card]),
+            el('div', { class: 'ir-room-meeples' }),
+        ]);
         room.style.gridColumn = String(col);
         room.style.gridRow = String(row);
         rooms.set(pos, room);
