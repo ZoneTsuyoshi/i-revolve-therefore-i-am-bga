@@ -352,7 +352,7 @@ class Game extends \Bga\GameFramework\Table
         return new MovePhase(
             new MoveBoardReader($this->irMemoryCards(), $this->irRooms(), $this->irPlayerValues(), $this->irGlobals()),
             new MovePlanner($payments, $light),
-            new MoveExecutor($this->irMemoryCards(), $this->irPlayerValues(), $this->irGlobals(), new CatalogSpecSource()),
+            new MoveExecutor($this->irMemoryCards(), $this->irPlayerValues(), $this->irGlobals()),
             $this->irHandLimit(),
             $payments,
             $light,

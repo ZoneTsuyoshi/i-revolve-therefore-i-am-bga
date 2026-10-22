@@ -116,7 +116,7 @@ final class MovePhase
                     'light' => $board->lights,
                     'wildUp' => $board->wildUp,
                     'lightCosts' => $lightCosts,
-                    'grantedKeys' => $board->priorLv2Entries === 0 ? $this->payments->usableGrantedWildKeys($player, 2) : 0,
+                    'lockReduction' => $board->priorLv2Entries === 0 ? $this->payments->lockReduction($player, 2) : 0,
                 ],
                 'keyServes' => $serves,
                 'tableau' => $tableau,

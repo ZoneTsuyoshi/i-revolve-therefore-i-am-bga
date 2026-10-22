@@ -424,51 +424,77 @@ final class MovePlannerTest extends TestCase
         self::assertSame(1, $outcome->steps[0]->lightsPaid);
     }
 
-    // ---- MD-06（万能鍵） ----
+    // ---- MD-06（錠前の軽減。Q-70） ----
 
-    /** UT-25: M064〜M066 の万能鍵は、このターン最初のレベル 2 の部屋への入室にだけ使える。 */
-    public function testGrantedWildKeysOnlyForTheFirstLevel2EntryOfTheTurn(): void
+    /** UT-25: M064〜M066 は、このターン最初のレベル 2 の部屋への入室の錠前の数を減らす（重ねて最大 -2 = 0 個）。 */
+    public function testLockReductionOnlyForTheFirstLevel2EntryOfTheTurn(): void
     {
         $kit = new QueryKit();
-        $ids = $kit->game->giveTableau(1, ['M064', 'M065', 'M066']);
+        $kit->game->giveTableau(1, ['M064']);
         $planner = $this->planner($kit);
-        $cards = array_map(static fn(int $id) => MoveBoards::card($id, self::W), $ids);
-        $effect = static fn(int $id): array => ['src' => 'EFFECT', 'card' => $id];
+        $board = MoveBoards::board(position: 3, lights: 30);
 
-        // 最初のレベル 2 の部屋 4 では 3 枚あっても錠前 2 個分まで
-        $board = MoveBoards::board(position: 3, tableau: $cards);
-        $outcome = $planner->plan($board, ['rooms' => [4], 'payments' => [[$effect($ids[0]), $effect($ids[1])]]]);
-        self::assertSame([$ids[0], $ids[1]], $outcome->steps[0]->effectCards);
-        self::assertSame(0, $outcome->wildTokensUsed);
-        self::assertSame([], $outcome->keyKinds, '万能鍵は鍵の種類に数えない');
+        // 最初のレベル 2 の部屋 4 は錠前 1 個。1 個の支払いで入れる
+        $outcome = $planner->plan($board, ['rooms' => [4], 'payments' => [[self::LIGHT]]]);
+        self::assertSame(1, $outcome->steps[0]->lockReduction);
+        self::assertCount(1, $outcome->steps[0]->payments);
+        // 2 個の支払いは錠前の数が合わない
+        $this->assertViolation(MoveViolation::LOCK_COUNT, $planner, $board, ['rooms' => [4], 'payments' => [[self::LIGHT, self::LIGHT]]]);
 
-        // 2 回目のレベル 2 の入室（7）には使えない
-        $this->assertViolation(MoveViolation::BAD_GRANT, $planner, $board, [
+        // 2 回目のレベル 2 の入室（7）は軽減されない（2 個）
+        $outcome = $planner->plan($board, [
             'rooms' => [4, 5, 6, 7],
-            'payments' => [
-                [$effect($ids[0]), $effect($ids[1])], [self::LIGHT], [self::LIGHT],
-                [$effect($ids[2]), self::LIGHT],
-            ],
+            'payments' => [[self::LIGHT], [self::LIGHT], [self::LIGHT], [self::LIGHT, self::LIGHT]],
         ]);
-        // このターンにすでにレベル 2 の部屋に入室していれば使えない
+        self::assertSame([1, 0, 0, 0], array_map(static fn($step) => $step->lockReduction, $outcome->steps));
+        // このターンにすでにレベル 2 の部屋に入室していれば軽減されない
         $this->assertViolation(
-            MoveViolation::BAD_GRANT,
+            MoveViolation::LOCK_COUNT,
             $planner,
-            MoveBoards::board(position: 3, tableau: $cards, priorLv2Entries: 1),
-            ['rooms' => [4], 'payments' => [[$effect($ids[0]), self::LIGHT]]],
+            MoveBoards::board(position: 3, priorLv2Entries: 1),
+            ['rooms' => [4], 'payments' => [[self::LIGHT]]],
         );
-        // 同じカードは 1 回だけ
-        $this->assertViolation(MoveViolation::BAD_GRANT, $planner, $board, [
-            'rooms' => [4],
-            'payments' => [[$effect($ids[0]), $effect($ids[0])]],
-        ]);
     }
 
-    public function testGrantedKeysAreUnavailableWithoutTheCards(): void
+    public function testThreeCardsReduceTheFirstLevel2RoomToNoLocks(): void
+    {
+        $kit = new QueryKit();
+        $kit->game->giveTableau(1, ['M064', 'M065', 'M066']);
+        $planner = $this->planner($kit);
+        $board = MoveBoards::board(position: 3);
+
+        $outcome = $planner->plan($board, ['rooms' => [4], 'payments' => [[]]]);
+        self::assertSame(2, $outcome->steps[0]->lockReduction);
+        self::assertSame([], $outcome->steps[0]->payments);
+        self::assertSame(0, $outcome->wildTokensUsed);
+        self::assertSame([], $outcome->keyKinds);
+        $this->assertViolation(MoveViolation::LOCK_COUNT, $planner, $board, ['rooms' => [4], 'payments' => [[self::LIGHT]]]);
+    }
+
+    /** 軽減後の錠前の数で canMove と zombie の自動の支払いが決まる。 */
+    public function testCanMoveAndAutoPlanUseTheReducedLocks(): void
+    {
+        $kit = new QueryKit();
+        $kit->game->giveTableau(1, ['M064', 'M065']);
+        $planner = $this->planner($kit);
+        $board = MoveBoards::board(position: 3); // 心光もトークンも無い。部屋 4 は錠前 2 個 - 2 = 0 個
+        self::assertTrue($planner->canMove($board));
+        self::assertSame(['rooms' => [4], 'payments' => [[]]], $planner->autoPlan($board));
+
+        $one = new QueryKit();
+        $one->game->giveTableau(1, ['M064']);
+        $planner = $this->planner($one);
+        // 1 枚なら錠前は 1 個。心光 1 個で入れる（部屋 4 に入る。スキップはしない）
+        self::assertSame(['rooms' => [4], 'payments' => [[self::LIGHT]]], $planner->autoPlan(MoveBoards::board(position: 3, lights: 1)));
+    }
+
+    public function testNoReductionWithoutTheCardsAndEffectPaymentIsGone(): void
     {
         $planner = $this->planner();
         $board = MoveBoards::board(position: 3, tableau: [MoveBoards::card(1, self::W)]);
-        $this->assertViolation(MoveViolation::BAD_GRANT, $planner, $board, [
+        $this->assertViolation(MoveViolation::LOCK_COUNT, $planner, $board, ['rooms' => [4], 'payments' => [[self::LIGHT]]]);
+        // 'EFFECT' の支払い手段は無い
+        $this->assertViolation(MoveViolation::BAD_INPUT, $planner, $board, [
             'rooms' => [4],
             'payments' => [[['src' => 'EFFECT', 'card' => 1], self::LIGHT]],
         ]);

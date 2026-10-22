@@ -4,7 +4,7 @@
  *
  * 流れ:
  * 1. 入る部屋を順にクリックして経路を作る（入れる部屋が光る。「Undo last room」で最後の部屋を取り消す）
- * 2. 払うものをまとめて選ぶ: 自己構成済みカード・手札をクリックで選択のオン・オフ（鍵は順不同）、心光・万能移動鍵・効果の万能鍵は「+1／-1」の数量
+ * 2. 払うものをまとめて選ぶ: 自己構成済みカード・手札をクリックで選択のオン・オフ（鍵は順不同）、心光・万能移動鍵は「+1／-1」の数量
  * 3. 選んだ資源は規則を守って各部屋の錠前に自動で割り当てられる（`solveMovePayment`）。ステータスバーに充足・不足・余りが出る
  * 4. 全部の錠前が払えたら「Confirm move」（割り当ての結果を `{rooms, payments}` にして送る）。「Reset」で選択を全部外す
  * 払える移動が無いときは「Stay」で空の経路を送る（Q-38）。
@@ -28,9 +28,9 @@ export const CLASS_ROOM_ROUTE = 'ir-room-route';
  * @property {import('../ui/texts.js').CardTexts | null} [texts] カード名（余りの表示用）
  */
 
-/** @returns {{ tableau: number[], hand: number[], light: number, token: number, effect: number }} */
+/** @returns {{ tableau: number[], hand: number[], light: number, token: number }} */
 function emptySelection() {
-  return { tableau: [], hand: [], light: 0, token: 0, effect: 0 };
+  return { tableau: [], hand: [], light: 0, token: 0 };
 }
 
 export class MoveState {
@@ -175,7 +175,7 @@ export class MoveState {
   /** @returns {boolean} 何か選んでいるか */
   hasSelection() {
     const s = this.selection;
-    return s.tableau.length + s.hand.length + s.light + s.token + s.effect > 0;
+    return s.tableau.length + s.hand.length + s.light + s.token > 0;
   }
 
   /**
@@ -196,14 +196,11 @@ export class MoveState {
     if (u.token > 0) {
       parts.push(`${_('Omni-Move Key')} × ${u.token}`);
     }
-    if (u.effect > 0) {
-      parts.push(`${_('Effect key')} × ${u.effect}`);
-    }
     return parts.join(', ');
   }
 
   /**
-   * 払う資源をまとめて選ぶ: カードはクリックで選択のオン・オフ、心光・トークン・効果の鍵は数量のボタン。
+   * 払う資源をまとめて選ぶ: カードはクリックで選択のオン・オフ、心光・トークンは数量のボタン。
    * @param {import('./move-plan.js').MoveBoard} board
    * @param {import('../board/PlayerAreas.js').PlayerAreas | null} playerAreas
    * @param {number | null} me
@@ -238,7 +235,7 @@ export class MoveState {
     const extras = routeExtras(board, this.route);
     const bar = this.bga.statusBar;
     /**
-     * @param {'light' | 'token' | 'effect'} kind
+     * @param {'light' | 'token'} kind
      * @param {string} plus
      * @param {string} minus
      * @param {number} max
@@ -264,9 +261,6 @@ export class MoveState {
     }
     if (board.wildUp + extras.token > 0) {
       quantity('token', _('Omni-Move Key +1 (selected ${count})'), _('Omni-Move Key -1'), total, _('Pay 1 lock with a Omni-Move Key'));
-    }
-    if (extras.effectKeys > 0) {
-      quantity('effect', _('Effect key +1 (selected ${count})'), _('Effect key -1'), extras.effectKeys, _('Pay 1 lock of the first level 2 room with a Wild key from a card effect'));
     }
   }
 

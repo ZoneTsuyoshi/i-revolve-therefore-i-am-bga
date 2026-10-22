@@ -375,7 +375,7 @@ final class EffectCatalog
             optional: true,
             unit: true,
         );
-        $granted = ['key' => KeyType::WILD, 'src' => 'EFFECT'];
+        $lockReduction = ['reduction' => 1];
         $firstLv2 = [ConditionRef::of(Condition::FIRST_LV2_ENTRY_THIS_TURN)];
         $onceTurn = EffectLimit::ONCE_PER_TURN;
         $tierUp = [Event::TIER_UP];
@@ -405,9 +405,9 @@ final class EffectCatalog
             $trigger('M061', $activated, [Event::MOVE_ENDED], [$draw()], [ConditionRef::of(Condition::ALL_KEY_KINDS_PAID)], limit: $onceTurn),
             $modifier('M062', $activated, Modifier::RECALL_TIMES, ['times' => 2], [ConditionRef::of(Condition::OTHER_PERSONA_IN_ROOM)]),
             $modifier('M063', $constant, Modifier::LIGHT_SCHEDULE, ['context' => ActionContext::MOVE, 'table' => $schedule]),
-            $modifier('M064', $activated, Modifier::MOVE_PAYMENT_GRANT, $granted, $firstLv2, $onceTurn),
-            $modifier('M065', $activated, Modifier::MOVE_PAYMENT_GRANT, $granted, $firstLv2, $onceTurn),
-            $modifier('M066', $activated, Modifier::MOVE_PAYMENT_GRANT, $granted, $firstLv2, $onceTurn),
+            $modifier('M064', $activated, Modifier::MOVE_LOCK_REDUCTION, $lockReduction, $firstLv2),
+            $modifier('M065', $activated, Modifier::MOVE_LOCK_REDUCTION, $lockReduction, $firstLv2),
+            $modifier('M066', $activated, Modifier::MOVE_LOCK_REDUCTION, $lockReduction, $firstLv2),
             $trigger('M067', $activated, [Event::MOVE_ENDED, Event::PERSONA_STOPPED], [$light()], [$fourRooms()], limit: $onceTurn),
             $modifier('M068', $activated, Modifier::COMPOSE_ENERGY_DELTA, ['delta' => -1], [
                 $fourRooms(),

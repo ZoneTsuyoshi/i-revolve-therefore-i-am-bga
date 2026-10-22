@@ -254,6 +254,32 @@ final class TriggerCardsTest extends TestCase
         self::assertSame(0, $this->b->light(), 'M076 自身の心光は無い');
     }
 
+    /**
+     * Q-52・Q-72（R8-3）: M073〜M078 は、そのカード自身を最初に自己構成したときには発動しない。
+     * 自己構成済みになってから、鍵が合う別のカードを自己構成したときに発動する。
+     */
+    public function testEverySelfComposeTriggerIgnoresItsOwnFirstComposition(): void
+    {
+        // [カード, 反応する鍵を持つ別のカード]（M001 = 知恵、M003 = 意志、M002 = 感情。MemoryCards の鍵を確認済み）
+        $cases = [73 => 1, 74 => 2, 75 => 3, 76 => 1, 78 => 3];
+        foreach ($cases as $type => $other) {
+            $b = new CardBench();
+            $b->fx->giveTableau(CardBench::P, [$type]);
+            self::assertFalse($b->emit(Event::COMPOSED, [
+                'card_type' => sprintf('M%03d', $type),
+                'ctx' => 'PHASE',
+                'composed_count' => 1,
+            ]), "M{$type} 自身の自己構成では誘発しない");
+
+            $b->fx->giveTableau(CardBench::P, [$other]);
+            self::assertTrue($b->emit(Event::COMPOSED, [
+                'card_type' => sprintf('M%03d', $other),
+                'ctx' => 'PHASE',
+                'composed_count' => 2,
+            ]), "M{$type} は自己構成済みになってから、鍵の合う別のカードで誘発する");
+        }
+    }
+
     /** UT-41（R8-4）: M090 は自身を含む枚数 3 枚につき万能移動鍵トークン 1 つ。 */
     public function testM090CountsItselfInThrees(): void
     {

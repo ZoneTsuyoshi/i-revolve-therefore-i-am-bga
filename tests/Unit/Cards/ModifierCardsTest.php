@@ -90,8 +90,8 @@ final class ModifierCardsTest extends TestCase
         $types = array_map(static fn ($n): string => $n->type, $notices);
         self::assertSame(['cardsExchanged', 'cardsDiscarded'], $types);
         self::assertSame('TABLEAU_HAND', $notices[0]->args['kind']);
-        self::assertSame($tableau, $notices[0]->args['pairs'][0]['out']['id']);
-        self::assertSame($hand, $notices[0]->args['pairs'][0]['in']['id']);
+        self::assertSame($hand, $notices[0]->args['pairs'][0]['out']['id']);
+        self::assertSame($tableau, $notices[0]->args['pairs'][0]['in']['id']);
         self::assertSame('UNDER_RELEASED', $notices[1]->args['reason']);
         self::assertSame([$under], array_column($notices[1]->args['cards'], 'id'));
         self::assertSame(MemoryLocation::Discard1, $b->fx->memory->find($under)?->location);

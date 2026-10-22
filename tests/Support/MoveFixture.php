@@ -133,7 +133,7 @@ final class MoveFixture
         $this->phase = new MovePhase(
             new MoveBoardReader($this->memory, $rooms, $this->players, $this->globals),
             $this->planner,
-            new MoveExecutor($this->memory, $this->players, $this->globals, $specs),
+            new MoveExecutor($this->memory, $this->players, $this->globals),
             $this->handLimit,
             $payments,
             $light,

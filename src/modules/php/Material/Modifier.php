@@ -19,7 +19,7 @@ enum Modifier: string
     case ANALYSIS_COST_DELTA = 'MD-03';
     case LIGHT_SCHEDULE = 'MD-04';
     case KEY_VIEW = 'MD-05';
-    case MOVE_PAYMENT_GRANT = 'MD-06';
+    case MOVE_LOCK_REDUCTION = 'MD-06';
     case TAP_FOR_ENERGY = 'MD-07';
     case EXTRA_PAY_SCORE = 'MD-08';
     case ARCHITECT_SUBSTITUTE = 'MD-09';

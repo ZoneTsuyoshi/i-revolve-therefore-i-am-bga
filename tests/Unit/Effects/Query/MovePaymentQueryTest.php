@@ -38,11 +38,11 @@ final class MovePaymentQueryTest extends TestCase
         self::assertTrue($this->cd02($kit->game, $kit));
     }
 
-    /** UT-24: 心光・万能移動鍵トークン・万能鍵（MD-06）での支払いや、カードの万能鍵は数えない。 */
+    /** UT-24: 心光・万能移動鍵トークンでの支払いや、カードの万能鍵は数えない。 */
     public function testWildPaymentsDoNotCount(): void
     {
         $kit = new QueryKit();
-        foreach ([KeyPayment::LIGHT, KeyPayment::TOKEN, KeyPayment::EFFECT] as $source) {
+        foreach ([KeyPayment::LIGHT, KeyPayment::TOKEN] as $source) {
             $kinds = $kit->move->keyKindsPaid([
                 new KeyPayment(KeyPayment::HAND, KeyType::WILL),
                 new KeyPayment(KeyPayment::TABLEAU, KeyType::WISDOM),
@@ -86,29 +86,35 @@ final class MovePaymentQueryTest extends TestCase
         self::assertSame(0, $kit->move->wildTokensUsed([]));
     }
 
-    /** UT-25: M064〜M066 の 3 枚。最初のレベル 2 の入室だけ万能鍵が 3 つ与えられ（錠前は 2 つなので使えるのは 2 つ）、2 回目以降は無い。 */
-    public function testGrantedWildKeysOnlyForTheFirstLevelTwoEntry(): void
+    /** UT-25: M064〜M066 の 3 枚。最初のレベル 2 の入室だけ錠前を減らし（重ねて -3 だが錠前は 2 つなので最大 -2）、2 回目以降は無い。 */
+    public function testLockReductionOnlyForTheFirstLevelTwoEntry(): void
     {
         $kit = new QueryKit();
         $kit->game->giveTableau(1, ['M064', 'M065', 'M066']);
 
-        self::assertSame(3, $kit->move->grantedWildKeys(1, 2));
-        self::assertSame(2, $kit->move->usableGrantedWildKeys(1, 2));
-        self::assertSame(0, $kit->move->grantedWildKeys(1, 1)); // レベル 1 の部屋
+        self::assertSame(2, $kit->move->lockReduction(1, 2));
+        self::assertSame(0, $kit->move->lockReduction(1, 1)); // レベル 1 の部屋
 
         $kit->game->lv2Entries = 1; // 2 回目のレベル 2 の入室
-        self::assertSame(0, $kit->move->grantedWildKeys(1, 2));
-        self::assertSame(0, $kit->move->usableGrantedWildKeys(1, 2));
+        self::assertSame(0, $kit->move->lockReduction(1, 2));
     }
 
-    public function testGrantedWildKeysFollowTheNumberOfCardsAndOnceUsed(): void
+    public function testLockReductionFollowsTheNumberOfCards(): void
     {
         $kit = new QueryKit();
-        self::assertSame(0, $kit->move->grantedWildKeys(1, 2));
+        self::assertSame(0, $kit->move->lockReduction(1, 2));
         $kit->game->giveTableau(1, ['M064']);
-        self::assertSame(1, $kit->move->usableGrantedWildKeys(1, 2));
-        $kit->game->markOnceUsed(1, 'M064.1');
-        self::assertSame(0, $kit->move->grantedWildKeys(1, 2));
+        self::assertSame(1, $kit->move->lockReduction(1, 2));
+        $kit->game->giveTableau(1, ['M065']);
+        self::assertSame(2, $kit->move->lockReduction(1, 2));
+    }
+
+    /** M064〜M066 は手札にある間は働かない。 */
+    public function testLockReductionIgnoresCardsInHand(): void
+    {
+        $kit = new QueryKit();
+        $kit->game->giveHand(1, ['M064']);
+        self::assertSame(0, $kit->move->lockReduction(1, 2));
     }
 
     /** UT-26: 周遊ボーナスで得た心光・万能移動鍵トークンは、その部屋の後の部屋の支払いに使える。 */
