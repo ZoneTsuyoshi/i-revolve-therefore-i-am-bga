@@ -7,7 +7,8 @@ import { FakeBgaAnimations, FakeBgaCards, FakeElement, installFakeDom } from './
 installFakeDom();
 const { buildCardTexts } = await import('../../src/modules/js/ui/texts.js');
 const { captionOf, describeCard, describeLock, formatScoreTable, fmt, indexCatalog, isLandscapeKey, keyKind } = await import('../../src/modules/js/ui/card-info-model.js');
-const { tooltipPosition, zoomLayout } = await import('../../src/modules/js/ui/zoom-math.js');
+const { tooltipImageSize, tooltipPosition, zoomLayout } = await import('../../src/modules/js/ui/zoom-math.js');
+const { CardInfo } = await import('../../src/modules/js/ui/card-info.js');
 const { recallFromGamedatas } = await import('../../src/modules/js/board/view-model.js');
 const { createCardManagers } = await import('../../src/modules/js/cards/managers.js');
 const { CommonNotifications } = await import('../../src/modules/js/notifications.js');
@@ -207,6 +208,35 @@ test('tooltipPosition: 右に出し、入らなければ左。画面の外に出
   assert.deepEqual(tooltipPosition({ card: { left: 100, top: 700, right: 200, bottom: 790 }, tipW: 200, tipH: 150, vw: 1000, vh: 800 }), { left: 212, top: 642 });
   const tight = tooltipPosition({ card, tipW: 500, tipH: 100, vw: 400, vh: 800 });
   assert.ok(tight.left >= 8);
+});
+
+test('tooltipImageSize: 縦長は横に並べ、横長は積む。低い画面でも画面の半分以内に収まる', () => {
+  const portrait = tooltipImageSize({ landscape: false, vw: 1280, vh: 800 });
+  assert.equal(portrait.stacked, false);
+  assert.equal(portrait.imageW, 210);
+  assert.ok(Math.abs(portrait.imageH / portrait.imageW - 390 / 280) < 0.01);
+  const landscape = tooltipImageSize({ landscape: true, vw: 1280, vh: 800 });
+  assert.equal(landscape.stacked, true);
+  assert.equal(landscape.imageW, 300);
+  const short = tooltipImageSize({ landscape: false, vw: 800, vh: 320 });
+  assert.ok(short.imageH <= 320 * 0.5);
+  assert.ok(tooltipImageSize({ landscape: false, vw: 0, vh: 0 }).imageW > 0);
+});
+
+test('CardInfo: クリックでは拡大を開かない（選択を邪魔しない）。長押しの直後の click だけ止める', () => {
+  const info = new CardInfo({ root: new FakeElement('div'), recallPanel: new FakeElement('div'), texts, catalog: undefined, imgUrl: (f) => f });
+  let opened = 0;
+  info.openZoom = () => { opened += 1; };
+  let stopped = 0;
+  const event = { target: null, preventDefault() {}, stopPropagation() { stopped += 1; } };
+  info.handleClick(event);
+  assert.equal(opened, 0);
+  assert.equal(stopped, 0, '通常のクリックは止めない（選択に届く）');
+  info.suppressClick = true;
+  info.handleClick(event);
+  assert.equal(stopped, 1);
+  assert.equal(info.suppressClick, false);
+  assert.equal(opened, 0);
 });
 
 test('recallFromGamedatas: 想起フェイズで表向きの部屋のカードがあるときだけ', () => {

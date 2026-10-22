@@ -75,3 +75,19 @@ export function tooltipPosition({ card, tipW, tipH, vw, vh }) {
     const top = Math.min(Math.max(MARGIN, card.top), Math.max(MARGIN, vh - tipH - MARGIN));
     return { left: Math.round(left), top: Math.round(top) };
 }
+
+/**
+ * ツールチップの中の拡大画像の寸法。想い出カード（縦長）は画像の右にテキスト、横長カードは画像の上にテキスト（stacked）。
+ * 画面が低いときは、高さを画面の 45 % までに抑える。
+ * @param {object} p
+ * @param {boolean} p.landscape 横長のカードか
+ * @param {number} p.vw window.innerWidth
+ * @param {number} p.vh window.innerHeight
+ * @returns {{ imageW: number, imageH: number, stacked: boolean }}
+ */
+export function tooltipImageSize({ landscape, vw, vh }) {
+    const ratio = landscape ? LANDSCAPE_RATIO : PORTRAIT_RATIO;
+    const wantW = landscape ? 300 : 210;
+    const imageW = Math.max(80, Math.floor(Math.min(wantW, vw * 0.5, (vh * 0.45) / ratio)));
+    return { imageW, imageH: Math.round(imageW * ratio), stacked: landscape };
+}

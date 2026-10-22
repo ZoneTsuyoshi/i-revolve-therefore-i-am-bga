@@ -165,14 +165,19 @@ html[data-theme="dark"] {
     min-width: 0;
 }
 
-/* 部屋: 床カードが下端、裏向きの想い出カードが上端の水平中央（009 §3.1） */
+/*
+ * 部屋: 床カードが下端、裏向きの想い出カードが上端の水平中央（009 §3.1）。
+ * 重ねる配置（abs）は、Stock の要素ではなく、その外の箱（-box）に持たせる。
+ * bga-cards の CSS が Stock の要素の position を上書きしても（実機で起きた）、箱の位置は変わらない。
+ * Stock の要素（.ir-room-floor・.ir-slot-room-card）は箱の中で通常の流れに置く。
+ */
 .ir-room {
     position: relative;
     width: var(--ir-room-w);
     height: var(--ir-room-h);
 }
 
-.ir-room-floor {
+.ir-room-floor-box {
     position: absolute;
     bottom: 0;
     left: 0;
@@ -180,7 +185,7 @@ html[data-theme="dark"] {
     height: var(--ir-room-floor-h);
 }
 
-.ir-slot-room-card {
+.ir-room-card-box {
     position: absolute;
     top: 0;
     left: 50%;
@@ -188,8 +193,24 @@ html[data-theme="dark"] {
     width: var(--ir-room-card-w);
     height: var(--ir-room-card-h);
     transform: translateX(-50%);
-    border: 1px dashed var(--ir-slot-border);
-    border-radius: 4px;
+}
+
+/* 枠は outline（寸法を食わない。カードの面が箱にぴったり重なる） */
+.ir-room-floor,
+.ir-slot-room-card {
+    border: 0;
+    outline: 1px dashed var(--ir-slot-border);
+    outline-offset: -1px;
+}
+
+.ir-room-floor {
+    width: var(--ir-room-w);
+    height: var(--ir-room-floor-h);
+}
+
+.ir-slot-room-card {
+    width: var(--ir-room-card-w);
+    height: var(--ir-room-card-h);
 }
 
 /* ミープルは左右の余白（U-3）。器だけ置く */
@@ -648,6 +669,7 @@ html[data-theme="dark"] {
 /* カードが入った器は破線の枠を消す（枠の分だけカードがはみ出さないように） */
 .ir-slot:has(.ir-card) {
     border-color: transparent;
+    outline-color: transparent;
     background: none;
 }
 
@@ -896,18 +918,34 @@ html[data-theme="dark"] {
     font-weight: bold;
 }
 
-/* ツールチップ（マウスのみ。body 直下。カードの横に出る） */
+/* ツールチップ（マウスのみ。body 直下。カードの横に出る）。拡大画像と英語テキスト。縦長は横に並べ、横長は縦に積む */
 .ir-tip {
     position: fixed;
     z-index: 10000;
+    display: flex;
+    gap: 10px;
     box-sizing: border-box;
-    max-width: min(320px, 90vw);
+    max-width: min(560px, 92vw);
     padding: 8px 10px;
     border: 1px solid var(--ir-tip-border);
     border-radius: 6px;
     background: var(--ir-tip-bg);
     box-shadow: 0 2px 8px var(--ir-tip-shadow);
     pointer-events: none;
+}
+
+.ir-tip.ir-tip-stacked {
+    flex-direction: column;
+    max-width: min(340px, 92vw);
+}
+
+.ir-tip-image {
+    flex: none;
+}
+
+.ir-tip > .ir-info {
+    flex: 1 1 180px;
+    min-width: 0;
 }
 
 /* 拡大表示（body 直下。高さと上端は JS が window.innerHeight から決める） */
