@@ -110,7 +110,7 @@ body::before {
 /* ---- 2. ルートと盤面の配置 ---- */
 
 /*
- * 配置（010 §3）。DOM の並びは ir-recall-panel（環の上。ir-pick-panel も先頭に入る）、ir-main（環と山札）、ir-common（精神トラック・強化自我の山・目標）、ir-players。
+ * 配置（010 §3）。DOM の並びは ir-recall-panel（xl・wide は共通の列の先頭、medium・narrow は環の上。ir-pick-panel も先頭に入る）、ir-main（環と山札）、ir-common（精神トラック・強化自我の山・目標）、ir-players。
  * xl: 左に環、中に共通の列、右にプレイヤーの列（grid）。wide: 環と共通の列の下にプレイヤーを内容の幅で折り返す。
  * medium: 環 → 共通 → プレイヤー（1 列）。narrow: flex の order で、想起 → 環 → 自分 → 共通 → 他プレイヤー（010 §3.7）。
  * 左右に 8px の余白を取り（padding）、最大幅 2000px で中央寄せ。Layout.js は padding を除いた幅を Wc とする。
@@ -194,7 +194,7 @@ body::before {
 }
 
 /*
- * 想起の案内パネル（ir-recall-panel。想起中だけ）と候補の置き場（ir-pick-panel。ドラフトなど）は、どちらも環の上（top）。
+ * 候補の置き場（ir-pick-panel。ドラフトなど）は環の上（top）。想起の案内パネル（ir-recall-panel。想起中だけ）は、medium・narrow では環の上（top）。
  * 同時には出ない。出ている間だけ先頭に top の行を足す（空の行の隙間を作らない）。
  */
 .ir-root[data-layout="xl"]:has(> .ir-pick-panel, > .ir-recall-panel:not([hidden])) {
@@ -217,6 +217,24 @@ body::before {
         "main"
         "common"
         "players";
+}
+
+/*
+ * xl・wide の想起の案内パネルは、共通の列の先頭（精神トラックの上、環の右）に置く。想起効果で環の中の場札や部屋を選ぶので、環は動かさない。
+ * 想起中は環が 2 行にまたがる。パネルの幅は共通の列の幅に合わせる（中身の幅で列を広げない）。
+ */
+.ir-root[data-layout="xl"]:has(> .ir-recall-panel:not([hidden])) {
+    grid-template:
+        "main recall players" auto
+        "main common players" auto
+        ". . players" 1fr / max-content max-content max-content;
+}
+
+.ir-root[data-layout="wide"]:has(> .ir-recall-panel:not([hidden])) {
+    grid-template-areas:
+        ". main recall ."
+        ". main common ."
+        "players players players players";
 }
 
 .ir-slot-host:empty {
@@ -1491,3 +1509,27 @@ html[data-ir-layout="wide"] .bga-jump-to_controls {
     display: none;
 }
 /* stylelint-enable selector-class-pattern */
+
+/* xl・wide の想起の案内パネルは共通の列の先頭（上の grid の規則）。列の幅に収め、画像は小さく、文字は横に置き、入らなければ下に回す。他の規則より後ろに置く */
+.ir-root[data-layout="xl"] .ir-recall-panel,
+.ir-root[data-layout="wide"] .ir-recall-panel {
+    grid-area: recall;
+    width: 0;
+    min-width: 100%;
+}
+
+.ir-root[data-layout="xl"] .ir-recall-panel:not([hidden]),
+.ir-root[data-layout="wide"] .ir-recall-panel:not([hidden]) {
+    flex-wrap: wrap;
+}
+
+.ir-root[data-layout="xl"] .ir-recall-image.ir-face,
+.ir-root[data-layout="wide"] .ir-recall-image.ir-face {
+    width: min(calc(var(--ir-w) * 1.2), 120px);
+}
+
+.ir-root[data-layout="xl"] .ir-recall-body,
+.ir-root[data-layout="wide"] .ir-recall-body {
+    flex: 1 1 140px;
+}
+
