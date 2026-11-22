@@ -24,11 +24,11 @@ export class PlayerNotifications {
     }
 
     /**
-     * 他人の手札の枚数を通知の `hand_count` に合わせる（自分の手札は Stock の枚数が正）。
+     * 他人の手札の枚数を通知の `hand_count` に合わせる。他プレイヤーの領域には手札のマットも枚数チップも無いので、パネルだけに反映する（010 §4）。
      * @param {Args} args
      */
     syncHandCount(args) {
-        this.areas.setHandCount(toInt(args?.player_id), args?.hand_count);
+        this.syncPanelHand(args);
     }
 
     /**
@@ -252,6 +252,7 @@ export class PlayerNotifications {
     /** N21: 自己構成スコアの変化（プレイヤーパネルのカウンター。共通側と重ならない） */
     async notif_scoreUpdated(/** @type {Args} */ args) {
         this.panels?.setScores(args?.scores);
+        this.areas.setScores(args?.scores);
     }
 
     async notif_handEnergyUpdated(/** @type {Args} */ args) {

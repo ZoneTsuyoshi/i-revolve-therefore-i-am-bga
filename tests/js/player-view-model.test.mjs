@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   HAND_LIMIT, applyTotals, compareHand, composedModel, energyMap, handCard, handCountState, handModel, intList, memoryInfoTable,
-  privateArg, restoreWild, tokensModel, underModel,
+  privateArg, restoreWild, scoreLabel, tokenChip, tokensModel, underModel, handWarning, TOKEN_KINDS,
 } from '../../src/modules/js/board/player-view-model.js';
 import { CLASS_SELECTABLE, CLASS_SELECTED, nextSelection, selectionClasses } from '../../src/modules/js/cards/selection.js';
 
@@ -97,4 +97,27 @@ test('selectionClasses: 選択中は選択中の印だけ。選べないカー�
   assert.deepEqual(selectionClasses({ selectable: true, selected: false }), [CLASS_SELECTABLE]);
   assert.deepEqual(selectionClasses({ selectable: true, selected: true }), [CLASS_SELECTED]);
   assert.deepEqual(selectionClasses({ selectable: false, selected: false }), []);
+});
+
+test('tokenChip: 万能移動鍵は表 + 使用済みで 1 つ、0 個は zero', () => {
+  assert.deepEqual(TOKEN_KINDS.map((k) => k.kind), ['light', 'wildUp', 'compose', 'analysis']);
+  const t = tokensModel({ light: 3, wildUp: 3, wildUsed: 1, compose: 0, analysis: 2 });
+  assert.deepEqual(tokenChip('wildUp', t), { count: 3, usedCount: 1, zero: false });
+  assert.deepEqual(tokenChip('light', t), { count: 3, usedCount: null, zero: false });
+  assert.deepEqual(tokenChip('compose', t), { count: 0, usedCount: null, zero: true });
+  assert.equal(tokenChip('wildUp', tokensModel({ wildUsed: 2 })).zero, false, '裏だけでも 0 個ではない');
+  assert.equal(tokenChip('wildUp', tokensModel(null)).zero, true);
+});
+
+test('handWarning: 上限 8 を超えたときだけ警告', () => {
+  assert.equal(handWarning(0), null);
+  assert.equal(handWarning(8), null);
+  assert.deepEqual(handWarning(9), { text: '9 / 8' });
+  assert.deepEqual(handWarning('10'), { text: '10 / 8' });
+});
+
+test('scoreLabel: 名前の行の N / 20', () => {
+  assert.equal(scoreLabel(7), '7 / 20');
+  assert.equal(scoreLabel('x'), '0 / 20');
+  assert.equal(scoreLabel(-3), '0 / 20');
 });

@@ -2,10 +2,11 @@
  * プレイヤーの領域の描画（仕様書 009 §3.7〜§3.11、§4、§13）。U-2 の器（`board/Board.js` の `playerAreas`）に bga-cards の Stock を作り、
  * getAllDatas と通知で更新する。表示の元になる値の変換は `player-view-model.js`（純粋関数）にある。
  *
- * - 全員: 初期自我・強化自我（LineStock、横長）、獲得した目標カード、トークン（心光・万能移動鍵の表/使用済み・自己構成・精神分析）、
+ * - 全員: 名前の行（ミープル・名前・N / 20・手番の印）、初期自我・強化自我（LineStock、横長。強化自我は獲得するまで非表示）、
+ *   獲得した目標カード（1 枚以上のときだけ表示）、トークンのチップ 4 種（心光・万能移動鍵（表 + 使用済み）・自己構成・精神分析）、
  *   自己構成済みカード（LineStock、折り返し。横向き＝`ir-tapped` ＋「Used」帯）、I08 の下のカードの枚数バッジ
- * - 自分だけ: 手札（LineStock、折り返し、レベル・エネルギー・番号順。上限 8 の表示）、I08 の下のカードの中身
- * - 他人: 手札は枚数チップだけ（Stock を作らない）
+ * - 自分だけ: 手札（LineStock、折り返し、レベル・エネルギー・番号順。上限 8 を超えたときだけタブに警告）、I08 の下のカードの中身
+ * - 他人: 手札のマットを持たない（枚数はパネルだけ。010 §4・§5.1）
  * - 選択: `this.selection`（`cards/selection.js` の SelectionController）。`selectHand`・`selectComposed`・`clearSelection`
  *
  * U-4 の `CommonArea.playerStocks`（自我・目標の最小の Stock）はここへ引き取った。
@@ -15,10 +16,11 @@ import { paintUiSprite } from '../cards/card-face.js';
 import { CLASS_SELECTABLE, CLASS_SELECTED, SelectionController, selectionClasses } from '../cards/selection.js';
 import { el } from '../ui/dom.js';
 import {
-    HAND_LIMIT, TOKEN_KINDS, applyTotals, compareHand, composedModel, energyMap, handCard, handCountState, handModel, memoryInfoTable,
-    restoreWild, tokensModel, underModel,
+    TOKEN_KINDS, applyTotals, compareHand, composedModel, energyMap, handCard, handCountState, handModel, handWarning, memoryInfoTable,
+    restoreWild, scoreLabel, tokenChip, tokensModel, underModel,
 } from './player-view-model.js';
-import { egoCard, faceUpMemory, objectivesModel, toInt } from './view-model.js';
+import { scoresFromArgs } from './player-panel-model.js';
+import { colorName, egoCard, faceUpMemory, meepleSprite, objectivesModel, toInt } from './view-model.js';
 
 /**
  * @typedef {object} PlayerAreasDeps
@@ -28,6 +30,7 @@ import { egoCard, faceUpMemory, objectivesModel, toInt } from './view-model.js';
  * @property {import('../cards/card-face.js').ImgUrl} imgUrl
  * @property {() => boolean} animationsActive
  * @property {number | null} [me] 自分の ID（観戦者は null）
+ * @property {Record<string, { name?: string, color?: string }>} [players] `gamedatas.players`（名前の行のミープルの色）
  */
 
 /**
@@ -68,7 +71,6 @@ function tokenTitle(kind) {
     switch (kind) {
         case 'light': return _('Psychic Light');
         case 'wildUp': return _('Omni-Move Key');
-        case 'wildUsed': return _('Omni-Move Key (used)');
         case 'compose': return _('Construct token');
         case 'analysis': return _('Psychoanalysis token');
         default: return '';
@@ -86,14 +88,13 @@ export class PlayerAreas {
         this.imgUrl = deps.imgUrl;
         this.animationsActive = deps.animationsActive;
         this.me = deps.me ?? null;
+        this.players = deps.players ?? {};
         /** @type {Map<number, PlayerStocks>} */
         this.stocks = new Map();
         /** @type {Map<number, import('./player-view-model.js').Tokens>} */
         this.tokens = new Map();
         /** @type {Map<number, Record<string, { root: HTMLElement, count: HTMLElement }>>} */
         this.tokenEls = new Map();
-        /** @type {Map<number, number>} 他人（観戦時は全員）の手札の枚数 */
-        this.handCounts = new Map();
         /** @type {Map<number, { level: number, energy: number }>} 想い出カードの種類 → レベルと印刷のエネルギー */
         this.info = new Map();
         /** @type {Map<number, { level: number, energy: number, type: number }>} 手札のカードの並び順の元（id → 現在の値） */
@@ -109,7 +110,7 @@ export class PlayerAreas {
         this.selection = new SelectionController();
         /** @type {HTMLElement[]} 「自己構成するカード」の印を付けた手札の要素 */
         this.marked = [];
-        /** @type {HTMLElement | null} 手札の区画の見出しに足した「Discard 2 for Psychic Light」ボタン */
+        /** @type {HTMLElement | null} 手札のタブに足した「Discard 2 for Psychic Light」ボタン */
         this.discardButton = null;
         /** @type {(() => void) | null} */
         this.discardButtonHandler = null;
@@ -150,6 +151,7 @@ export class PlayerAreas {
         const playerData = gamedatas?.playerData ?? {};
         for (const playerId of this.refs.playerAreas.keys()) {
             const data = playerData[playerId];
+            this.renderHeader(playerId, data?.score);
             this.renderTokens(playerId);
             this.setTokens(playerId, data?.tokens, true);
             const stocks = this.stocks.get(playerId);
@@ -159,16 +161,15 @@ export class PlayerAreas {
                 jobs.push(stocks?.ego.addCard(ego));
             }
             if (enh !== null) {
+                this.reveal(playerId, 'enhEgo');
                 jobs.push(stocks?.enhEgo.addCard(enh));
             }
             for (const entry of composedModel(data?.composed)) {
                 jobs.push(this.addComposed(playerId, entry.card, { tapped: entry.tapped, underCount: entry.underCount }));
             }
-            if (stocks?.hand === null || stocks?.hand === undefined) {
-                this.setHandCount(playerId, data?.handCount);
-            }
         }
         for (const entry of objectivesModel(gamedatas?.objectives).owned) {
+            this.reveal(entry.owner, 'owned');
             jobs.push(this.stocks.get(entry.owner)?.owned.addCard(entry.card));
         }
         const mine = this.me === null ? undefined : this.stocks.get(this.me);
@@ -206,6 +207,55 @@ export class PlayerAreas {
     setTurn(playerId) {
         for (const [id, area] of this.refs.playerAreas) {
             area.area.classList.toggle('ir-turn', id === playerId);
+            area.turnMark.hidden = id !== playerId;
+        }
+    }
+
+    /**
+     * 名前の行を整える（プレイヤー色のミープルの形、N / 20）。
+     * @param {number} playerId
+     * @param {unknown} score
+     */
+    renderHeader(playerId, score) {
+        const refs = this.refs.playerAreas.get(playerId);
+        if (refs === undefined) {
+            return;
+        }
+        paintUiSprite(refs.meeple, meepleSprite(colorName(this.players[playerId]?.color)), this.imgUrl);
+        this.setScore(playerId, score);
+    }
+
+    /**
+     * 名前の行の自己構成スコア（パネルと同じ値。UxPdf A.1 のため 2 か所に出す。010 §4）。
+     * @param {number} playerId
+     * @param {unknown} score
+     */
+    setScore(playerId, score) {
+        const node = this.refs.playerAreas.get(playerId)?.score;
+        if (node !== undefined) {
+            node.textContent = scoreLabel(score);
+        }
+    }
+
+    /**
+     * N21 `scoreUpdated` の `scores`。
+     * @param {unknown} scores
+     */
+    setScores(scores) {
+        for (const [playerId, total] of scoresFromArgs(scores)) {
+            this.setScore(playerId, total);
+        }
+    }
+
+    /**
+     * 強化自我の枠・獲得した目標の欄を表示する（持つまでは `hidden`）。カードを加える直前に呼ぶ（非表示のままだと行き先の位置が取れない。010 §5.2）。
+     * @param {number} playerId
+     * @param {'enhEgo' | 'owned'} kind
+     */
+    reveal(playerId, kind) {
+        const refs = this.refs.playerAreas.get(playerId);
+        if (refs !== undefined) {
+            (kind === 'enhEgo' ? refs.enhEgo : refs.ownedGoals).hidden = false;
         }
     }
 
@@ -268,10 +318,17 @@ export class PlayerAreas {
         }
         for (const { kind } of TOKEN_KINDS) {
             const entry = els[kind];
-            const value = tokens[kind];
-            entry.count.textContent = kind === 'wildUsed' ? _('+ ${n} used').replace('${n}', String(value)) : String(value);
-            entry.root.classList.toggle('ir-zero', value === 0);
-            if (flip && previous !== undefined && previous[kind] !== value) {
+            const chip = tokenChip(kind, tokens);
+            entry.count.textContent = chip.usedCount === null ? String(chip.count) : _('${n} + ${m} used').replace('${n}', String(chip.count)).replace('${m}', String(chip.usedCount));
+            entry.root.classList.toggle('ir-zero', chip.zero);
+            const label = `${tokenTitle(kind)}: ${entry.count.textContent}`;
+            entry.root.dataset.label = label;
+            if (entry.root.getAttribute('role') !== 'button') {
+                entry.root.setAttribute('title', label);
+                entry.root.setAttribute('aria-label', label);
+            }
+            const changed = previous !== undefined && (previous[kind] !== tokens[kind] || (kind === 'wildUp' && previous.wildUsed !== tokens.wildUsed));
+            if (flip && changed) {
                 // 反転は CSS のアニメーション（.ir-token-flip）。クラスは付け直して再生する
                 entry.root.classList.toggle('ir-token-flip', false);
                 entry.root.classList.toggle('ir-token-flip', this.animationsActive());
@@ -281,31 +338,7 @@ export class PlayerAreas {
 
     // ---- 手札 ----
 
-    /**
-     * 他人の手札の枚数チップ（カードの束のアイコン + 数字。009 §3.11）。観戦時は全員。手札の Stock を持つ自分には使わない。
-     * @param {number} playerId
-     * @param {unknown} count
-     */
-    setHandCount(playerId, count) {
-        if (count === undefined || count === null || this.isMine(playerId)) {
-            return;
-        }
-        const n = handCountState(toInt(count), false).count;
-        this.handCounts.set(playerId, n);
-        const holder = this.refs.playerAreas.get(playerId)?.handCount;
-        if (holder === null || holder === undefined) {
-            return;
-        }
-        if (holder.children.length === 0) {
-            holder.append(el('span', { class: 'ir-hand-icon', attrs: { 'aria-hidden': 'true' } }), el('span', { class: 'ir-hand-count-text' }));
-        }
-        const text = holder.querySelector('.ir-hand-count-text');
-        if (text !== null) {
-            text.textContent = String(n);
-        }
-    }
-
-    /** 自分の手札の枚数と上限の表示（超えたら印と文言で示す。色だけにしない） */
+    /** 自分の手札が上限を超えたときだけ、手札のタブに印と「N / 8」の警告を出す（色だけにしない。010 §4） */
     refreshHandCount() {
         const mine = this.me === null ? undefined : this.stocks.get(this.me);
         const info = this.me === null ? null : this.refs.playerAreas.get(this.me)?.handInfo;
@@ -313,12 +346,17 @@ export class PlayerAreas {
             return;
         }
         const state = handCountState(mine.hand.getCards().length, true);
-        let text = _('${n} / ${max}').replace('${n}', String(state.count)).replace('${max}', String(HAND_LIMIT));
-        if (state.over) {
-            text += ` ${_('(over the limit)')}`;
-        }
-        info.textContent = text;
+        const warning = handWarning(state.count);
+        info.textContent = warning === null ? '' : `${warning.text} ${_('(over the limit)')}`;
+        info.hidden = warning === null;
         info.classList.toggle('ir-over-limit', state.over);
+        if (warning !== null) {
+            info.setAttribute('title', _('Over the hand limit'));
+            info.setAttribute('aria-label', `${_('Over the hand limit')}: ${warning.text}`);
+        } else {
+            info.removeAttribute('title');
+            info.removeAttribute('aria-label');
+        }
         this.selection.refresh();
     }
 
@@ -576,6 +614,9 @@ export class PlayerAreas {
         const card = egoCard(egoId);
         const stock = this.stocks.get(playerId)?.[kind];
         if (card !== null && stock !== undefined) {
+            if (kind === 'enhEgo') {
+                this.reveal(playerId, kind);
+            }
             await stock.addCard(card, from === undefined ? undefined : { fromElement: from });
         }
     }
@@ -595,6 +636,7 @@ export class PlayerAreas {
         if (points !== undefined && points !== null) {
             this.goalPoints.set(key, toInt(points));
         }
+        this.reveal(playerId, 'owned');
         await owned.addCard({ id: key, key });
         this.refreshGoalBadges();
     }
@@ -686,7 +728,7 @@ export class PlayerAreas {
     }
 
     /**
-     * 手札の区画の見出しに、小さなボタン（手札を捨てて心光を得る。ターンプレイヤーだけ。010 §2.4）を出す。前のものは外す。
+     * 手札のマットのタブに、小さなボタン（手札を捨てて心光を得る。ターンプレイヤーだけ。010 §2.4）を出す。前のものは外す。
      * @param {{ label: string, tooltip: string, onClick: () => void }} options
      */
     showDiscardButton({ label, tooltip, onClick }) {
@@ -700,12 +742,14 @@ export class PlayerAreas {
         button.addEventListener('click', onClick);
         this.discardButtonHandler = onClick;
         title.append(button);
+        title.parentElement?.classList.add('ir-zone-has-button');
         this.discardButton = button;
     }
 
-    /** 見出しの小さなボタンを外す */
+    /** タブの小さなボタンを外す */
     clearDiscardButton() {
         if (this.discardButton !== null) {
+            this.discardButton.parentElement?.parentElement?.classList.remove('ir-zone-has-button');
             if (this.discardButtonHandler !== null) {
                 this.discardButton.removeEventListener('click', this.discardButtonHandler);
             }
@@ -800,7 +844,9 @@ export class PlayerAreas {
             for (const name of ['role', 'tabindex', 'aria-label']) {
                 root.removeAttribute(name);
             }
-            root.setAttribute('title', tokenTitle(kind));
+            const label = root.dataset.label ?? tokenTitle(kind);
+            root.setAttribute('title', label);
+            root.setAttribute('aria-label', label);
         };
     }
 

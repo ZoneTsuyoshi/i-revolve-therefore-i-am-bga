@@ -114,6 +114,7 @@ export class Game {
             imgUrl: (file) => this.bga.images.getImgUrl(file),
             animationsActive: () => this.bga.gameui.bgaAnimationsActive(),
             me: spectator ? null : int(this.bga.players.getCurrentPlayerId()),
+            players: gamedatas?.players ?? {},
         });
         this.playerAreas = playerAreas;
         // 共通の領域（回廊・場札・山札・精神トラック・強化自我・目標。U-4）。中身は gamedatas から描く

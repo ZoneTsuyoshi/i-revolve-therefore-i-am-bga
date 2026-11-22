@@ -37,13 +37,19 @@ export const LAND_RATIO = 287 / 400;
 export const LAYOUT_RANK = { narrow: 0, medium: 1, wide: 2, xl: 3 };
 
 /**
- * プレイヤーの列の幅 P_w = 4 × wp + 3g + 22（22 は区画の枠と余白）。
+ * プレイヤーの領域の内側の枠と余白の合計（領域の枠 1 + 余白 6、手札・自己構成済みのマットの枠 1 + 余白 6 を両側で 28。
+ * 手番の太い枠 3px は余白を 2px 減らして打ち消すので同じ）。CSS の `--ir-area-chrome` と一致させる。仕様 010 §3.3 の 22 からの読み替え。
+ */
+export const AREA_CHROME = 28;
+
+/**
+ * プレイヤーの列の幅 P_w = 4 × wp + 3g + AREA_CHROME。
  * @param {number} wp
  * @param {number} gap
  * @returns {number}
  */
 export function playerColumnWidth(wp, gap) {
-  return 4 * wp + 3 * gap + 22;
+  return 4 * wp + 3 * gap + AREA_CHROME;
 }
 
 /**
