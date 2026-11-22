@@ -38,3 +38,6 @@ id_ed25519*
 
 # 原本アセット（カード画像・ルールブックなど）。リポジトリには上げず、ローカルにのみ置く
 /data/
+
+# ローカルのプレビューの撮影の出力（scripts/preview/shoot.mjs）
+/scripts/preview/out/

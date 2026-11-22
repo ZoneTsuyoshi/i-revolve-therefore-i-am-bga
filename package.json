@@ -22,7 +22,10 @@
     "build:sprites": "node scripts/build-sprites.mjs",
     "check:sprites": "node scripts/check-sprites.mjs",
     "build:cards": "node scripts/build-card-data.mjs",
-    "check:cards": "node scripts/check-card-data.mjs"
+    "check:cards": "node scripts/check-card-data.mjs",
+    "preview": "node scripts/preview/serve.mjs",
+    "preview:shots": "node scripts/preview/shoot.mjs",
+    "preview:fixtures": "sh scripts/preview/dump-fixtures.sh"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -31,6 +34,7 @@
     "globals": "^17.13.0",
     "image-size": "2.0.4",
     "markdownlint-cli2": "^0.23.3",
+    "playwright-core": "^1.65.1",
     "sharp": "0.35.5",
     "stylelint": "^17.16.0",
     "stylelint-config-standard": "^40.0.0",
