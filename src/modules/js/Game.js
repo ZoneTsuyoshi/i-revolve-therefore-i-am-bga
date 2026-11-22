@@ -30,6 +30,7 @@ import { int } from './ui/dom.js';
 
 const BgaAnimations = await importEsmLib('bga-animations', '1.x');
 const BgaCards = await importEsmLib('bga-cards', '1.x');
+const BgaJumpTo = await importEsmLib('bga-jump-to', '1.x');
 
 export class Game {
     /**
@@ -43,6 +44,8 @@ export class Game {
         this.cards = null;
         /** @type {Layout | null} */
         this.layout = null;
+        /** @type {any} */
+        this.jumpTo = null;
         /** @type {CommonArea | null} */
         this.common = null;
         /** @type {PlayerAreas | null} */
@@ -152,10 +155,39 @@ export class Game {
         // 幅を測って data-layout と CSS 変数を入れ、以後は ResizeObserver で追従する。layout が変わるたびに piles と open の置き場所を替える
         this.layout = new Layout(board.root, (layout) => placeFloating(board, layout));
 
+        this.setupJumpTo(board, spectator);
+
         // ログの引数の整形（カード名・部屋名・トークン名。009 §9）。ログ・リプレイは setup の後に描かれる
         cardInfo.attachLog();
         this.hookLogFormat();
         this.setupNotifications();
+    }
+
+    /**
+     * ジャンプリンク（bga-jump-to。010 §3.7）。Board / You / Spirit & goals と各プレイヤーの領域へ移る。
+     * リンクは `<html data-ir-layout>` が medium・narrow のときだけ CSS で出す（xl・wide は全体が収まるので隠す）。
+     * 開閉は端末に覚える（localStorageFoldedKey）。初めは閉じておき（左端の丸 1 つ）、狭い画面でカードを隠さない。観戦者には You を出さない。
+     *
+     * @param {import('./board/Board.js').BoardRefs} board
+     * @param {boolean} spectator
+     */
+    setupJumpTo(board, spectator) {
+        const players = this.gamedatas?.players ?? {};
+        const me = spectator ? null : int(this.bga.players.getCurrentPlayerId());
+        const entries = [new BgaJumpTo.Entry(_('Board'), 'ir-main', { color: '#c9a45c' })];
+        if (me !== null && board.playerAreas.has(me)) {
+            entries.push(new BgaJumpTo.Entry(_('You'), `ir-player-area-${me}`, { color: `#${players[me]?.color ?? 'c9a45c'}` }));
+        }
+        entries.push(new BgaJumpTo.Entry(_('Spirit & goals'), 'ir-common', { color: '#8fb3d9' }));
+        for (const playerId of board.playerOrder) {
+            if (playerId === me) {
+                continue;
+            }
+            const info = players[playerId] ?? {};
+            const color = typeof info.color === 'string' && /^[0-9a-fA-F]{6}$/.test(info.color) ? `#${info.color}` : '#c9a45c';
+            entries.push(new BgaJumpTo.Entry(typeof info.name === 'string' ? info.name : String(playerId), `ir-player-area-${playerId}`, { color }));
+        }
+        this.jumpTo = new BgaJumpTo.Manager({ entries, element: this.bga.gameArea.getElement(), defaultFolded: true, localStorageFoldedKey: 'irevolvethereforeiam-jumpto-folded' });
     }
 
     /**

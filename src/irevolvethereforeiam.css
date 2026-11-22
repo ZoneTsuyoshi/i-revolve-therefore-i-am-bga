@@ -27,15 +27,25 @@
     --ir-gap: 8px;
     --ir-room-w: 171px;
     --ir-w: 102px;
+    --ir-wp: 104px;
+    --ir-wd: 102px;
     --ir-c: 119px;
     --ir-room-card-w: 85.5px;
 
     /* 高さはスプライトのセルの縦横比から求める: 想い出 280:390、横長 400:287 */
     --ir-h: calc(var(--ir-w) * 390 / 280);
+    --ir-hp: calc(var(--ir-wp) * 390 / 280);
     --ir-ch: calc(var(--ir-c) * 287 / 400);
     --ir-room-floor-h: calc(var(--ir-room-w) * 287 / 400);
     --ir-room-card-h: calc(var(--ir-room-card-w) * 390 / 280);
     --ir-room-h: calc(var(--ir-room-w) * 287 / 400 + var(--ir-room-w) * 0.3);
+
+    /*
+     * プレイヤーの領域（手札・自己構成済み）のカード幅 wp と、領域の幅 P_w = 4 wp + 3 g + 枠と余白（010 §3.3）。
+     * --ir-wp は JS（ui/Layout.js）が上書きする。--ir-area-chrome は領域の内側の枠・余白の合計（仕様の 22px に対し、現状の区画の枠で、手番の太い枠（3px）を含めて 44px。内側の作りを変えたら合わせる）。
+     */
+    --ir-area-chrome: 44px;
+    --ir-pw: calc(4 * var(--ir-wp) + 3 * var(--ir-gap) + var(--ir-area-chrome));
 
     /* 色（背景・枠・空き枠・パネル・文字。カード画像は共通） */
     --ir-text: #222;
@@ -101,12 +111,23 @@ body::before {
 
 /* ---- 2. ルートと盤面の配置 ---- */
 
+/*
+ * 配置（010 §3）。DOM の並びは ir-main（環と山札）、ir-common（精神トラック・強化自我の山・目標）、ir-recall-panel、ir-players。
+ * xl: 左に環、中に共通の列、右にプレイヤーの列（grid）。wide: 環と共通の列の下にプレイヤーを内容の幅で折り返す。
+ * medium: 環 → 共通 → プレイヤー（1 列）。narrow: flex の order で、環 → 想起 → 自分 → 共通 → 他プレイヤー（010 §3.7）。
+ * 左右に 8px の余白を取り（padding）、最大幅 2000px で中央寄せ。Layout.js は padding を除いた幅を Wc とする。
+ */
 .ir-root {
     box-sizing: border-box;
     width: 100%;
+    max-width: 2000px;
+    margin: 0 auto;
+    padding: 0 8px;
     color: var(--ir-text);
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: minmax(0, max-content);
+    place-content: start center;
+    align-items: start;
     gap: var(--ir-gap);
 
     --ir-slot-line: var(--ir-bare-line);
@@ -119,23 +140,63 @@ body::before {
     box-sizing: border-box;
 }
 
-/* wide: 左に環、右に共通の列。medium・narrow: 環の下に共通の領域 */
-.ir-board {
-    display: flex;
-    flex-direction: column;
-    gap: var(--ir-gap);
-}
-
-.ir-root[data-layout="wide"] .ir-board {
-    flex-direction: row;
-    align-items: flex-start;
-}
-
 .ir-main {
+    grid-area: main;
     display: flex;
     flex-direction: column;
     gap: var(--ir-gap);
     flex: none;
+    justify-self: center;
+}
+
+.ir-root[data-layout="xl"] {
+    /* 背の高いプレイヤーの列（行をまたぐ）の余りは、最後の行（1fr）だけが受ける。環の行を伸ばさない */
+    grid-template:
+        "main common players" auto
+        "recall recall players" 1fr / max-content max-content max-content;
+}
+
+/* wide: 両端の余白の列（1fr）を足し、プレイヤーの行が環と共通の列より広い root の全幅を使えるようにする */
+.ir-root[data-layout="wide"] {
+    grid-template-columns: minmax(0, 1fr) max-content max-content minmax(0, 1fr);
+    grid-template-areas:
+        ". main common ."
+        ". recall recall ."
+        "players players players players";
+}
+
+.ir-root[data-layout="medium"] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+        "main"
+        "common"
+        "recall"
+        "players";
+}
+
+/* 初期自我などの候補の置き場（ir-pick-panel）がある間だけ、先頭に pick の行を足す（空の行の隙間を作らない） */
+.ir-root[data-layout="xl"]:has(> .ir-pick-panel) {
+    grid-template:
+        "pick pick players" auto
+        "main common players" auto
+        "recall recall players" 1fr / max-content max-content max-content;
+}
+
+.ir-root[data-layout="wide"]:has(> .ir-pick-panel) {
+    grid-template-areas:
+        ". pick pick ."
+        ". main common ."
+        ". recall recall ."
+        "players players players players";
+}
+
+.ir-root[data-layout="medium"]:has(> .ir-pick-panel) {
+    grid-template-areas:
+        "pick"
+        "main"
+        "common"
+        "recall"
+        "players";
 }
 
 .ir-slot-host:empty {
@@ -169,7 +230,7 @@ body::before {
     height: var(--ir-ch);
 }
 
-/* 山札・捨札: 横 1 列（wide・medium の環の上）、narrow は環の中央に 2 × 2 */
+/* 山札・捨札: 横 1 列（xl・wide・medium の環の上）、narrow は環の中央に 2 × 2（環の中央に収まる幅 --ir-wd = 0.7 W。010 §3、390px で部屋に重なっていた） */
 .ir-piles {
     display: flex;
     flex-wrap: wrap;
@@ -178,7 +239,7 @@ body::before {
 
 .ir-root[data-layout="narrow"] .ir-piles {
     display: grid;
-    grid-template-columns: repeat(2, var(--ir-w));
+    grid-template-columns: repeat(2, var(--ir-wd));
     place-content: center center;
     height: 100%;
 }
@@ -297,6 +358,8 @@ body::before {
 /* ---- 5. 共通の領域 ---- */
 
 .ir-common {
+    grid-area: common;
+    justify-self: center;
     display: flex;
     flex-direction: column;
     gap: var(--ir-gap);
@@ -309,10 +372,16 @@ body::before {
     gap: var(--ir-gap);
 }
 
-/* medium: 精神トラックと目標カードを横に並べる。narrow: 積む */
+/* xl・wide: 精神トラック + 強化自我の山（3 c + 2 g）の幅で目標を折り返す。medium: 精神トラックと目標カードを横に並べる。narrow: 積む */
+.ir-root[data-layout="xl"] .ir-common,
+.ir-root[data-layout="wide"] .ir-common {
+    width: calc(var(--ir-c) * 3 + var(--ir-gap) * 2);
+}
+
 .ir-root[data-layout="medium"] .ir-common {
     flex-flow: row wrap;
     align-items: flex-start;
+    justify-content: center;
 }
 
 .ir-spirit-track {
@@ -342,6 +411,7 @@ body::before {
 }
 
 .ir-recall-panel {
+    grid-area: recall;
     padding: var(--ir-gap);
     border: 1px solid var(--ir-panel-border);
     border-radius: 4px;
@@ -351,9 +421,21 @@ body::before {
 /* ---- 6. プレイヤーの領域 ---- */
 
 .ir-players {
+    grid-area: players;
     display: flex;
     flex-direction: column;
     gap: var(--ir-gap);
+}
+
+/* wide・medium: 内容の幅 P_w の領域を横に並べ、入らなければ折り返す（中央寄せ、自分が先頭。010 §3.5）。xl: 右の列に縦に積む */
+.ir-root[data-layout="wide"] .ir-players,
+.ir-root[data-layout="medium"] .ir-players {
+    flex-flow: row wrap;
+    align-items: flex-start;
+    justify-content: center;
+
+    /* 折り返す行の幅を、grid の列の幅（環と共通の列）の計算に入れない（入れると全員が 1 行に並ぶ幅になる） */
+    contain: inline-size;
 }
 
 .ir-player-area {
@@ -365,6 +447,12 @@ body::before {
     border-radius: 4px;
     background: var(--ir-panel-bg);
     color: var(--ir-text);
+}
+
+/* xl・wide・medium: 領域は内容の幅 P_w（narrow は全幅） */
+.ir-root:not([data-layout="narrow"]) .ir-player-area {
+    flex: none;
+    width: var(--ir-pw);
 }
 
 /* 手番プレイヤーの領域は枠を太くする（色だけに頼らない。U-5 が .ir-turn を付ける） */
@@ -398,7 +486,7 @@ body::before {
     display: flex;
     flex-wrap: wrap;
     gap: var(--ir-gap);
-    min-height: var(--ir-h);
+    min-height: var(--ir-hp);
 }
 
 /* 手札と自己構成済みエリアの区画: 見出し・背景色・枠・間隔で分ける（009 §3.10） */
@@ -719,6 +807,7 @@ body::before {
 }
 
 .ir-pick-panel {
+    grid-area: pick;
     display: flex;
     flex-wrap: wrap;
     gap: var(--ir-gap);
@@ -766,8 +855,34 @@ body::before {
 
     /* stylelint-disable-next-line custom-property-pattern -- bga-cards の変数名 */
     --bga-cards_card-height: var(--ir-h) !important;
+
+    /* 実寸は effective-width / -height（bga-cards が要素に inline で入れる。回転しないので幅・高さと同じ値） */
+    /* stylelint-disable-next-line custom-property-pattern -- bga-cards の変数名 */
+    --bga-cards_card-effective-width: var(--ir-w) !important;
+
+    /* stylelint-disable-next-line custom-property-pattern -- bga-cards の変数名 */
+    --bga-cards_card-effective-height: var(--ir-h) !important;
     --width: var(--ir-w) !important;
     --height: var(--ir-h) !important;
+}
+
+.ir-stock-mp,
+.ir-stock-mp .ir-m {
+    /* プレイヤーの領域（手札・自己構成済み）のカードは幅 wp（010 §3.3）。詳細度を上げて .ir-m に勝つ。アニメーション中は標準幅に戻る */
+    /* stylelint-disable-next-line custom-property-pattern -- bga-cards の変数名 */
+    --bga-cards_card-width: var(--ir-wp) !important;
+
+    /* stylelint-disable-next-line custom-property-pattern -- bga-cards の変数名 */
+    --bga-cards_card-height: var(--ir-hp) !important;
+
+    /* 実寸は effective-width / -height（bga-cards が要素に inline で入れる。回転しないので幅・高さと同じ値） */
+    /* stylelint-disable-next-line custom-property-pattern -- bga-cards の変数名 */
+    --bga-cards_card-effective-width: var(--ir-wp) !important;
+
+    /* stylelint-disable-next-line custom-property-pattern -- bga-cards の変数名 */
+    --bga-cards_card-effective-height: var(--ir-hp) !important;
+    --width: var(--ir-wp) !important;
+    --height: var(--ir-hp) !important;
 }
 
 .ir-l,
@@ -778,6 +893,13 @@ body::before {
 
     /* stylelint-disable-next-line custom-property-pattern -- bga-cards の変数名 */
     --bga-cards_card-height: var(--ir-ch) !important;
+
+    /* 実寸は effective-width / -height（bga-cards が要素に inline で入れる。回転しないので幅・高さと同じ値） */
+    /* stylelint-disable-next-line custom-property-pattern -- bga-cards の変数名 */
+    --bga-cards_card-effective-width: var(--ir-c) !important;
+
+    /* stylelint-disable-next-line custom-property-pattern -- bga-cards の変数名 */
+    --bga-cards_card-effective-height: var(--ir-ch) !important;
     --width: var(--ir-c) !important;
     --height: var(--ir-ch) !important;
 }
@@ -790,6 +912,13 @@ body::before {
 
     /* stylelint-disable-next-line custom-property-pattern -- bga-cards の変数名 */
     --bga-cards_card-height: var(--ir-room-card-h) !important;
+
+    /* 実寸は effective-width / -height（bga-cards が要素に inline で入れる。回転しないので幅・高さと同じ値） */
+    /* stylelint-disable-next-line custom-property-pattern -- bga-cards の変数名 */
+    --bga-cards_card-effective-width: var(--ir-room-card-w) !important;
+
+    /* stylelint-disable-next-line custom-property-pattern -- bga-cards の変数名 */
+    --bga-cards_card-effective-height: var(--ir-room-card-h) !important;
     --width: var(--ir-room-card-w) !important;
     --height: var(--ir-room-card-h) !important;
 }
@@ -824,6 +953,13 @@ body::before {
 
     /* stylelint-disable-next-line custom-property-pattern -- bga-cards の変数名 */
     --bga-cards_card-height: var(--ir-room-floor-h) !important;
+
+    /* 実寸は effective-width / -height（bga-cards が要素に inline で入れる。回転しないので幅・高さと同じ値） */
+    /* stylelint-disable-next-line custom-property-pattern -- bga-cards の変数名 */
+    --bga-cards_card-effective-width: var(--ir-room-w) !important;
+
+    /* stylelint-disable-next-line custom-property-pattern -- bga-cards の変数名 */
+    --bga-cards_card-effective-height: var(--ir-room-floor-h) !important;
     --width: var(--ir-room-w) !important;
     --height: var(--ir-room-floor-h) !important;
 }
@@ -1224,3 +1360,69 @@ body::before {
     font-size: 12px;
     color: var(--ir-text-muted);
 }
+
+/* ---- 10. narrow の並びとジャンプリンク（010 §3.7。他の規則より後ろに置く） ---- */
+
+.ir-root[data-layout="narrow"] {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.ir-root[data-layout="narrow"] .ir-main {
+    order: 1;
+    align-self: center;
+}
+
+.ir-root[data-layout="narrow"] .ir-recall-panel {
+    order: 2;
+}
+
+/* 自分の領域は共通の領域より先、他プレイヤーはその後（#ir-players は箱を作らず、領域を root の直下に並べる） */
+.ir-root[data-layout="narrow"] .ir-players {
+    display: contents;
+}
+
+.ir-root[data-layout="narrow"] .ir-player-area {
+    order: 5;
+}
+
+.ir-root[data-layout="narrow"] .ir-player-area.ir-mine {
+    order: 3;
+}
+
+.ir-root[data-layout="narrow"] .ir-common {
+    order: 4;
+    align-self: center;
+}
+
+/* narrow の山札・捨札は幅 --ir-wd（部屋の 2 行の高さに 2 段が収まる大きさ） */
+.ir-root[data-layout="narrow"] .ir-pile-slot,
+.ir-root[data-layout="narrow"] .ir-pile-slot .ir-m {
+    /* stylelint-disable-next-line custom-property-pattern -- bga-cards の変数名 */
+    --bga-cards_card-width: var(--ir-wd) !important;
+
+    /* stylelint-disable-next-line custom-property-pattern -- bga-cards の変数名 */
+    --bga-cards_card-height: calc(var(--ir-wd) * 390 / 280) !important;
+
+    /* stylelint-disable-next-line custom-property-pattern -- bga-cards の変数名 */
+    --bga-cards_card-effective-width: var(--ir-wd) !important;
+
+    /* stylelint-disable-next-line custom-property-pattern -- bga-cards の変数名 */
+    --bga-cards_card-effective-height: calc(var(--ir-wd) * 390 / 280) !important;
+    --width: var(--ir-wd) !important;
+    --height: calc(var(--ir-wd) * 390 / 280) !important;
+}
+
+.ir-root[data-layout="narrow"] .ir-pile-slot {
+    width: var(--ir-wd);
+    height: calc(var(--ir-wd) * 390 / 280);
+}
+
+/* ジャンプリンク（bga-jump-to。盤面の外に置かれる）は、全体が収まる xl・wide では出さない（010 §3.7） */
+/* stylelint-disable selector-class-pattern -- bga-jump-to のクラス名 */
+html[data-ir-layout="xl"] .bga-jump-to_controls,
+html[data-ir-layout="wide"] .bga-jump-to_controls {
+    display: none;
+}
+/* stylelint-enable selector-class-pattern */

@@ -2,11 +2,11 @@
  * 盤面の枠（仕様書 009 §2.2・§2.4・§2.5・§15）を、空の器として作る。中身の描画は U-3〜U-6。
  * 器の id とクラスは 009 §15 に従う。後続のタスクは `refs` から器を取り、そこに Stock を作る。
  *
- * #ir-root
+ * #ir-root（xl・wide・medium は CSS の grid、narrow は flex の order で並べる。narrow は自分の領域を共通の領域より先に出す。010 §3）
  *   #ir-main
- *     #ir-slot-piles-top        … wide・medium では ir-piles がここ
+ *     #ir-slot-piles-top        … xl・wide・medium では ir-piles がここ
  *     #ir-cloister              … 4 × 4 グリッドの環（12 部屋 ir-room[data-pos]）
- *       #ir-cloister-center     … wide・medium は ir-open、narrow は ir-piles
+ *       #ir-cloister-center     … xl・wide・medium は ir-open、narrow は ir-piles
  *     #ir-slot-open-below       … narrow では ir-open がここ
  *   #ir-common                  … ir-spirit-track、ir-enh-pile、ir-goals
  *   #ir-recall-panel            … 想起中だけ表示（U-7）
@@ -150,7 +150,8 @@ export function buildBoard(host, { players = {}, playerOrder = [], me = null } =
     }
 
     const root = el('div', { id: 'ir-root', class: 'ir-root', data: { layout: 'wide' } }, [
-        el('div', { class: 'ir-board' }, [main, common]),
+        main,
+        common,
         recallPanel,
         playersEl,
     ]);
@@ -177,11 +178,11 @@ function buildPlayerArea(playerId, player, mine) {
     const enhEgo = slot('ir-slot-l ir-enh-ego');
     const tokens = el('div', { class: 'ir-tokens' });
     const ownedGoals = el('div', { class: 'ir-owned-goals ir-stock-l' });
-    const hand = mine ? el('div', { class: 'ir-hand ir-stock-m', attrs: { 'aria-label': _('Your hand') } }) : null;
+    const hand = mine ? el('div', { class: 'ir-hand ir-stock-mp', attrs: { 'aria-label': _('Your hand') } }) : null;
     const handCount = mine ? null : el('div', { class: 'ir-hand-count' });
     const handInfo = mine ? el('div', { class: 'ir-hand-info' }) : null;
-    const under = mine ? el('div', { class: 'ir-under ir-stock-m', attrs: { 'aria-label': _('Cards under a composed card') } }) : null;
-    const composed = el('div', { class: 'ir-composed ir-stock-m', attrs: { 'aria-label': _('Composed cards') } });
+    const under = mine ? el('div', { class: 'ir-under ir-stock-mp', attrs: { 'aria-label': _('Cards under a composed card') } }) : null;
+    const composed = el('div', { class: 'ir-composed ir-stock-mp', attrs: { 'aria-label': _('Composed cards') } });
     const name = el('span', { class: 'ir-player-name' }, [player.name ?? '']);
     if (typeof player.color === 'string' && /^[0-9a-fA-F]{6}$/.test(player.color)) {
         name.style.setProperty('--ir-player-color', `#${player.color}`);
@@ -210,9 +211,9 @@ function buildPlayerArea(playerId, player, mine) {
 
 /**
  * レイアウトに応じて、ir-piles と ir-open の置き場所を付け替える（009 §2.4）。
- * wide・medium: piles は環の上、open は環の中央。narrow: piles が環の中央、open は環の下。
+ * xl・wide・medium: piles は環の上、open は環の中央。narrow: piles が環の中央、open は環の下。
  * @param {BoardRefs} refs
- * @param {'wide' | 'medium' | 'narrow'} layout
+ * @param {import('../ui/layout-math.js').LayoutName} layout
  */
 export function placeFloating(refs, layout) {
     if (layout === 'narrow') {
