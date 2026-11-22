@@ -90,21 +90,21 @@ function build() {
   return { panels, text, hosts, scoreHolder };
 }
 
-test('setup: 3 行・各項目・標準のスコア欄を隠す', () => {
+test('setup: 2 行（スコア・手札 / 鍵 4 項目）。トークンと精神階層は出さない。標準のスコア欄を隠す', () => {
   const { text, hosts, scoreHolder } = build();
   const rows = hosts.get(P1)?.querySelector('.ir-pp')?.children ?? [];
-  assert.deepEqual(rows.map((r) => r.children.length), [3, 3, 5]);
+  assert.deepEqual(rows.map((r) => r.children.length), [2, 4]);
   assert.equal(text(P1, 'score'), '7 / 20');
   assert.equal(text(P1, 'hand'), '5');
-  assert.equal(text(P1, 'light'), '3');
-  assert.equal(text(P1, 'wild'), '3 + 1');
-  assert.equal(text(P1, 'compose'), '0');
-  assert.equal(text(P1, 'analysis'), '2');
-  assert.equal(text(P1, 'tier'), 'Tier 1');
+  for (const item of ['light', 'wild', 'compose', 'analysis', 'tier']) {
+    assert.equal(text(P1, item), undefined, `${item} はパネルに出さない`);
+  }
+  const items = hosts.get(P1)?.querySelector('.ir-pp')?.querySelectorAll('.ir-pp-item') ?? [];
+  assert.equal(items.length, 6);
+  assert.ok(items.every((i) => (i.attrs.title ?? '') !== '' && i.attrs['aria-label'] === i.attrs.title), '各項目に title と aria-label');
   assert.equal(text(P1, 'keyWISDOM'), '1');
   assert.equal(text(P1, 'keyWILL'), '1');
   assert.equal(text(P1, 'keyWILD'), '1');
-  assert.equal(text(P2, 'wild'), '4 + 0');
   assert.equal(text(P2, 'keyWISDOM'), '0');
   assert.ok(scoreHolder.hasClass('ir-hide-standard-score'));
 });
@@ -112,14 +112,12 @@ test('setup: 3 行・各項目・標準のスコア欄を隠す', () => {
 test('通知のフック: 手札・トークン・スコア・階層・自己構成済み（鍵）が動く。壊れた args でも例外なし', async () => {
   const { panels, text } = build();
   const areas = /** @type {any} */ ({
-    me: null, tokens: new Map(), isMine: () => false, setHandCount() {}, setTokens() {}, setTapped() {}, restoreWildKeys() {},
+    me: null, tokens: new Map(), isMine: () => false, setHandCount() {}, setScores() {}, setTokens() {}, setTapped() {}, restoreWildKeys() {},
     refs: { playerAreas: new Map() }, addComposed: async () => {}, removeComposed: async () => {}, removeFromHand: async () => {}, addToHand: async () => {},
     attachUnder: async () => {}, tapped: new Set(),
   });
   const pn = new PlayerNotifications(areas, panels);
   await pn.notif_tokensChanged({ player_id: P1, totals: { light: 5, wild_up: 2, wild_used: 2 } });
-  assert.equal(text(P1, 'light'), '5');
-  assert.equal(text(P1, 'wild'), '2 + 2');
   await pn.notif_cardComposed({ player_id: P1, card: { id: 60, type: 4 }, hand_count: 4 });
   assert.equal(text(P1, 'hand'), '4');
   assert.equal(text(P1, 'keyWISDOM'), '3');
@@ -134,12 +132,10 @@ test('通知のフック: 手札・トークン・スコア・階層・自己構
   pn.onCleanup({ player_id: P1, wild_restored: 1 });
   areas.tokens.set(P1, { light: 5, wildUp: 4, wildUsed: 1, compose: 0, analysis: 2 });
   pn.onCleanup({ player_id: P1 });
-  assert.equal(text(P1, 'wild'), '4 + 1');
   // 共通側の N24・N12 からのフック
   const common = /** @type {any} */ ({ advanceSpirit: async () => {}, syncDecks() {}, deckElement() {} });
   const cn = new CommonNotifications(common, pn);
   await cn.notif_spiritAdvanced({ player_id: P1, to_spirit: 'R1A', tier: 2 });
-  assert.equal(text(P1, 'tier'), 'Tier 2');
   await cn.notif_cardsDrawn({ player_id: P2, hand_count: 7, decks: {} });
   assert.equal(text(P2, 'hand'), '7');
   for (const args of [undefined, null, {}, { player_id: 'x', scores: 5, totals: 3, card: 1, pairs: 'y' }]) {

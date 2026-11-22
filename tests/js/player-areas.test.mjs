@@ -61,7 +61,8 @@ test('setup: 手札・自己構成済み・横向き・下のカード・自我�
 
   // 手札はレベル→エネルギー→番号の順（M002 e1, M001 e3, M060 L2）に stock へ入る
   assert.deepEqual(stockOf(areas, P1).hand.getCards().map((/** @type {any} */ c) => c.key), ['M002', 'M001', 'M060']);
-  assert.equal(mine.handInfo.textContent, '3 / 8');
+  assert.equal(mine.handInfo.textContent, '', '上限以内ならタブに警告を出さない');
+  assert.equal(mine.handInfo.hidden, true);
   assert.equal(mine.handInfo.hasClass('ir-over-limit'), false);
 
   // 自己構成済み: 横向きと Used 帯、I08 の下の枚数バッジ。下のカードの中身（本人）
@@ -80,14 +81,33 @@ test('setup: 手札・自己構成済み・横向き・下のカード・自我�
   assert.equal(mine.area.hasClass('ir-turn'), true);
   assert.equal(theirs.area.hasClass('ir-turn'), false);
 
-  // トークン: 5 種類を常に出し、0 は薄く
-  assert.equal(mine.tokens.querySelectorAll('.ir-token').length, 5);
-  assert.equal(mine.tokens.querySelector('.ir-token[data-kind="wildUsed"]')?.querySelector('.ir-token-count')?.textContent, '+ 1 used');
+  // トークンのチップ: 4 種類を常に出し（万能移動鍵は表 + 使用済みで 1 つ）、0 は薄く
+  assert.equal(mine.tokens.querySelectorAll('.ir-token').length, 4);
+  assert.equal(mine.tokens.querySelector('.ir-token[data-kind="wildUsed"]'), null);
+  assert.equal(mine.tokens.querySelector('.ir-token[data-kind="wildUp"]')?.querySelector('.ir-token-count')?.textContent, '3 + 1 used');
+  assert.equal(mine.tokens.querySelector('.ir-token[data-kind="wildUp"]')?.getAttribute('aria-label'), 'Omni-Move Key: 3 + 1 used');
+  assert.equal(mine.tokens.querySelector('.ir-token[data-kind="light"]')?.getAttribute('title'), 'Psychic Light: 2');
   assert.equal(theirs.tokens.querySelector('.ir-token[data-kind="light"]')?.hasClass('ir-zero'), true);
+  assert.equal(theirs.tokens.querySelector('.ir-token[data-kind="light"]')?.getAttribute('aria-label'), 'Psychic Light: 0');
 
-  // 他人は手札の Stock を持たず枚数チップだけ
+  // 名前の行: 「N / 20」と手番の印（手番のときだけ）
+  assert.equal(mine.score.textContent, '0 / 20');
+  assert.equal(mine.turnMark.hidden, false);
+  assert.equal(theirs.turnMark.hidden, true);
+
+  // 他人は手札のマットも枚数チップも持たない（枚数はパネルだけ。010 §4）。手札のマットは自分だけ
   assert.equal(theirs.hand, null);
-  assert.equal(theirs.handCount.querySelector('.ir-hand-count-text')?.textContent, '5');
+  assert.equal(theirs.handInfo, null);
+  assert.equal(theirs.area.querySelector('.ir-zone-hand'), null);
+  assert.equal(theirs.area.querySelector('.ir-hand-count'), null);
+  assert.notEqual(mine.area.querySelector('.ir-zone-hand'), null);
+  assert.equal(mine.area.querySelectorAll('.ir-zone-title').length + theirs.area.querySelectorAll('.ir-zone-title').length, 0, '見出しの行はタブに置き換えた');
+
+  // 強化自我の枠・獲得した目標の欄は、持っているときだけ表示（持たなければ hidden）
+  assert.equal(mine.enhEgo.hidden, false);
+  assert.equal(theirs.enhEgo.hidden, true);
+  assert.equal(mine.ownedGoals.hidden, true);
+  assert.equal(theirs.ownedGoals.hidden, false);
   assert.equal(stockOf(areas, P2).hand, null);
   assert.equal(stockOf(areas, P2).under, null);
 });
@@ -102,7 +122,8 @@ test('setup: 空・欠けた gamedatas、観戦者でも例外を出さない', 
   areas.setup(/** @type {any} */ (gamedatas()));
   await areas.ready;
   assert.equal(areas.isMine(P1), false);
-  assert.equal(board.playerAreas.get(P1)?.handCount?.querySelector('.ir-hand-count-text')?.textContent, '3');
+  assert.equal(board.playerAreas.get(P1)?.handCount, undefined);
+  assert.equal(board.playerAreas.get(P1)?.area.querySelector('.ir-zone-hand'), null, '観戦者は全員が他プレイヤーの形');
 });
 
 test('通知: 手札・自己構成・横向き・トークン・下のカード・捨札・クリーンアップ', async () => {
@@ -116,7 +137,6 @@ test('通知: 手札・自己構成・横向き・トークン・下のカード
   await cn.notif_cardsDrawn({ player_id: P1, level: 1, decks: {}, _private: { cards: [{ id: 33, type: 7 }] } });
   assert.deepEqual(hand().includes(33), true);
   await cn.notif_cardsDrawn({ player_id: P2, level: 1, count: 2, hand_count: 7 });
-  assert.equal(board.playerAreas.get(P2)?.handCount?.querySelector('.ir-hand-count-text')?.textContent, '7');
 
   // 上限を超えると印と文言
   for (let i = 0; i < 5; i += 1) {
@@ -125,6 +145,7 @@ test('通知: 手札・自己構成・横向き・トークン・下のカード
   assert.equal(hand().length, 9);
   assert.equal(board.playerAreas.get(P1)?.handInfo?.textContent, '9 / 8 (over the limit)');
   assert.equal(board.playerAreas.get(P1)?.handInfo?.hasClass('ir-over-limit'), true);
+  assert.equal(board.playerAreas.get(P1)?.handInfo?.hidden, false);
 
   // N18 自己構成: 手札から自己構成済みへ
   await pn.notif_cardComposed({ player_id: P1, card: { id: 33, type: 7 }, hand_count: 8 });
@@ -132,7 +153,6 @@ test('通知: 手札・自己構成・横向き・トークン・下のカード
   assert.equal(stockOf(areas, P1).composed.getCards().some((/** @type {any} */ c) => c.id === 33), true);
   await pn.notif_cardComposed({ player_id: P2, card: { id: 61, type: 2 }, hand_count: 6 });
   assert.deepEqual(keysIn(board.playerAreas.get(P2)?.composed), ['M001', 'M002']);
-  assert.equal(board.playerAreas.get(P2)?.handCount?.querySelector('.ir-hand-count-text')?.textContent, '6');
 
   // N17 横向き → クリーンアップで戻る（N29）
   await pn.notif_cardsTapped({ card_ids: [51, 61], tapped: true });
@@ -215,10 +235,19 @@ test('通知: 場札・部屋・交換・目標・自我が手札と領域に届
   assert.equal(hand().includes(31), false);
 
   // N22 目標の獲得（得点バッジ）、N25 強化自我、N02 初期自我の一斉公開
+  assert.equal(board.playerAreas.get(P1)?.ownedGoals.hidden, true, '獲得前は欄を出さない');
   await cn.notif_objectiveClaimed({ player_id: P1, obj_id: 1, points: 3 });
+  assert.equal(board.playerAreas.get(P1)?.ownedGoals.hidden, false, '0 → 1 枚のとき、カードを加える前に表示する');
   assert.deepEqual(keysIn(board.playerAreas.get(P1)?.ownedGoals), ['O001']);
   assert.equal(stockOf(areas, P1).owned.getCardElement({ id: 'O001' }).querySelector('.ir-goal-points')?.textContent, '+3');
+  assert.equal(board.playerAreas.get(P2)?.enhEgo.hidden, true, '獲得前は枠を出さない');
   await cn.notif_enhancedEgoObtained({ player_id: P2, ego_id: 'E03', deck_count: 1 });
+  assert.equal(board.playerAreas.get(P2)?.enhEgo.hidden, false);
+  // N21 自己構成スコア（名前の行）
+  await pn.notif_scoreUpdated({ scores: { [P1]: { total: 12 }, [P2]: { total: 3 } } });
+  assert.equal(board.playerAreas.get(P1)?.score.textContent, '12 / 20');
+  assert.equal(board.playerAreas.get(P2)?.score.textContent, '3 / 20');
+  await cn.notif_turnStarted?.({ player_id: P2 });
   assert.deepEqual(keysIn(board.playerAreas.get(P2)?.enhEgo), ['E03']);
   await cn.notif_initialEgosRevealed({ egos: [{ player_id: P2, ego_id: 'I07' }] });
   assert.equal(keysIn(board.playerAreas.get(P2)?.ego).includes('I07'), true);

@@ -126,6 +126,34 @@ export class CommonArea {
     }
 
     /**
+     * 山札・捨札・強化自我の山に、アクセシブルな名前とツールチップ（"Level 1 deck: 23 cards"。ラベルをやめた部品。010 §9）を付ける。
+     * @param {HTMLElement | undefined} host
+     * @param {string} name 例: "Level 1 deck"
+     * @param {number} count
+     */
+    labelPile(host, name, count) {
+        if (host === undefined) {
+            return;
+        }
+        const text = `${name}: ${count === 1 ? _('1 card') : _('${n} cards').replace('${n}', String(count))}`;
+        host.setAttribute('title', text);
+        host.setAttribute('aria-label', text);
+        host.setAttribute('role', 'group');
+    }
+
+    /**
+     * @param {1 | 2} level
+     * @param {'deck' | 'discard'} kind
+     * @param {number} count
+     */
+    labelLevelPile(level, kind, count) {
+        const name = kind === 'deck'
+            ? (level === 1 ? _('Level 1 deck') : _('Level 2 deck'))
+            : (level === 1 ? _('Level 1 discard pile') : _('Level 2 discard pile'));
+        this.labelPile(this.refs.pileSlots[`${kind}-${level}`], name, count);
+    }
+
+    /**
      * @param {Record<1 | 2, import('./view-model.js').DeckModel>} decks
      * @param {unknown} discards
      */
@@ -140,6 +168,7 @@ export class CommonArea {
                 counter: COUNTER,
                 thicknesses: DECK_THICKNESSES,
             });
+            this.labelLevelPile(/** @type {1 | 2} */ (level), 'deck', model.count);
             const discard = discardModel(/** @type {any} */ (discards)?.[level]);
             this.discardState[level] = discard;
             this.discards[level] = new this.lib.Deck(this.cards.mem, discardEl, {
@@ -148,6 +177,7 @@ export class CommonArea {
                 counter: COUNTER,
                 thicknesses: DECK_THICKNESSES,
             });
+            this.labelLevelPile(/** @type {1 | 2} */ (level), 'discard', discard.count);
         }
     }
 
@@ -179,8 +209,8 @@ export class CommonArea {
         // 階層 0（開始位置）の帯
         const startCubes = el('div', { class: 'ir-cubes' });
         this.startCubes = startCubes;
-        this.refs.spiritTrack.append(el('div', { class: 'ir-spirit-start' }, [
-            el('span', { class: 'ir-spirit-start-label' }, [_('Start')]),
+        // 文字は出さず、アクセシブルな名前とツールチップに移す（010 §4・§9）
+        this.refs.spiritTrack.append(el('div', { class: 'ir-spirit-start', attrs: { role: 'group', title: _('Start (tier 0)'), 'aria-label': _('Start (tier 0)') } }, [
             startCubes,
         ]));
         const all = [...this.seatOrder];
@@ -208,6 +238,7 @@ export class CommonArea {
             counter: COUNTER,
             thicknesses: DECK_THICKNESSES,
         });
+        this.labelPile(this.refs.enhPile, _('Enhanced ego deck'), count);
     }
 
     /** @param {import('./view-model.js').ObjectivesModel} model */
@@ -394,6 +425,7 @@ export class CommonArea {
         for (const level of [1, 2]) {
             const entry = model[/** @type {1 | 2} */ (level)];
             this.decks[level]?.setCardNumber(entry.count, entry.top ?? undefined);
+            this.labelLevelPile(/** @type {1 | 2} */ (level), 'deck', entry.count);
         }
     }
 
@@ -512,6 +544,7 @@ export class CommonArea {
             state.top = card;
             this.discardState[level] = state;
             await this.discards[level]?.addCard(card, from === undefined ? undefined : { fromElement: from });
+            this.labelLevelPile(/** @type {1 | 2} */ (level), 'discard', state.count);
         }
         for (const level of [1, 2]) {
             const count = pileCounts?.[String(level)];
@@ -523,6 +556,7 @@ export class CommonArea {
                 }
                 this.discardState[level] = state;
                 this.discards[level]?.setCardNumber(state.count, state.top ?? undefined);
+                this.labelLevelPile(/** @type {1 | 2} */ (level), 'discard', state.count);
             }
         }
     }
@@ -534,6 +568,7 @@ export class CommonArea {
     setEnhCount(count) {
         this.enhCount = Math.max(0, count);
         this.enhDeck?.setCardNumber(this.enhCount, this.enhCount > 0 ? { id: 'enh-top', key: 'Erev' } : undefined);
+        this.labelPile(this.refs.enhPile, _('Enhanced ego deck'), this.enhCount);
     }
 
     /**

@@ -1,8 +1,8 @@
 /**
- * プレイヤーパネル（BGA 標準のパネルに足す 3 行。仕様書 009 §6）。
- *   1 行目: 自己構成スコア（N / 20）・手札の枚数・心光
- *   2 行目: 万能移動鍵（表 + 使用済み）・自己構成トークン・精神分析トークン
- *   3 行目: 精神階層・鍵の本数（知恵・意志・感情・万能）
+ * プレイヤーパネル（BGA 標準のパネルに足す 2 行。仕様書 010 §4。009 §6 の 3 行から、トークン・精神階層を外した）。
+ *   1 行目: 自己構成スコア（N / 20）・手札の枚数
+ *   2 行目: 鍵の本数（知恵・意志・感情・万能）
+ * トークン・精神階層は領域・精神トラックが出す（1 つの値は 1 か所）。状態（`states`）には持ち続け、描画だけしない。
  * 値はすべて公開情報。更新は通知から `PlayerNotifications`・`CommonNotifications` のフックが呼ぶ（このクラスは通知名を知らない）。
  * 標準のスコア欄は使わない（終了時の勝者 1 / 他 0 になるため。`hideStandardScore`）。
  * © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
@@ -10,7 +10,7 @@
 import { paintUiSprite } from '../cards/card-face.js';
 import { el } from '../ui/dom.js';
 import {
-  KEY_KINDS, applyComposedChange, clampTier, exchangeChange, keyCounts, keyTable, panelState, scoreText, scoresFromArgs, tierText, wildText,
+  KEY_KINDS, applyComposedChange, clampTier, exchangeChange, keyCounts, keyTable, panelState, scoreText, scoresFromArgs,
 } from './player-panel-model.js';
 import { applyTotals, tokensModel } from './player-view-model.js';
 import { toInt } from './view-model.js';
@@ -163,7 +163,7 @@ export class PlayerPanels {
     // ---- 描画 ----
 
     /**
-     * 3 行を作る（初回だけ）。
+     * 2 行を作る（初回だけ）。
      * @param {number} playerId
      */
     build(playerId) {
@@ -186,14 +186,14 @@ export class PlayerPanels {
             }
             const value = el('span', { class: 'ir-pp-value', data: { item: name } });
             values[name] = value;
-            return el('span', { class: 'ir-pp-item', data: { item: name }, attrs: { title } }, [icon, value]);
+            return el('span', { class: 'ir-pp-item', data: { item: name }, attrs: { title, 'aria-label': title, role: 'group' } }, [icon, value]);
         };
         const row = (/** @type {HTMLElement[]} */ ...items) => el('div', { class: 'ir-pp-row' }, items);
         const keys = KEY_KINDS.map(({ kind, sprite }) => item(`key${kind}`, keyTitle(kind), sprite));
+        // 2 行まで（010 §4）。トークンと精神階層は領域・精神トラックにあるのでここには出さない
         const root = el('div', { class: 'ir-pp', data: { player: playerId } }, [
-            row(item('score', _('Construction score'), 'icon_score'), item('hand', _('Hand (cards)'), null, 'ir-hand-icon'), item('light', _('Psychic Light'), 'token_light')),
-            row(item('wild', _('Omni-Move Key (face up + used)'), 'token_wildkey'), item('compose', _('Construct token'), 'token_compose'), item('analysis', _('Psychoanalysis token'), 'token_analysis')),
-            row(item('tier', _('Psyche tier'), null, 'ir-tier-icon'), ...keys),
+            row(item('score', _('Construction score'), 'icon_score'), item('hand', _('Hand (cards)'), null, 'ir-hand-icon')),
+            row(...keys),
         ]);
         host.append(root);
         this.values.set(playerId, values);
@@ -225,11 +225,6 @@ export class PlayerPanels {
         const texts = {
             score: scoreText(state.score),
             hand: String(state.handCount),
-            light: String(state.tokens.light),
-            wild: wildText(state.tokens),
-            compose: String(state.tokens.compose),
-            analysis: String(state.tokens.analysis),
-            tier: tierText(state.tier),
         };
         for (const { kind } of KEY_KINDS) {
             texts[`key${kind}`] = String(keys[kind]);
