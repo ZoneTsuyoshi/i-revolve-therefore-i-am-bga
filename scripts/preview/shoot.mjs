@@ -24,8 +24,9 @@ function measureLayout() {
   const main = document.getElementById('ir-main');
   const hv = window.innerHeight;
   const roomW = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ir-room-w')) || 0;
-  // 初期自我などの候補の置き場（ir-pick-panel）は一時的に環の上に出るので、その高さは数えない
-  const pick = document.querySelector('#ir-root > .ir-pick-panel');
+  // 初期自我などの候補の置き場（ir-pick-panel）は一時的に環の上に出るので、その高さは数えない。想起の案内パネルは xl・wide では共通の列の先頭（環は動かない）、medium・narrow では環の上
+  const wideLike = layout === 'xl' || layout === 'wide';
+  const pick = document.querySelector(wideLike ? '#ir-root > .ir-pick-panel' : '#ir-root > .ir-pick-panel, #ir-root > .ir-recall-panel:not([hidden])');
   const pickHeight = pick === null ? 0 : pick.getBoundingClientRect().height + 16;
   const ringBottom = main === null ? 0 : Math.round(main.getBoundingClientRect().bottom + window.scrollY - pickHeight);
   const vw = document.documentElement.clientWidth;
