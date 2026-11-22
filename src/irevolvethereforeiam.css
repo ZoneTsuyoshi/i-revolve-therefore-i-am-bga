@@ -110,9 +110,9 @@ body::before {
 /* ---- 2. ルートと盤面の配置 ---- */
 
 /*
- * 配置（010 §3）。DOM の並びは ir-main（環と山札）、ir-common（精神トラック・強化自我の山・目標）、ir-recall-panel、ir-players。
+ * 配置（010 §3）。DOM の並びは ir-recall-panel（環の上。ir-pick-panel も先頭に入る）、ir-main（環と山札）、ir-common（精神トラック・強化自我の山・目標）、ir-players。
  * xl: 左に環、中に共通の列、右にプレイヤーの列（grid）。wide: 環と共通の列の下にプレイヤーを内容の幅で折り返す。
- * medium: 環 → 共通 → プレイヤー（1 列）。narrow: flex の order で、環 → 想起 → 自分 → 共通 → 他プレイヤー（010 §3.7）。
+ * medium: 環 → 共通 → プレイヤー（1 列）。narrow: flex の order で、想起 → 環 → 自分 → 共通 → 他プレイヤー（010 §3.7）。
  * 左右に 8px の余白を取り（padding）、最大幅 2000px で中央寄せ。Layout.js は padding を除いた幅を Wc とする。
  */
 .ir-root {
@@ -174,7 +174,7 @@ body::before {
     /* 背の高いプレイヤーの列（行をまたぐ）の余りは、最後の行（1fr）だけが受ける。環の行を伸ばさない */
     grid-template:
         "main common players" auto
-        "recall recall players" 1fr / max-content max-content max-content;
+        ". . players" 1fr / max-content max-content max-content;
 }
 
 /* wide: 両端の余白の列（1fr）を足し、プレイヤーの行が環と共通の列より広い root の全幅を使えるようにする */
@@ -182,7 +182,6 @@ body::before {
     grid-template-columns: minmax(0, 1fr) max-content max-content minmax(0, 1fr);
     grid-template-areas:
         ". main common ."
-        ". recall recall ."
         "players players players players";
 }
 
@@ -191,32 +190,32 @@ body::before {
     grid-template-areas:
         "main"
         "common"
-        "recall"
         "players";
 }
 
-/* 初期自我などの候補の置き場（ir-pick-panel）がある間だけ、先頭に pick の行を足す（空の行の隙間を作らない） */
-.ir-root[data-layout="xl"]:has(> .ir-pick-panel) {
+/*
+ * 想起の案内パネル（ir-recall-panel。想起中だけ）と候補の置き場（ir-pick-panel。ドラフトなど）は、どちらも環の上（top）。
+ * 同時には出ない。出ている間だけ先頭に top の行を足す（空の行の隙間を作らない）。
+ */
+.ir-root[data-layout="xl"]:has(> .ir-pick-panel, > .ir-recall-panel:not([hidden])) {
     grid-template:
-        "pick pick players" auto
+        "top top players" auto
         "main common players" auto
-        "recall recall players" 1fr / max-content max-content max-content;
+        ". . players" 1fr / max-content max-content max-content;
 }
 
-.ir-root[data-layout="wide"]:has(> .ir-pick-panel) {
+.ir-root[data-layout="wide"]:has(> .ir-pick-panel, > .ir-recall-panel:not([hidden])) {
     grid-template-areas:
-        ". pick pick ."
+        ". top top ."
         ". main common ."
-        ". recall recall ."
         "players players players players";
 }
 
-.ir-root[data-layout="medium"]:has(> .ir-pick-panel) {
+.ir-root[data-layout="medium"]:has(> .ir-pick-panel, > .ir-recall-panel:not([hidden])) {
     grid-template-areas:
-        "pick"
+        "top"
         "main"
         "common"
-        "recall"
         "players";
 }
 
@@ -421,7 +420,7 @@ body::before {
 }
 
 .ir-recall-panel {
-    grid-area: recall;
+    grid-area: top;
     padding: var(--ir-gap);
     border: 1px solid var(--ir-mat-border);
     border-radius: var(--ir-mat-radius);
@@ -885,7 +884,7 @@ body::before {
 }
 
 .ir-pick-panel {
-    grid-area: pick;
+    grid-area: top;
     display: flex;
     flex-wrap: wrap;
     gap: var(--ir-gap);
@@ -1153,41 +1152,41 @@ body::before {
     text-align: center;
 }
 
-/* プレイヤーパネル（009 §6）: 3 行。アイコンの高さは 18 px、数字は変化時に 0.3 秒だけ強調する */
+/* プレイヤーパネル（009 §6・010 §4）: 2 行。幅 150 px まで 1 行に収める。アイコンの高さは 14 px、数字は変化時に 0.3 秒だけ強調する */
 .ir-pp {
     display: flex;
     flex-direction: column;
     gap: 3px;
     margin-top: 4px;
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .ir-pp-row {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 2px 10px;
+    gap: 2px 6px;
 }
 
 .ir-pp-item {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
 }
 
 .ir-pp-icon {
     display: inline-block;
     flex: none;
-    height: 18px;
+    height: 14px;
 }
 
 .ir-pp-icon.ir-hand-icon {
-    width: 12px;
-    height: 17px;
+    width: 10px;
+    height: 14px;
 }
 
 .ir-pp-value {
-    min-width: 1.2em;
+    min-width: 1em;
     font-weight: bold;
     color: var(--ir-text);
 }
@@ -1441,7 +1440,7 @@ body::before {
 }
 
 .ir-root[data-layout="narrow"] .ir-recall-panel {
-    order: 2;
+    order: 0;
 }
 
 /* 自分の領域は共通の領域より先、他プレイヤーはその後（#ir-players は箱を作らず、領域を root の直下に並べる） */

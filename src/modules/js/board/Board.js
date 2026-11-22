@@ -3,13 +3,13 @@
  * 器の id とクラスは 009 §15 に従う。後続のタスクは `refs` から器を取り、そこに Stock を作る。
  *
  * #ir-root（xl・wide・medium は CSS の grid、narrow は flex の order で並べる。narrow は自分の領域を共通の領域より先に出す。010 §3）
+ *   #ir-recall-panel            … 想起中だけ表示（U-7）。環の上（候補の置き場 ir-pick-panel も先頭に入り、同じ位置に出る）
  *   #ir-main
  *     #ir-slot-piles-top        … xl・wide・medium では ir-piles がここ
  *     #ir-cloister              … 4 × 4 グリッドの環（12 部屋 ir-room[data-pos]）
  *       #ir-cloister-center     … xl・wide・medium は ir-open、narrow は ir-piles
  *     #ir-slot-open-below       … narrow では ir-open がここ
  *   #ir-common                  … ir-spirit-track、ir-enh-pile、ir-goals
- *   #ir-recall-panel            … 想起中だけ表示（U-7）
  *   #ir-players                 … ir-player-area[data-player]（自分が先頭）
  *
  * ir-piles と ir-open は DOM ノードを付け替えるだけで作り直さない（Stock が壊れない）。
@@ -152,9 +152,9 @@ export function buildBoard(host, { players = {}, playerOrder = [], me = null } =
     }
 
     const root = el('div', { id: 'ir-root', class: 'ir-root', data: { layout: 'wide' } }, [
+        recallPanel,
         main,
         common,
-        recallPanel,
         playersEl,
     ]);
     host.append(root);
