@@ -53,6 +53,11 @@
     --ir-tip-bg: #fffdf8;
     --ir-tip-border: #8a8478;
     --ir-tip-shadow: rgb(0 0 0 / 35%);
+
+    /* 背景（暗いセピア）の上に直接描くもの用（箱の外。テーマに関わらず固定。010 §7.2）。#a89e88 / #d8d0c0 は背景の最も明るい所（約 #3a3225）に対しても 6.2 / 8.1 以上 */
+    --ir-bare-line: #a89e88;
+    --ir-bare-fill: rgb(255 255 255 / 6%);
+    --ir-bare-text: #d8d0c0;
 }
 
 /* BGA のダークモードは html の data-theme="dark"（@media (prefers-color-scheme) は BGA の切り替えを無視するので使わない。009 §12.2） */
@@ -74,6 +79,26 @@ html[data-theme="dark"] {
     --ir-tip-shadow: rgb(0 0 0 / 70%);
 }
 
+/*
+ * 背景（仕様書 010 §7 案 B）。BGA 既定の木目は html に付くので、body::before（固定）で覆う。
+ * 画像は使わない。暗いセピアの基調色 + 中央がやや明るい放射状のグラデーション + 周辺のビネット + 薄い石畳風の格子。
+ * ライト・ダークで同じ。body 自身に背景色を付けると z-index: -1 の ::before を覆ってしまうので、基調色は ::before に持たせる。
+ * ::before は画面全体（fixed）なので、読み込み前後を含め html の木目は見えない。
+ */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-color: #1c1812;
+    background-image:
+        radial-gradient(ellipse at 50% 40%, transparent 35%, rgb(10 8 5 / 55%) 100%),
+        radial-gradient(ellipse at 50% 40%, rgb(70 58 40 / 45%) 0%, rgb(28 24 18 / 0%) 70%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Cpath d='M0 .5H96M.5 0V96' stroke='%23fff' stroke-opacity='.035' fill='none'/%3E%3Cpath d='M48 0V96M0 48H96' stroke='%23000' stroke-opacity='.12' fill='none'/%3E%3C/svg%3E");
+    background-size: 100% 100%, 100% 100%, 96px 96px;
+}
+
 /* ---- 2. ルートと盤面の配置 ---- */
 
 .ir-root {
@@ -83,6 +108,9 @@ html[data-theme="dark"] {
     display: flex;
     flex-direction: column;
     gap: var(--ir-gap);
+
+    --ir-slot-line: var(--ir-bare-line);
+    --ir-slot-fill: var(--ir-bare-fill);
 }
 
 .ir-root *,
@@ -118,9 +146,17 @@ html[data-theme="dark"] {
 
 .ir-slot {
     flex: none;
-    border: 1px dashed var(--ir-slot-border);
+    border: 1px dashed var(--ir-slot-line, var(--ir-slot-border));
     border-radius: 4px;
-    background: var(--ir-slot-bg);
+    background: var(--ir-slot-fill, var(--ir-slot-bg));
+}
+
+/* 箱の外の空き枠は背景用の色（.ir-root で設定）、箱（プレイヤーの領域・区画・想起の案内）の中は従来の色 */
+.ir-player-area,
+.ir-zone,
+.ir-recall-panel {
+    --ir-slot-line: var(--ir-slot-border);
+    --ir-slot-fill: var(--ir-slot-bg);
 }
 
 .ir-slot-m {
@@ -870,14 +906,14 @@ html[data-theme="dark"] {
     justify-content: center;
     gap: var(--ir-gap);
     min-height: calc(var(--ir-c) * 0.16);
-    border: 1px dashed var(--ir-slot-border);
+    border: 1px dashed var(--ir-bare-line);
     border-radius: 4px;
-    background: var(--ir-slot-bg);
+    background: var(--ir-bare-fill);
 }
 
 .ir-spirit-start-label {
     font-size: 12px;
-    color: var(--ir-text-muted);
+    color: var(--ir-bare-text);
 }
 
 /* 山札・捨札の枚数バッジ（bga-cards の Deck の counter） */
