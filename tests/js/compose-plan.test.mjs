@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  REASON, architectHand, architectTableau, canAddLight, checkPayment, composableIds, composeFromArgs, discardOptions, emptyPayment,
+  REASON, composeAfterDiscard, composeSelectionWithout, architectHand, architectTableau, canAddLight, checkPayment, composableIds, composeFromArgs, discardOptions, emptyPayment,
   energyNeed, extraOptions, lightCost, paidEnergy, shortfall, tapOptions, toPayment, toggle,
 } from '../../src/modules/js/states/compose-plan.js';
 
@@ -144,4 +144,13 @@ test('toPayment は送る形（discard・light・tap・extra）。toggle は含�
   assert.deepEqual(toPayment(pay(1, { discard: [2], light: 1, tap: [3], extra: [4] })), { discard: [2], light: 1, tap: [3], extra: [4] });
   assert.deepEqual(toggle([1, 2], 2), [1]);
   assert.deepEqual(toggle([1], 5), [1, 5]);
+});
+
+test('composeAfterDiscard / composeSelectionWithout: 捨てた手札を外し、心光を増やす', () => {
+  const board = composeFromArgs(args({ hand: [row(1, 1, 2), row(2, 1, 0), row(3, 1, 0)] }));
+  const after = composeAfterDiscard(board, [2, 3], 1);
+  assert.deepEqual([...after.hand.keys()], [1]);
+  assert.equal(after.light, board.light + 1);
+  assert.equal(board.hand.size, 3);
+  assert.deepEqual(composeSelectionWithout({ hand: [2, 1], tap: [9], light: 1, extra: [3, 1] }, [2, 3]), { hand: [1], tap: [9], light: 1, extra: [1] });
 });

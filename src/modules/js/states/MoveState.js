@@ -7,13 +7,16 @@
  * 2. 払うものをまとめて選ぶ: 自己構成済みカード・手札をクリックで選択のオン・オフ（鍵は順不同）、心光・万能移動鍵は領域のトークンを押して数量
  * 3. 選んだ資源は規則を守って各部屋の錠前に自動で割り当てられる（`solveMovePayment`）。ステータスバーに充足・不足・余りが出る
  * 4. 全部の錠前が払えたら「Confirm move」（割り当ての結果を `{rooms, payments}` にして送る）。Reset はない（010 §2.3）
+ * ターンプレイヤーには、手札のタブの「Discard 2 for Psychic Light」と、獲得できる目標（青の「Claim goal」）のフリーアクションも出す（006 §6.2。FreeActionsUi.js）。
  * 払える移動が無いときは「Stay」で空の経路を送る（Q-38）。
  * © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
  */
 import {
-  boardFromArgs, lightCostOf, lockTotal, reachableRooms, routeExtras, solveMovePayment, toInput,
+  afterDiscard, boardFromArgs, keepReachableRoute, lightCostOf, lockTotal, reachableRooms, routeExtras, solveMovePayment, toInput, withoutDiscarded,
 } from './move-plan.js';
-import { cumulativeOf, lightLimit } from './action-bar-model.js';
+import { cumulativeOf, lightLimit, sortButtons } from './action-bar-model.js';
+import { FreeActionsUi } from './FreeActionsUi.js';
+import { int } from '../ui/dom.js';
 import { cardLabel, neededText, quantityTokenPick, statusText } from './payment-ui.js';
 
 /** 入れる部屋の印 */
@@ -26,9 +29,10 @@ export const CLASS_ROOM_UNDO = 'ir-room-undo';
 /**
  * @typedef {object} MoveDeps
  * @property {import('../board/PlayerAreas.js').PlayerAreas | null} playerAreas
+ * @property {import('../board/CommonArea.js').CommonArea | null} common 共通の場（獲得できる目標。フリーアクション）
  * @property {import('../board/Board.js').BoardRefs | null} refs
  * @property {number | null} me 自分のプレイヤー ID（観戦なら null）
- * @property {import('../ui/texts.js').CardTexts | null} [texts] カード名（余りの表示用）
+ * @property {import('../ui/texts.js').CardTexts | null} texts カード名（余りの表示用）
  */
 
 /** @returns {{ tableau: number[], hand: number[], light: number, token: number }} */
@@ -54,6 +58,69 @@ export class MoveState {
     this.active = false;
     /** @type {Array<[HTMLElement, () => void]>} */
     this.listeners = [];
+    /** @type {number | null} ターンプレイヤー（args の turnPlayer。フリーアクションを出すか決める） */
+    this.turnPlayerId = null;
+    /** フリーアクションを送ったあとか（サーバーが状態に入り直したとき、経路を戻すための印） */
+    this.freeSent = false;
+    /** @type {{ position: number, route: number[], selection: ReturnType<typeof emptySelection> } | null} 入り直しのために取っておいた計画 */
+    this.keep = null;
+    /** @type {Array<{ label: string, onClick: () => void, params: Record<string, any> }> | null} 画面を作っている間のボタン（青 → 白 → 赤に並べ直す） */
+    this.queue = null;
+    // フリーアクション（手札を捨てて心光を得る・目標の獲得）。ActionState と同じ部品（006 §6.2）
+    this.free = new FreeActionsUi({
+      bga,
+      getDeps,
+      turnPlayer: () => this.turnPlayerId ?? -1,
+      button: (label, onClick, params = {}) => this.button(label, onClick, params),
+      send: (action, args = {}) => {
+        this.freeSent = true;
+        return Promise.resolve(this.bga.actions.performAction(action, args)).then(() => true, () => false);
+      },
+      render: () => this.render(),
+      onDiscarded: (ids, gain) => this.applyDiscard(ids, gain),
+    });
+  }
+
+  /**
+   * ステータスバーのボタンを足す。`render` の間は一度ためて、青 → 白 → 赤に並べ直して出す（010 §2.2）。
+   * @param {string} label
+   * @param {() => void} onClick
+   * @param {{ color?: 'primary' | 'secondary' | 'alert', disabled?: boolean, tooltip?: string }} [params]
+   */
+  button(label, onClick, params = {}) {
+    if (this.queue === null) {
+      this.bga.statusBar.addActionButton(label, onClick, params);
+    } else {
+      this.queue.push({ label, onClick, params });
+    }
+  }
+
+  /** ためたボタンを、青 → 白 → 赤の順に出す */
+  flushButtons() {
+    const queue = this.queue ?? [];
+    this.queue = null;
+    for (const { label, onClick, params } of sortButtons(queue)) {
+      this.bga.statusBar.addActionButton(label, onClick, params);
+    }
+  }
+
+  /**
+   * 手札を捨てて心光を得たあと、計画の盤面と選択を合わせる（サーバーが状態に入り直さなくても合うように）。
+   * @param {number[]} ids
+   * @param {number} gain
+   */
+  applyDiscard(ids, gain) {
+    if (this.board !== null) {
+      this.board = afterDiscard(this.board, ids, gain);
+    }
+    this.selection = withoutDiscarded(this.selection, ids);
+  }
+
+  /** フリーアクションのあと入り直すときのために、経路と選択を取っておく */
+  snapshot() {
+    this.keep = this.freeSent && this.board !== null
+      ? { position: this.board.position, route: this.route, selection: this.selection }
+      : null;
   }
 
   /**
@@ -61,14 +128,32 @@ export class MoveState {
    * @param {boolean} isCurrentPlayerActive
    */
   onEnteringState(args, isCurrentPlayerActive) {
+    if (this.active) {
+      this.snapshot();
+    }
+    const keep = this.keep;
+    this.keep = null;
+    this.freeSent = false;
+    this.free.reset();
     this.route = [];
     this.selection = emptySelection();
     this.solution = null;
     this.active = isCurrentPlayerActive;
+    this.turnPlayerId = int((/** @type {any} */ (args))?.turnPlayer);
     if (!isCurrentPlayerActive) {
       return;
     }
     this.board = boardFromArgs(args);
+    // フリーアクションのあとの入り直しなら、同じ位置の経路と、まだ持っている手札・自己構成済みの選択を戻す
+    if (keep !== null && keep.position === this.board.position) {
+      const board = this.board;
+      this.route = keepReachableRoute(board, keep.route);
+      this.selection = {
+        ...keep.selection,
+        tableau: keep.selection.tableau.filter((id) => board.tableau.has(id)),
+        hand: keep.selection.hand.filter((id) => board.hand.has(id)),
+      };
+    }
     this.render();
   }
 
@@ -77,7 +162,10 @@ export class MoveState {
    * @param {boolean} _isCurrentPlayerActive
    */
   onLeavingState(_args, _isCurrentPlayerActive) {
+    this.snapshot();
     this.active = false;
+    this.free.setClaimListener(false);
+    this.free.reset();
     this.clearMarks();
     this.getDeps().playerAreas?.clearSelection();
     this.route = [];
@@ -111,6 +199,14 @@ export class MoveState {
     playerAreas?.clearSelection();
     const bar = this.bga.statusBar;
     bar.removeActionButtons();
+    this.queue = [];
+
+    // 手札を捨てて心光を得る画面: 部屋と支払いの選択は外し、経路は保つ（Cancel で計画に戻る）
+    if (this.free.discardMode) {
+      this.free.drawDiscard();
+      this.flushButtons();
+      return;
+    }
 
     const route = this.route;
     this.solution = route.length === 0 ? null : solveMovePayment(board, route, this.selection);
@@ -165,16 +261,18 @@ export class MoveState {
 
     // 青 → 白 → 赤の順（Confirm move / Stay を先頭、Undo last room は赤で右端。010 §2.3）。Reset はなく、選んだ資源は個別に押して外す
     if (solution?.complete === true) {
-      bar.addActionButton(_('Confirm move'), () => this.confirm());
+      this.button(_('Confirm move'), () => this.confirm());
     } else if (route.length > 0) {
-      bar.addActionButton(_('Confirm move'), () => {}, { disabled: true, tooltip: _('Select enough resources to pay for every lock') });
+      this.button(_('Confirm move'), () => {}, { disabled: true, tooltip: _('Select enough resources to pay for every lock') });
     }
     if (route.length === 0 && !board.canMove) {
-      bar.addActionButton(_('Stay'), () => this.confirm());
+      this.button(_('Stay'), () => this.confirm());
     }
     if (route.length > 0) {
-      bar.addActionButton(_('Undo last room'), () => this.undoRoom(), { color: 'alert', tooltip: _('You can also click the last room of the route') });
+      this.button(_('Undo last room'), () => this.undoRoom(), { color: 'alert', tooltip: _('You can also click the last room of the route') });
     }
+    this.free.add();
+    this.flushButtons();
   }
 
   /** 経路の最後の部屋を 1 つ戻す */
@@ -274,6 +372,8 @@ export class MoveState {
       return;
     }
     const steps = this.solution?.complete === true ? this.solution.steps : [];
+    // 移動を送ったら、離脱のときに計画を取っておかない（フリーアクションのあとの入り直し用の印を戻す）
+    this.freeSent = false;
     this.bga.actions.performAction('actMove', { plan: JSON.stringify(toInput(steps)) });
   }
 }

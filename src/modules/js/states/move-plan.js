@@ -852,3 +852,48 @@ export function routeExtras(board, route) {
   }
   return { light, token };
 }
+
+/**
+ * 手札を捨てて心光を得たあとの盤面（フリーアクション。006 §6.2）。捨てたカードを手札から外し、心光を増やす。元の盤面は変えない。
+ * @param {MoveBoard} board
+ * @param {number[]} discarded 捨てた手札のカード ID
+ * @param {number} gain 得た心光
+ * @returns {MoveBoard}
+ */
+export function afterDiscard(board, discarded, gain) {
+  const gone = new Set(discarded);
+  return {
+    ...board,
+    hand: new Map([...board.hand].filter(([id]) => !gone.has(id))),
+    light: board.light + gain,
+  };
+}
+
+/**
+ * 支払いの選択から、捨てたカードを外す。
+ * @param {{ tableau: number[], hand: number[], light: number, token: number }} selection
+ * @param {number[]} discarded
+ * @returns {{ tableau: number[], hand: number[], light: number, token: number }}
+ */
+export function withoutDiscarded(selection, discarded) {
+  const gone = new Set(discarded);
+  return { ...selection, hand: selection.hand.filter((id) => !gone.has(id)) };
+}
+
+/**
+ * 保存した経路を、入り直した盤面で今も歩けるところまで残す（先頭から順に入れる部屋だけ。残りは捨てる）。
+ * @param {MoveBoard} board
+ * @param {number[]} route
+ * @returns {number[]}
+ */
+export function keepReachableRoute(board, route) {
+  /** @type {number[]} */
+  const kept = [];
+  for (const pos of route) {
+    if (!reachableRooms(board, kept).includes(pos)) {
+      break;
+    }
+    kept.push(pos);
+  }
+  return kept;
+}
