@@ -49,7 +49,7 @@ export const CLASS_TOKEN_PICK = 'ir-token-pick';
  * @property {boolean} canAdd 押せるか（上限に達していたら偽）
  * @property {number} count 選択中の個数（バッジ。0 なら出さない）
  * @property {number | null} [cost] 次に選ぶときのコスト（N 回目は N 個で 1 つ分。「+N」に出す）
- * @property {boolean} [plus] 「+」を出すか（既定は出す。トークンの使用では出さない）
+ * @property {boolean} [plus] プラスの印「+」を出すか（既定は出す。トークンの使用では出さない）
  * @property {string} tooltip ツールチップ（押せない理由か、押したときの結果と次のコスト）
  * @property {string} [removeTooltip] バッジのツールチップ
  * @property {() => void} onAdd トークンを押したとき
