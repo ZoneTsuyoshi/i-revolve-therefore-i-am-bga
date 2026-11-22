@@ -156,10 +156,14 @@ export function buildBoard(host, { players = {}, playerOrder = [], me = null } =
     ]);
     host.append(root);
 
-    return {
+    /** @type {BoardRefs} */
+    const refs = {
         root, cloister, center, slotPilesTop, slotOpenBelow, rooms, roomFloors, roomCards, piles, pileSlots, open, openSlots,
         spiritTrack, enhPile, goals, recallPanel, players: playersEl, playerAreas, playerOrder: order,
     };
+    // bga-cards の Stock は置き場が document に付いていないと例外を出す。Layout が付け替えるより前に Stock を作るので、先に既定の置き場所へ付ける。
+    placeFloating(refs, 'wide');
+    return refs;
 }
 
 /**
