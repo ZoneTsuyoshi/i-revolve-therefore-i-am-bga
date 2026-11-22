@@ -11,7 +11,7 @@
 import { memKey } from '../board/view-model.js';
 import { ActionState } from './ActionState.js';
 import {
-  architectHand, architectTableau, composableIds, composeFromArgs, discardOptions, emptyPayment, extraOptions, lightCost, solveComposePayment,
+  architectHand, architectTableau, composeAfterDiscard, composeSelectionWithout, composableIds, composeFromArgs, discardOptions, emptyPayment, extraOptions, lightCost, solveComposePayment,
   toPayment,
 } from './compose-plan.js';
 import { lightLimit } from './action-bar-model.js';
@@ -52,6 +52,26 @@ export class ComposeState extends ActionState {
     this.architect = false;
     this.architectTableauId = null;
     this.architectHandId = null;
+  }
+
+  /**
+   * @param {number[]} ids
+   * @param {number} gain
+   */
+  onDiscardedForLight(ids, gain) {
+    if (this.board === null) {
+      return;
+    }
+    this.board = composeAfterDiscard(this.board, ids, gain);
+    this.selection = composeSelectionWithout(this.selection, ids);
+    if (this.architectHandId !== null && ids.includes(this.architectHandId)) {
+      this.architectHandId = null;
+    }
+    // 自己構成しようとしていたカードを捨てたら、カードの選び直し
+    if (this.payment.cardId !== null && ids.includes(this.payment.cardId)) {
+      this.payment = emptyPayment();
+      this.selection = emptySelection();
+    }
   }
 
   end() {

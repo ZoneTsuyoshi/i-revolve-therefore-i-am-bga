@@ -71,6 +71,7 @@ export class Game {
         // 移動の計画（31。U-3）。盤面は setup で作られるので、参照は使うときに取る
         bga.states.register('Move', new MoveState(bga, () => ({
             playerAreas: this.playerAreas,
+            common: this.common,
             refs: this.board,
             me: bga.players.isCurrentPlayerSpectator() ? null : int(bga.players.getCurrentPlayerId()),
             texts: this.texts,

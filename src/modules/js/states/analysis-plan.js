@@ -732,3 +732,15 @@ export function solveAnalysisPayment(board, destinationId, selection, { feasible
     },
   };
 }
+
+/**
+ * 手札を捨てて心光を得たあとの盤面（フリーアクション。006 §6.2）。捨てたカードを手札から外し、心光を増やす。元の盤面は変えない。
+ * @param {AnalysisBoard} board
+ * @param {number[]} discarded
+ * @param {number} gain
+ * @returns {AnalysisBoard}
+ */
+export function analysisAfterDiscard(board, discarded, gain) {
+  const gone = new Set(discarded);
+  return { ...board, hand: new Map([...board.hand].filter(([id]) => !gone.has(id))), light: board.light + gain };
+}

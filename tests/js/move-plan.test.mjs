@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  REASON, SRC, addPayment, boardFromArgs, canComplete, cardChoices, checkPlan, describePlan, isComplete, lightCostOf, nextRooms, payOptions,
+  REASON, SRC, addPayment, afterDiscard, keepReachableRoute, withoutDiscarded, boardFromArgs, canComplete, cardChoices, checkPlan, describePlan, isComplete, lightCostOf, nextRooms, payOptions,
   pendingRoom, toInput, undoRoom,
 } from '../../src/modules/js/states/move-plan.js';
 
@@ -226,4 +226,26 @@ test('describePlan: 部屋・錠前・支払いを並べる', () => {
   assert.equal(describePlan(b, plan([6], [[tab(2)]])), 'Room 6 (Will x1): Composed #2 Will');
   assert.equal(describePlan(b, [{ pos: 6, payments: [] }]), 'Room 6 (Will x1): ...');
   assert.equal(describePlan(b, plan([6], [[TOKEN]])), 'Room 6 (Will x1): Omni-Move Key');
+});
+
+test('afterDiscard: 捨てた手札を外して心光を増やす。元の盤面は変えない', () => {
+  const b = board({ hand: [card(1, W), card(2, F), card(3, E)], light: 1 });
+  const after = afterDiscard(b, [1, 3], 1);
+  assert.deepEqual([...after.hand.keys()], [2]);
+  assert.equal(after.light, 2);
+  assert.equal(b.hand.size, 3);
+  assert.equal(b.light, 1);
+});
+
+test('withoutDiscarded: 選択から捨てた手札だけを外す', () => {
+  const sel = { tableau: [7], hand: [1, 2, 3], light: 1, token: 0 };
+  assert.deepEqual(withoutDiscarded(sel, [2, 9]), { tableau: [7], hand: [1, 3], light: 1, token: 0 });
+});
+
+test('keepReachableRoute: 入り直した盤面で歩ける先頭だけ残す', () => {
+  const b = board({ position: 1, hand: [card(1, W), card(2, W)] });
+  assert.deepEqual(keepReachableRoute(b, [2]), [2]);
+  // 隣でも次でもない部屋は残らない
+  assert.deepEqual(keepReachableRoute(b, [5]), []);
+  assert.deepEqual(keepReachableRoute(b, []), []);
 });
