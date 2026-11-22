@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  REASON, SRC, addPay, analysisFromArgs, canPay, checkAnalysis, emptyState, isComplete, lightChoices, lightCost, maxMatching, payChoices,
+  REASON, SRC, addPay, analysisAfterDiscard, analysisFromArgs, canPay, checkAnalysis, emptyState, isComplete, lightChoices, lightCost, maxMatching, payChoices,
   removableKeys, removals, removeKey, toPayment, undo, unpaid,
 } from '../../src/modules/js/states/analysis-plan.js';
 
@@ -157,4 +157,12 @@ test('addPay・removeKey・undo・toPayment: 支払いを組み立て、取り�
   assert.equal(state.removed[E], 0);
   assert.equal(undo(state).destination, null);
   assert.deepEqual(toPayment({ ...state, removed: { [E]: 0 } }).removed, {});
+});
+
+test('analysisAfterDiscard: 捨てた手札を外し、心光を増やす', () => {
+  const b = analysisFromArgs({ _private: { hand: [card(4, F), card(5, W)] }, light: 1 });
+  const after = analysisAfterDiscard(b, [4], 2);
+  assert.deepEqual([...after.hand.keys()], [5]);
+  assert.equal(after.light, b.light + 2);
+  assert.equal(b.hand.size, 2);
 });

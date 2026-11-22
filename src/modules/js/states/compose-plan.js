@@ -384,3 +384,26 @@ export function solveComposePayment(board, cardId, selection) {
     },
   };
 }
+
+/**
+ * 手札を捨てて心光を得たあとの盤面（フリーアクション。006 §6.2）。捨てたカードを手札から外し、心光を増やす。元の盤面は変えない。
+ * @param {ComposeBoard} board
+ * @param {number[]} discarded
+ * @param {number} gain
+ * @returns {ComposeBoard}
+ */
+export function composeAfterDiscard(board, discarded, gain) {
+  const gone = new Set(discarded);
+  return { ...board, hand: new Map([...board.hand].filter(([id]) => !gone.has(id))), light: board.light + gain };
+}
+
+/**
+ * 捨てた手札を、支払いの選択（捨てる手札・追加のカード）から外す。
+ * @param {{ hand: number[], tap: number[], light: number, extra: number[] }} selection
+ * @param {number[]} discarded
+ * @returns {{ hand: number[], tap: number[], light: number, extra: number[] }}
+ */
+export function composeSelectionWithout(selection, discarded) {
+  const gone = new Set(discarded);
+  return { ...selection, hand: selection.hand.filter((id) => !gone.has(id)), extra: selection.extra.filter((id) => !gone.has(id)) };
+}

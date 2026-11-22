@@ -6,8 +6,9 @@
  */
 import { SelectionController } from '../cards/selection.js';
 import { int } from '../ui/dom.js';
-import { claimView, sortButtons } from './action-bar-model.js';
-import { claimableObjectives, canUseFreeActions, discardLightGain, toIds } from './choice-model.js';
+import { sortButtons } from './action-bar-model.js';
+import { toIds } from './choice-model.js';
+import { FreeActionsUi } from './FreeActionsUi.js';
 import { CLASS_ROOM_ROUTE, CLASS_ROOM_SELECTABLE } from './MoveState.js';
 
 /**
@@ -47,12 +48,15 @@ export class ActionState {
     this.panelElement = null;
     /** @type {import('../cards/selection.js').SelectionController | null} */
     this.panelSelection = null;
-    // フリーアクション「手札を捨てて心光を得る」
-    this.discardMode = false;
-    /** @type {number[]} */
-    this.discardSelected = [];
-    /** @type {string | null} 獲得するつもりで選んだ目標カードのキー（`O001`。010 §2.4） */
-    this.claimSelected = null;
+    this.free = new FreeActionsUi({
+      bga,
+      getDeps,
+      turnPlayer: () => this.turnPlayer(),
+      button: (label, onClick, params) => this.button(label, onClick, params),
+      send: (action, args) => this.send(action, args),
+      render: () => this.render(),
+      onDiscarded: (ids, gain) => this.onDiscardedForLight(ids, gain),
+    });
     /** @type {Array<{ label: string, onClick: () => void, params: Record<string, any> }> | null} 画面を作っている間のボタン（青 → 白 → 赤に並べ直してから出す） */
     this.queue = null;
   }
@@ -65,9 +69,7 @@ export class ActionState {
     this.args = args;
     this.active = isCurrentPlayerActive;
     this.session++;
-    this.discardMode = false;
-    this.discardSelected = [];
-    this.claimSelected = null;
+    this.free.reset();
     if (!isCurrentPlayerActive) {
       return;
     }
@@ -84,8 +86,8 @@ export class ActionState {
     this.session++;
     this.clearUi();
     this.clearPanel();
-    this.setClaimListener(false);
-    this.claimSelected = null;
+    this.free.setClaimListener(false);
+    this.free.reset();
     this.end();
     this.args = null;
   }
@@ -95,6 +97,15 @@ export class ActionState {
    * @param {unknown} _args
    */
   begin(_args) {
+  }
+
+  /**
+   * 手札を捨てて心光を得るのが受け付けられたとき。サーバーは状態に入り直さず args も送り直さないので、
+   * args 由来のモデル（手札・心光）を持つ状態が、捨てたカードを外し、心光を増やす。サブクラスが上書きする。
+   * @param {number[]} _ids 捨てた手札
+   * @param {number} _gain 得た心光
+   */
+  onDiscardedForLight(_ids, _gain) {
   }
 
   /** 離脱のとき（計画を捨てる）。サブクラスが上書きする。 */
@@ -112,11 +123,13 @@ export class ActionState {
     }
     this.clearUi();
     this.queue = [];
-    if (this.discardMode) {
-      this.drawDiscardForLight();
+    if (this.free.discardMode) {
+      this.free.drawDiscard();
     } else {
       this.draw();
-      this.addFreeActions();
+      if (this.freeActions) {
+        this.free.add();
+      }
     }
     this.flushButtons();
   }
@@ -322,96 +335,5 @@ export class ActionState {
   /** @returns {number} ターンプレイヤー（args の turnPlayer） */
   turnPlayer() {
     return int(this.args?.turnPlayer);
-  }
-
-  /**
-   * ターンプレイヤーだけに、フリーアクションを足す（010 §2.4）。手札を捨てて心光を得るのは手札の区画の見出しの小さなボタン、
-   * 目標の獲得は共通の場の獲得できる目標カードを押して選び、青の「Claim goal」で確定する（獲得できる目標がなければ何も出さない）。
-   */
-  addFreeActions() {
-    if (!this.freeActions || !canUseFreeActions(this.getDeps().me, this.turnPlayer())) {
-      return;
-    }
-    this.getDeps().playerAreas?.showDiscardButton({
-      label: _('Discard 2 for Psychic Light'),
-      tooltip: _('Discard Memory cards from your hand. Every 2 cards\' worth gives 1 Psychic Light (a level 2 card counts as 2)'),
-      onClick: () => {
-        this.discardMode = true;
-        this.discardSelected = [];
-        this.render();
-      },
-    });
-    this.setClaimListener(true);
-    this.addClaimUi();
-  }
-
-  /**
-   * 目標の現在値の通知（N23）で、獲得できる目標の表示を作り直すか。
-   * @param {boolean} on
-   */
-  setClaimListener(on) {
-    const common = this.getDeps().common;
-    if (common !== null) {
-      common.onObjectiveStatus = on ? () => this.render() : null;
-    }
-  }
-
-  /** 獲得できる目標カードを「選べる」で光らせ、選んだものの「Claim goal」ボタンを出す */
-  addClaimUi() {
-    const { common, texts, playerAreas } = this.getDeps();
-    const view = claimView(claimableObjectives(common?.objectiveStatus ?? new Map()), this.claimSelected);
-    this.claimSelected = view.selected?.key ?? null;
-    if (view.keys.length === 0) {
-      return;
-    }
-    if (common?.goalStock !== null && common?.goalStock !== undefined) {
-      playerAreas?.selection.start(common.goalStock, {
-        ids: view.keys,
-        mode: 'single',
-        selected: this.claimSelected === null ? [] : [this.claimSelected],
-        onChange: (picked) => {
-          this.claimSelected = picked.length > 0 ? String(picked[0]) : null;
-          this.render();
-        },
-      });
-    }
-    const goal = view.selected;
-    if (goal !== null) {
-      const name = texts?.cards[goal.key]?.name ?? goal.key;
-      const label = _('Claim goal: ${name} (+${points})').replace('${name}', name).replace('${points}', String(goal.points));
-      this.button(label, () => {
-        this.send('actClaimObjective', { objectiveId: goal.id });
-      });
-    }
-  }
-
-  /** 「手札を捨てて心光を得る」の選択中の画面 */
-  drawDiscardForLight() {
-    const gain = discardLightGain(this.discardSelected.map((id) => this.getDeps().playerAreas?.handLevel(id) ?? 1));
-    this.bga.statusBar.setTitle(_('Select Memory cards to discard for Psychic Light (gain ${light})'), { light: gain });
-    this.pickHand({
-      ids: this.getDeps().playerAreas?.handData.keys() ?? [],
-      mode: 'multiple',
-      selected: this.discardSelected,
-      onChange: (selected) => {
-        this.discardSelected = selected;
-        this.render();
-      },
-    });
-    this.button(_('Discard for Psychic Light'), () => {
-      const cardIds = this.discardSelected;
-      this.send('actDiscardForLight', { cardIds }).then((ok) => {
-        if (ok) {
-          this.discardMode = false;
-          this.discardSelected = [];
-          this.render();
-        }
-      });
-    }, { disabled: gain < 1, tooltip: _('You need at least 2 cards\' worth to gain Psychic Light') });
-    this.button(_('Cancel'), () => {
-      this.discardMode = false;
-      this.discardSelected = [];
-      this.render();
-    }, { color: 'alert' });
   }
 }

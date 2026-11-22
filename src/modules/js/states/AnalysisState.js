@@ -9,7 +9,7 @@
  * © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
  */
 import { ActionState } from './ActionState.js';
-import { analysisFromArgs, canPay, destinationOf, lightCost, solveAnalysisPayment, toPayment } from './analysis-plan.js';
+import { analysisAfterDiscard, analysisFromArgs, canPay, destinationOf, lightCost, solveAnalysisPayment, toPayment } from './analysis-plan.js';
 import { costText, spiritParts } from './choice-model.js';
 import { lightLimit } from './action-bar-model.js';
 import { cardLabel, keyName, neededText, quantityTokenPick, statusText } from './payment-ui.js';
@@ -38,6 +38,18 @@ export class AnalysisState extends ActionState {
     this.board = analysisFromArgs(args);
     this.destination = null;
     this.selection = emptySelection();
+  }
+
+  /**
+   * @param {number[]} ids
+   * @param {number} gain
+   */
+  onDiscardedForLight(ids, gain) {
+    if (this.board === null) {
+      return;
+    }
+    this.board = analysisAfterDiscard(this.board, ids, gain);
+    this.selection = { ...this.selection, hand: this.selection.hand.filter((id) => !ids.includes(id)) };
   }
 
   end() {
