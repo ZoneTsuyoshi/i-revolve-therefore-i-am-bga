@@ -1,34 +1,79 @@
 // U-2: レイアウトの計算・スプライトの背景指定・プレイヤーの並び（生成物 sprites.js には依存しない）。実行: npm run test:js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { computeSizes, layoutOf, RING_CELLS } from '../../src/modules/js/ui/layout-math.js';
+import { computeSizes, layoutOf, resolveSizes, RING_CELLS } from '../../src/modules/js/ui/layout-math.js';
 import { gridCellStyle, isPortraitKey, rectStyle } from '../../src/modules/js/cards/sprite-css.js';
 import { orderPlayers } from '../../src/modules/js/board/player-order.js';
 
-test('layoutOf: 境界は 1100 と 600', () => {
-  assert.equal(layoutOf(1100), 'wide');
-  assert.equal(layoutOf(1099), 'medium');
+test('layoutOf: 高さで W を抑えた xl の条件と wide の下限（Wc ≥ 971）と medium の下限（600）', () => {
+  assert.equal(layoutOf(970, Infinity), 'medium');
+  assert.equal(layoutOf(971, Infinity), 'wide');
   assert.equal(layoutOf(600), 'medium');
   assert.equal(layoutOf(599), 'narrow');
+  // xl: Wc ≥ 6.1 × W_x + 7g + P_w（W_x = min(213, max(W_h, 150))、P_w = 4 × 128 + 3 × 8 + 28 = 564）。Hv = 810 で W_x = 158、境目は 1583.8
+  assert.equal(layoutOf(1584, 810), 'xl');
+  assert.equal(layoutOf(1583, 810), 'wide');
+  // 高さが低いほど W_x が下限 150 に近づき、xl の境目が下がる（Hv = 700 → 150。境目 1535）
+  assert.equal(layoutOf(1535, 700), 'xl');
+  assert.equal(layoutOf(1534, 700), 'wide');
 });
 
-test('computeSizes: 仕様書 009 §2.4 の計算例', () => {
+test('computeSizes: 高さを渡さないときは高さで抑えない（009 §2.4 の計算例）', () => {
   const at = (/** @type {number} */ w) => computeSizes(w);
-  assert.deepEqual(pick(at(1100)), { layout: 'wide', roomW: 171, cardW: 102, landW: 119 });
-  assert.deepEqual(pick(at(1400)), { layout: 'wide', roomW: 213, cardW: 127, landW: 149 });
-  assert.deepEqual(pick(at(740)), { layout: 'medium', roomW: 179, cardW: 107, landW: 125 });
-  assert.deepEqual(pick(at(600)), { layout: 'medium', roomW: 144, cardW: 86, landW: 100 });
-  assert.deepEqual(pick(at(360)), { layout: 'narrow', roomW: 85, cardW: 85, landW: 116 });
+  assert.deepEqual(pick(at(1100)), { layout: 'wide', roomW: 171, cardW: 102, landW: 119, playerCardW: 104 });
+  assert.deepEqual(pick(at(1400)), { layout: 'wide', roomW: 213, cardW: 127, landW: 149, playerCardW: 127 });
+  assert.deepEqual(pick(at(740)), { layout: 'medium', roomW: 179, cardW: 107, landW: 125, playerCardW: 107 });
+  assert.deepEqual(pick(at(600)), { layout: 'medium', roomW: 144, cardW: 86, landW: 100, playerCardW: 104 });
+  assert.deepEqual(pick(at(360)), { layout: 'narrow', roomW: 85, cardW: 85, landW: 116, playerCardW: 85 });
   assert.equal(at(390).roomW, 93);
+});
+
+test('computeSizes: 010 §3.4 の代表的な画面（Wc、Hv）の配置と W / w / wp', () => {
+  const at = (/** @type {number} */ w, /** @type {number} */ h) => computeSizes(w, h);
+  // 1920 × 1080（1630、810）
+  assert.deepEqual(pick(at(1630, 810)), { layout: 'xl', roomW: 158, cardW: 94, landW: 110, playerCardW: 128 });
+  // 2560 × 1440（2270、1170）: W は上限 213
+  assert.deepEqual(pick(at(2270, 1170)), { layout: 'xl', roomW: 213, cardW: 127, landW: 149, playerCardW: 128 });
+  // 1440 × 900（1180、700）: 高さで W = 150 に下限止め
+  assert.deepEqual(pick(at(1180, 700)), { layout: 'wide', roomW: 150, cardW: 90, landW: 105, playerCardW: 104 });
+  // 1366 × 768（1080、520）、1024 × 768（1010、520）も wide の W = 150
+  assert.deepEqual(pick(at(1080, 520)), { layout: 'wide', roomW: 150, cardW: 90, landW: 105, playerCardW: 104 });
+  assert.deepEqual(pick(at(1010, 520)), { layout: 'wide', roomW: 150, cardW: 90, landW: 105, playerCardW: 104 });
+  // 768 × 1024（768、700）: medium。幅からは 186、高さで 150
+  assert.deepEqual(pick(at(768, 700)), { layout: 'medium', roomW: 150, cardW: 90, landW: 105, playerCardW: 104 });
+  // 390 × 844（390、844）: narrow は高さで抑えない
+  assert.deepEqual(pick(at(390, 844)), { layout: 'narrow', roomW: 93, cardW: 93, landW: 126, playerCardW: 93 });
+  assert.deepEqual(pick(at(390, 300)), { layout: 'narrow', roomW: 93, cardW: 93, landW: 126, playerCardW: 93 });
+});
+
+test('computeSizes: 環と山札の行が Hv に収まる（xl・wide で W が下限に達しない範囲）', () => {
+  const s = computeSizes(1630, 810);
+  assert.ok(4.906 * s.roomW + 4 * s.gap <= 810);
+});
+
+test('resolveSizes: 大きい配置へ変えるのは幅が 24px 狭くても同じ結果になるときだけ（ヒステリシス）', () => {
+  // wide から: Hv = 810 の xl の境目は 1584。1584〜1607 は 24px 狭いと wide になるので wide のまま
+  assert.equal(resolveSizes(1596, 810, 'wide').layout, 'wide');
+  assert.equal(resolveSizes(1608, 810, 'wide').layout, 'xl');
+  // 初回・xl のままなら素直に判定
+  assert.equal(resolveSizes(1596, 810, null).layout, 'xl');
+  assert.equal(resolveSizes(1596, 810, 'xl').layout, 'xl');
+  // 小さい配置へはすぐ変える（xl から、境目の 1 px 下で wide）
+  assert.equal(resolveSizes(1583, 810, 'xl').layout, 'wide');
+  // medium から wide（971）、narrow から medium（600）も同様
+  assert.equal(resolveSizes(980, 520, 'medium').layout, 'medium');
+  assert.equal(resolveSizes(995, 520, 'medium').layout, 'wide');
+  assert.equal(resolveSizes(610, 800, 'narrow').layout, 'narrow');
+  assert.equal(resolveSizes(624, 800, 'narrow').layout, 'medium');
 });
 
 /** @param {ReturnType<typeof computeSizes>} s */
 function pick(s) {
-  return { layout: s.layout, roomW: s.roomW, cardW: s.cardW, landW: s.landW };
+  return { layout: s.layout, roomW: s.roomW, cardW: s.cardW, landW: s.landW, playerCardW: s.playerCardW };
 }
 
 test('computeSizes: 幅が 0・NaN でも下限で計算する', () => {
-  assert.equal(computeSizes(0).rootW, 360);
+  assert.equal(computeSizes(0).rootW, 300);
   assert.equal(computeSizes(NaN).layout, 'narrow');
 });
 

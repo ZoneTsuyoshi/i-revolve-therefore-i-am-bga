@@ -22,6 +22,8 @@ npm run preview:fixtures # 固定データを本物のサーバーのコード�
 - `preview:shots` の引数は `--fixture` / `--size` / `--theme`（いずれもカンマ区切りで複数可）、`--spectator`、`--strict`。サイズは 360x780、390x844、768x1024、1024x768、1280x800、1366x768、1440x900、1920x1080、2560x1440。
 - 出力は `scripts/preview/out/<fixture>/<W>x<H>-<theme>.png`（見えている範囲）と `...-full.png`（ページ全体）。`out/` は `.gitignore` 済み。
 - ページのエラー（`pageerror`、`console.error`、リクエスト失敗、`data-error`）があると一覧を出して終了コード 1 になる。ページの横はみ出し（`scrollWidth > innerWidth`）は別に数えて警告として出す（`--strict` で失敗にする）。読み込みが終わると `<html data-ready="1">` が立つ。
+- 画面の大きさ（`--size`）の高さは、デスクトップ幅（980px 以上）ではブラウザのタブ・アドレスバーの約 130px を引いたものを見える高さ（ビューポート）にする（スクリーンショットの高さは `--size` より 130px 低い）。モバイル幅は `--size` のまま。
+- 配置の検証: 撮影のたびに、配置（`data-layout`）、環の下端と見える高さ（`xl` / `wide` で `W` が下限 150 より大きいとき、環が収まるか）、盤面の左右の余白 8px、操作できる要素（ボタン・押せるトークン・ジャンプリンク）が 32px 以上か、画面の外へはみ出す要素を数えて出力する（警告のみ。010 §11.1）。
 - 操作の記録: `performAction` は `console.log` され、`window.__irActions` に積まれる。
 
 ## 固定データ
