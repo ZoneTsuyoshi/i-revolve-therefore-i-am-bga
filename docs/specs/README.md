@@ -19,3 +19,4 @@
 | 007 | データモデル・通知 | Approved | T-007 |
 | 008 | カード効果の実装方針 | Approved | T-008 |
 | 009 | UI・アセット設計 | Approved | T-009 |
+| 010 | Public Alpha 審査に向けた UI の見直し | Approved | T-010 |
