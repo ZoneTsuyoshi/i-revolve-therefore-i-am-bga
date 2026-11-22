@@ -15,9 +15,12 @@ export class FakeElement {
     this.parentElement = null;
     this.style = { setProperty() {}, backgroundImage: '', backgroundSize: '', backgroundPosition: '', aspectRatio: '' };
     this.textContent = '';
+    /** @type {Record<string, Array<(event: any) => void>>} */
+    this.listeners = {};
     const self = this;
     this.classList = {
       add: (/** @type {string[]} */ ...names) => names.forEach((n) => { if (!self.hasClass(n)) { self.className = `${self.className} ${n}`.trim(); } }),
+      remove: (/** @type {string[]} */ ...names) => { self.className = self.className.split(/\s+/).filter((n) => n !== '' && !names.includes(n)).join(' '); },
       toggle: (/** @type {string} */ name, /** @type {boolean} */ on) => {
         const has = self.hasClass(name);
         if (on && !has) { self.className = `${self.className} ${name}`.trim(); }
@@ -54,6 +57,38 @@ export class FakeElement {
   /** @param {string} name @param {string} value */
   setAttribute(name, value) {
     this.attrs[name] = value;
+  }
+
+  /** @param {string} name */
+  getAttribute(name) {
+    return this.attrs[name] ?? null;
+  }
+
+  /** @param {string} name */
+  removeAttribute(name) {
+    delete this.attrs[name];
+  }
+
+  /** @param {string} type @param {(event: any) => void} handler */
+  addEventListener(type, handler) {
+    (this.listeners[type] ??= []).push(handler);
+  }
+
+  /** @param {string} type @param {(event: any) => void} handler */
+  removeEventListener(type, handler) {
+    this.listeners[type] = (this.listeners[type] ?? []).filter((h) => h !== handler);
+  }
+
+  /** クリックなどの代わり（テスト用）。`stopPropagation` は親へ伝えない */
+  fire(/** @type {string} */ type, /** @type {any} */ event = {}) {
+    let stopped = false;
+    const full = { stopPropagation: () => { stopped = true; }, preventDefault: () => {}, ...event };
+    for (const handler of this.listeners[type] ?? []) {
+      handler(full);
+    }
+    if (!stopped) {
+      this.parentElement?.fire(type, event);
+    }
   }
 
   /** `.a.b[data-x="1"]` 形式の単純なセレクタだけ */

@@ -8,7 +8,7 @@ import { checkPayment, composeFromArgs, solveComposePayment, toPayment as compos
 import {
   REASON, boardFromArgs, checkPlan, lockTotal, payOptions, pendingRoom, reachableRooms, routeExtras, solveMovePayment, toInput,
 } from '../../src/modules/js/states/move-plan.js';
-import { stepQuantity } from '../../src/modules/js/states/payment-ui.js';
+import { stepTokenCount as stepQuantity } from '../../src/modules/js/states/action-bar-model.js';
 
 const W = 'WISDOM';
 const F = 'WILL';

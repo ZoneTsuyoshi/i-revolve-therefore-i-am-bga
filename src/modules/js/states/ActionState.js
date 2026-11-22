@@ -6,6 +6,7 @@
  */
 import { SelectionController } from '../cards/selection.js';
 import { int } from '../ui/dom.js';
+import { claimView, sortButtons } from './action-bar-model.js';
 import { claimableObjectives, canUseFreeActions, discardLightGain, toIds } from './choice-model.js';
 import { CLASS_ROOM_ROUTE, CLASS_ROOM_SELECTABLE } from './MoveState.js';
 
@@ -50,8 +51,10 @@ export class ActionState {
     this.discardMode = false;
     /** @type {number[]} */
     this.discardSelected = [];
-    /** @type {HTMLElement[]} */
-    this.claimButtons = [];
+    /** @type {string | null} 獲得するつもりで選んだ目標カードのキー（`O001`。010 §2.4） */
+    this.claimSelected = null;
+    /** @type {Array<{ label: string, onClick: () => void, params: Record<string, any> }> | null} 画面を作っている間のボタン（青 → 白 → 赤に並べ直してから出す） */
+    this.queue = null;
   }
 
   /**
@@ -64,6 +67,7 @@ export class ActionState {
     this.session++;
     this.discardMode = false;
     this.discardSelected = [];
+    this.claimSelected = null;
     if (!isCurrentPlayerActive) {
       return;
     }
@@ -81,6 +85,7 @@ export class ActionState {
     this.clearUi();
     this.clearPanel();
     this.setClaimListener(false);
+    this.claimSelected = null;
     this.end();
     this.args = null;
   }
@@ -106,31 +111,45 @@ export class ActionState {
       return;
     }
     this.clearUi();
+    this.queue = [];
     if (this.discardMode) {
       this.drawDiscardForLight();
-      return;
+    } else {
+      this.draw();
+      this.addFreeActions();
     }
-    this.draw();
-    this.addFreeActionButtons();
+    this.flushButtons();
   }
 
-  /** ステータスバーのボタン、部屋の印、カードの選択を外す */
+  /** ステータスバーのボタン、部屋の印、カードの選択（トークン・目標・精神カード・見出しのボタンを含む）を外す */
   clearUi() {
+    this.queue = null;
     this.bga.statusBar.removeActionButtons();
-    this.claimButtons = [];
     this.clearRooms();
     this.getDeps().playerAreas?.clearSelection();
   }
 
   /**
-   * ステータスバーのボタンを足す。
+   * ステータスバーのボタンを足す。`render` の間は一度ためて、青 → 白 → 赤の順に並べ直して出す（取り消し系は右端。010 §2.2）。
    * @param {string} label
    * @param {() => void} onClick
    * @param {{ color?: 'primary' | 'secondary' | 'alert', disabled?: boolean, tooltip?: string, title?: string }} [params]
-   * @returns {HTMLButtonElement}
    */
   button(label, onClick, params = {}) {
-    return this.bga.statusBar.addActionButton(label, onClick, params);
+    if (this.queue === null) {
+      this.bga.statusBar.addActionButton(label, onClick, params);
+    } else {
+      this.queue.push({ label, onClick, params });
+    }
+  }
+
+  /** ためたボタンを、青 → 白 → 赤の順に出す */
+  flushButtons() {
+    const queue = this.queue ?? [];
+    this.queue = null;
+    for (const { label, onClick, params } of sortButtons(queue)) {
+      this.bga.statusBar.addActionButton(label, onClick, params);
+    }
   }
 
   /**
@@ -229,6 +248,33 @@ export class ActionState {
     });
   }
 
+  // ---- 精神カードの選択 ----
+
+  /**
+   * 精神トラックのカードを選べるようにする（行き先の選択。押すとボタンと同じ選択になる。010 §2.4）。
+   * @param {Iterable<string>} ids 選べる精神カード（`R1a`）
+   * @param {string | null} selected 選択中のカード
+   * @param {(id: string | null) => void} onChange 押したカード（選択を外したら null）
+   */
+  pickSpirits(ids, selected, onChange) {
+    const { playerAreas, common } = this.getDeps();
+    if (playerAreas === null || common === null) {
+      return;
+    }
+    for (const id of ids) {
+      const stock = common.spiritStocks.get(id);
+      if (stock === undefined) {
+        continue;
+      }
+      playerAreas.selection.start(stock, {
+        ids: [id],
+        mode: 'single',
+        selected: selected === id ? [id] : [],
+        onChange: (picked) => onChange(picked.length > 0 ? id : null),
+      });
+    }
+  }
+
   // ---- 候補のカード置き場 ----
 
   /**
@@ -278,57 +324,64 @@ export class ActionState {
     return int(this.args?.turnPlayer);
   }
 
-  /** ターンプレイヤーだけに、フリーアクションのボタンを足す */
-  addFreeActionButtons() {
+  /**
+   * ターンプレイヤーだけに、フリーアクションを足す（010 §2.4）。手札を捨てて心光を得るのは手札の区画の見出しの小さなボタン、
+   * 目標の獲得は共通の場の獲得できる目標カードを押して選び、青の「Claim goal」で確定する（獲得できる目標がなければ何も出さない）。
+   */
+  addFreeActions() {
     if (!this.freeActions || !canUseFreeActions(this.getDeps().me, this.turnPlayer())) {
       return;
     }
-    this.button(_('Discard 2 for Psychic Light'), () => {
-      this.discardMode = true;
-      this.discardSelected = [];
-      this.render();
-    }, {
-      color: 'secondary',
+    this.getDeps().playerAreas?.showDiscardButton({
+      label: _('Discard 2 for Psychic Light'),
       tooltip: _('Discard Memory cards from your hand. Every 2 cards\' worth gives 1 Psychic Light (a level 2 card counts as 2)'),
+      onClick: () => {
+        this.discardMode = true;
+        this.discardSelected = [];
+        this.render();
+      },
     });
     this.setClaimListener(true);
-    this.refreshClaimButtons();
+    this.addClaimUi();
   }
 
   /**
-   * 目標の現在値の通知（N23）で獲得ボタンを更新するか。
+   * 目標の現在値の通知（N23）で、獲得できる目標の表示を作り直すか。
    * @param {boolean} on
    */
   setClaimListener(on) {
     const common = this.getDeps().common;
     if (common !== null) {
-      common.onObjectiveStatus = on ? () => this.refreshClaimButtons() : null;
+      common.onObjectiveStatus = on ? () => this.render() : null;
     }
   }
 
-  /** 獲得できる目標カードごとにボタンを出す。無ければ無効のボタンを 1 つ出す（サーバーの claimable が来たら有効になる） */
-  refreshClaimButtons() {
-    for (const button of this.claimButtons) {
-      button.remove();
-    }
-    this.claimButtons = [];
-    if (!this.active || this.discardMode) {
+  /** 獲得できる目標カードを「選べる」で光らせ、選んだものの「Claim goal」ボタンを出す */
+  addClaimUi() {
+    const { common, texts, playerAreas } = this.getDeps();
+    const view = claimView(claimableObjectives(common?.objectiveStatus ?? new Map()), this.claimSelected);
+    this.claimSelected = view.selected?.key ?? null;
+    if (view.keys.length === 0) {
       return;
     }
-    const { common, texts } = this.getDeps();
-    const claimable = claimableObjectives(common?.objectiveStatus ?? new Map());
-    if (claimable.length === 0) {
-      this.claimButtons.push(this.button(_('Claim goal'), () => {}, {
-        color: 'secondary', disabled: true, tooltip: _('No goal card can be claimed now'),
-      }));
-      return;
+    if (common?.goalStock !== null && common?.goalStock !== undefined) {
+      playerAreas?.selection.start(common.goalStock, {
+        ids: view.keys,
+        mode: 'single',
+        selected: this.claimSelected === null ? [] : [this.claimSelected],
+        onChange: (picked) => {
+          this.claimSelected = picked.length > 0 ? String(picked[0]) : null;
+          this.render();
+        },
+      });
     }
-    for (const goal of claimable) {
+    const goal = view.selected;
+    if (goal !== null) {
       const name = texts?.cards[goal.key]?.name ?? goal.key;
       const label = _('Claim goal: ${name} (+${points})').replace('${name}', name).replace('${points}', String(goal.points));
-      this.claimButtons.push(this.button(label, () => {
+      this.button(label, () => {
         this.send('actClaimObjective', { objectiveId: goal.id });
-      }, { color: 'secondary' }));
+      });
     }
   }
 
@@ -359,6 +412,6 @@ export class ActionState {
       this.discardMode = false;
       this.discardSelected = [];
       this.render();
-    }, { color: 'secondary' });
+    }, { color: 'alert' });
   }
 }

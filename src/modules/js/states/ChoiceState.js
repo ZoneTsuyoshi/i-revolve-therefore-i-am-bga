@@ -86,7 +86,7 @@ export class ChoiceState extends ActionState {
    * @param {() => Record<string, unknown>} payload
    */
   confirmButton(ready, payload) {
-    this.button(_('Confirm'), () => this.reply(payload()), { disabled: !ready });
+    this.button(_('Confirm'), () => this.reply(payload()), { disabled: !ready, tooltip: ready ? undefined : _('Make your choice first') });
   }
 
   /**
@@ -199,7 +199,7 @@ export class ChoiceState extends ActionState {
           if (this.ego !== null) {
             this.reply(answer.ego(this.ego));
           }
-        }, { disabled: this.ego === null });
+        }, { disabled: this.ego === null, tooltip: this.ego === null ? _('Choose a card first') : undefined });
         break;
       case KIND.PICK_SPIRIT_BRANCH:
         this.drawSpiritBranch(choice);
@@ -295,7 +295,14 @@ export class ChoiceState extends ActionState {
   drawSpiritBranch(choice) {
     this.bga.statusBar.setTitle(_('${you} must choose a spirit card to advance to'));
     const catalog = list(this.getDeps().catalog?.spirit).map(obj);
-    for (const id of list(choice.data.candidates).map(String)) {
+    const candidates = list(choice.data.candidates).map(String);
+    // 精神トラックの候補のカードを押しても選べる（ボタンも残す。010 §2.4）
+    this.pickSpirits(candidates, null, (id) => {
+      if (id !== null) {
+        this.reply(answer.spirit(id));
+      }
+    });
+    for (const id of candidates) {
       const { tier, branch } = spiritParts(id);
       const cost = costText(obj(catalog.find((row) => row.id === id)?.cost), keyName);
       const label = _('Tier ${tier} ${branch}: ${cost}').replace('${tier}', String(tier)).replace('${branch}', branch).replace('${cost}', cost);

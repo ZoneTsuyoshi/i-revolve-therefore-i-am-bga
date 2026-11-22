@@ -3,9 +3,9 @@
  * ここは手札・自己構成済みカード・ステータスバーのボタンをつなぐだけ。
  *
  * 流れ: 手札から自己構成するカードを選ぶ（自己構成できるカードが光る）→ 払うものをまとめて選ぶ
- * （捨てる手札・M095 で横向きにする自己構成済みカードはクリックで選択のオン・オフ、心光は「+1／-1」、I08 の追加支払いは別の選択）。
+ * （捨てる手札・M095 で横向きにする自己構成済みカードはクリックで選択のオン・オフ、心光はトークンを押して数量、I08 の追加支払いは別の選択）。
  * 割り当ては自動（compose-plan.js の `solveComposePayment`）で、エネルギーが足りたら「Confirm」で `actCompose`。
- * I03（建築家）を持つときは「Swap with Architect」で `actComposeArchitect`。「Cancel」で何も消費せずに戻る。
+ * I03（建築家）を持つときは「Swap with Architect」で `actComposeArchitect`。「Cancel」（赤・右端）で何も消費せずに戻る。Reset はなく、選んだ資源は個別に押して外す（010 §2.3）。
  * © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
  */
 import { memKey } from '../board/view-model.js';
@@ -14,7 +14,8 @@ import {
   architectHand, architectTableau, composableIds, composeFromArgs, discardOptions, emptyPayment, extraOptions, lightCost, solveComposePayment,
   toPayment,
 } from './compose-plan.js';
-import { cardLabel } from './payment-ui.js';
+import { lightLimit } from './action-bar-model.js';
+import { cardLabel, quantityTokenPick } from './payment-ui.js';
 
 /** @returns {{ hand: number[], tap: number[], light: number, extra: number[] }} */
 function emptySelection() {
@@ -80,7 +81,9 @@ export class ComposeState extends ActionState {
     } else {
       this.drawPay(board);
     }
-    this.button(_('Cancel'), () => this.send('actCancel'), { color: 'secondary' });
+    if (!this.architect) {
+      this.button(_('Cancel'), () => this.send('actCancel'), { color: 'alert' });
+    }
   }
 
   /**
@@ -168,22 +171,19 @@ export class ComposeState extends ActionState {
     }
 
     if (board.paysEnergy && board.maxLightUses > 0) {
-      const next = sel.light + 1;
-      const step = lightCost(board, next) - lightCost(board, sel.light);
-      this.button(_('Psychic Light +1 (selected ${count}, cost ${cost})').replace('${count}', String(sel.light)).replace('${cost}', Number.isFinite(step) ? String(step) : '-'), () => {
-        this.selection = { ...sel, light: next };
-        this.render();
-      }, {
-        color: 'secondary',
-        disabled: next > board.maxLightUses || lightCost(board, next) > board.light,
-        tooltip: _('Pay 1 energy with Psychic Light. The nth use in an action costs more'),
+      const max = lightLimit((uses) => lightCost(board, uses), board.light, board.maxLightUses);
+      playerAreas?.pickTokens({
+        light: quantityTokenPick({
+          kind: 'light',
+          count: sel.light,
+          max,
+          cumulative: (uses) => lightCost(board, uses),
+          onChange: (light) => {
+            this.selection = { ...sel, light };
+            this.render();
+          },
+        }),
       });
-      if (sel.light > 0) {
-        this.button(_('Psychic Light -1'), () => {
-          this.selection = { ...sel, light: sel.light - 1 };
-          this.render();
-        }, { color: 'secondary' });
-      }
     }
     if (board.extraMax > 0) {
       this.button(editing === 'extra' ? _('Choose energy cards') : _('Choose extra cards'), () => {
@@ -199,17 +199,11 @@ export class ComposeState extends ActionState {
       this.selection = emptySelection();
       this.render();
     }, { color: 'secondary' });
-    if (sel.hand.length + sel.tap.length + sel.light + sel.extra.length > 0) {
-      this.button(_('Reset'), () => {
-        this.selection = emptySelection();
-        this.render();
-      }, { color: 'alert', tooltip: _('Deselect every resource') });
-    }
     this.button(_('Confirm'), () => {
       if (cardId !== null) {
         this.send('actCompose', { cardId, payment: JSON.stringify(toPayment(solution.payment)) });
       }
-    }, { disabled: !solution.complete });
+    }, { disabled: !solution.complete, tooltip: solution.complete ? undefined : _('Select enough resources to pay') });
   }
 
   /**
@@ -265,10 +259,10 @@ export class ComposeState extends ActionState {
       if (tableauCardId !== null && newCardId !== null) {
         this.send('actComposeArchitect', { tableauCardId, newCardId });
       }
-    }, { disabled: tableauCardId === null || newCardId === null });
+    }, { disabled: tableauCardId === null || newCardId === null, tooltip: tableauCardId === null || newCardId === null ? _('Choose a constructed card and a card in your hand') : undefined });
     this.button(_('Back'), () => {
       this.architect = false;
       this.render();
-    }, { color: 'secondary' });
+    }, { color: 'alert' });
   }
 }

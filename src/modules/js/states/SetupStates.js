@@ -43,7 +43,7 @@ export class SetupEgoPickState extends ActionState {
       if (this.selected !== null) {
         this.send('actPickInitialEgo', { egoId: this.selected });
       }
-    }, { disabled: this.selected === null });
+    }, { disabled: this.selected === null, tooltip: this.selected === null ? _('Choose a card first') : undefined });
   }
 }
 
@@ -84,6 +84,6 @@ export class SetupMeeplePlaceState extends ActionState {
       if (this.chosen !== null) {
         this.send('actPlaceMeeple', { pos: this.chosen });
       }
-    }, { disabled: this.chosen === null });
+    }, { disabled: this.chosen === null, tooltip: this.chosen === null ? _('Choose a room first') : undefined });
   }
 }
