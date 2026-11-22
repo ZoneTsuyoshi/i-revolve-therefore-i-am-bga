@@ -45,44 +45,11 @@ updateBodyClasses();
 window.addEventListener('resize', updateBodyClasses);
 
 // ---- グローバル（BGA が提供するもの）----
-/**
- * bga-cards の Stock は、置き場の要素が document に付いていないと、カードを足した直後に例外を出す（`getElementById` で自分の要素を引くため）。
- * このゲームは ir-open と ir-piles を、setup の最後に Layout が置き場所へ付け替えるまで document の外に置く（Board.js の placeFloating）。
- * Studio で同じことが起きるかは未確認なので、プレビューでは Stock の作成時に、付いていない要素を隠した置き場（#pv-limbo）へ仮に入れて例外を避ける。
- * @param {any} lib
- */
-function withLimbo(lib) {
-  const limbo = document.createElement('div');
-  limbo.id = 'pv-limbo';
-  limbo.hidden = true;
-  document.body.append(limbo);
-  const wrapped = { ...lib };
-  for (const [name, exported] of Object.entries(lib)) {
-    if (typeof exported === 'function' && typeof exported.prototype?.addCard === 'function') {
-      wrapped[name] = class extends exported {
-        constructor(/** @type {any[]} */ ...args) {
-          // Deck はコンストラクターの中でカードを足すので、super の前に付ける
-          /** @type {Element} */
-          let top = args[1];
-          while (top.parentElement !== null) {
-            top = top.parentElement;
-          }
-          if (!top.isConnected) {
-            limbo.append(top);
-          }
-          super(...args);
-        }
-      };
-    }
-  }
-  return wrapped;
-}
-
 Object.assign(window, {
   _: (/** @type {string} */ text) => text,
   importEsmLib: async (/** @type {string} */ name, /** @type {string} */ version) => {
     const lib = await import(/* @vite-ignore */ `https://x.boardgamearena.net/data/game-libs/${name}/${version}/dist/${name}.esm.js`);
-    return name === 'bga-cards' ? withLimbo(lib) : lib;
+    return lib;
   },
 });
 

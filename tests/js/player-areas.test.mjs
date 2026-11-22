@@ -278,3 +278,17 @@ test('選択の基盤: start で選べる印、onChange、上限、clear で全�
   assert.equal(hand.onSelectionChange, undefined);
   FakeStock.log.length = 0;
 });
+
+test('buildBoard の直後に、ir-piles と ir-open が root の中にある（Stock の作成前に document へ付く）', () => {
+  const { board } = build();
+  const inRoot = (/** @type {any} */ node) => {
+    for (let n = node; n; n = n.parentElement ?? n.parentNode) {
+      if (n === board.root) return true;
+    }
+    return false;
+  };
+  assert.ok(inRoot(board.piles));
+  assert.ok(inRoot(board.open));
+  assert.equal(board.piles.parentElement ?? board.piles.parentNode, board.slotPilesTop);
+  assert.equal(board.open.parentElement ?? board.open.parentNode, board.center);
+});
