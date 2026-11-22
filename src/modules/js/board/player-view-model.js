@@ -8,11 +8,10 @@ import { memKey, toInt } from './view-model.js';
 /** 手札の上限（001 §12。獲得の途中では一時的に超える） */
 export const HAND_LIMIT = 8;
 
-/** トークンの種類。表示順と UI スプライトのキー（名前の翻訳は PlayerAreas の `tokenTitle`） */
+/** トークンのチップ 4 種。表示順と UI スプライトのキー（名前の翻訳は PlayerAreas の `tokenTitle`）。万能移動鍵は表・裏を 1 つにまとめる（010 §5.3） */
 export const TOKEN_KINDS = /** @type {const} */ ([
   { kind: 'light', sprite: 'token_light' },
   { kind: 'wildUp', sprite: 'token_wildkey' },
-  { kind: 'wildUsed', sprite: 'token_wildkey_used' },
   { kind: 'compose', sprite: 'token_compose' },
   { kind: 'analysis', sprite: 'token_analysis' },
 ]);
@@ -257,4 +256,36 @@ export function energyMap(energies) {
     }
   }
   return out;
+}
+
+/**
+ * トークンのチップ 1 つの表示（万能移動鍵は表 + 使用済み、他は個数）。0 個は `zero`（薄く出す）。
+ * @param {'light' | 'wildUp' | 'compose' | 'analysis'} kind
+ * @param {Tokens} tokens
+ * @returns {{ count: number, usedCount: number | null, zero: boolean }}
+ */
+export function tokenChip(kind, tokens) {
+  if (kind === 'wildUp') {
+    return { count: tokens.wildUp, usedCount: tokens.wildUsed, zero: tokens.wildUp + tokens.wildUsed === 0 };
+  }
+  return { count: tokens[kind], usedCount: null, zero: tokens[kind] === 0 };
+}
+
+/**
+ * 手札が上限（8）を超えたときだけの警告（「9 / 8」）。超えていなければ null（タブに何も出さない。010 §4）。
+ * @param {number} count
+ * @returns {{ text: string } | null}
+ */
+export function handWarning(count) {
+  const n = Math.max(0, toInt(count));
+  return n > HAND_LIMIT ? { text: `${n} / ${HAND_LIMIT}` } : null;
+}
+
+/**
+ * 名前の行の「N / 20」（パネルと同じ表記）。
+ * @param {unknown} score
+ * @returns {string}
+ */
+export function scoreLabel(score) {
+  return `${Math.max(0, toInt(score))} / 20`;
 }

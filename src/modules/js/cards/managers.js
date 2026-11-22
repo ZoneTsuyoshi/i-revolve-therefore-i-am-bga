@@ -57,6 +57,8 @@ export function createCardManagers({ BgaCards, BgaAnimations, imgUrl, animations
             div.dataset.irCardId = String(card.id);
             const text = card.caption ?? captionOf?.(card.key);
             if (text !== undefined) {
+                // 画像に印刷された日本語の代わりに、英語名をアクセシブルな名前にする（010 §9）
+                div.setAttribute('aria-label', text);
                 const caption = document.createElement('span');
                 caption.className = 'ir-caption';
                 caption.textContent = text;
