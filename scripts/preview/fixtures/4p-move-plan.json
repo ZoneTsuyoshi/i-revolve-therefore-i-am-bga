@@ -1,0 +1,817 @@
+{
+    "preview": {
+        "me": 11,
+        "state": {
+            "name": "Move",
+            "active": true,
+            "args": {
+                "turnPlayer": 11,
+                "position": 1,
+                "rooms": [
+                    {
+                        "pos": 1,
+                        "level": 2,
+                        "lock": "WILL",
+                        "locks": 2,
+                        "bonus": "ANALYSIS_TOKEN"
+                    },
+                    {
+                        "pos": 2,
+                        "level": 1,
+                        "lock": "WILL",
+                        "locks": 1,
+                        "bonus": "NONE"
+                    },
+                    {
+                        "pos": 3,
+                        "level": 1,
+                        "lock": "WILL",
+                        "locks": 1,
+                        "bonus": "NONE"
+                    },
+                    {
+                        "pos": 4,
+                        "level": 2,
+                        "lock": "WISDOM",
+                        "locks": 2,
+                        "bonus": "LIGHT"
+                    },
+                    {
+                        "pos": 5,
+                        "level": 1,
+                        "lock": "WISDOM",
+                        "locks": 1,
+                        "bonus": "NONE"
+                    },
+                    {
+                        "pos": 6,
+                        "level": 1,
+                        "lock": "EMOTION",
+                        "locks": 1,
+                        "bonus": "NONE"
+                    },
+                    {
+                        "pos": 7,
+                        "level": 2,
+                        "lock": "WILL",
+                        "locks": 2,
+                        "bonus": "WILD_MOVE_KEY"
+                    },
+                    {
+                        "pos": 8,
+                        "level": 1,
+                        "lock": "WISDOM",
+                        "locks": 1,
+                        "bonus": "NONE"
+                    },
+                    {
+                        "pos": 9,
+                        "level": 1,
+                        "lock": "WILL",
+                        "locks": 1,
+                        "bonus": "NONE"
+                    },
+                    {
+                        "pos": 10,
+                        "level": 2,
+                        "lock": "WISDOM",
+                        "locks": 2,
+                        "bonus": "COMPOSE_TOKEN"
+                    },
+                    {
+                        "pos": 11,
+                        "level": 1,
+                        "lock": "WISDOM",
+                        "locks": 1,
+                        "bonus": "NONE"
+                    },
+                    {
+                        "pos": 12,
+                        "level": 1,
+                        "lock": "WILL",
+                        "locks": 1,
+                        "bonus": "NONE"
+                    }
+                ],
+                "maxRooms": 24,
+                "canMove": true,
+                "resources": {
+                    "light": 3,
+                    "wildUp": 1,
+                    "lightCosts": [
+                        1,
+                        2,
+                        3,
+                        4,
+                        5,
+                        6,
+                        7,
+                        8,
+                        9,
+                        10,
+                        11,
+                        12,
+                        13,
+                        14,
+                        15,
+                        16,
+                        17,
+                        18,
+                        19,
+                        20,
+                        21,
+                        22,
+                        23,
+                        24,
+                        25,
+                        26,
+                        27,
+                        28,
+                        29,
+                        30,
+                        31,
+                        32,
+                        33,
+                        34,
+                        35,
+                        36,
+                        37,
+                        38,
+                        39,
+                        40,
+                        41,
+                        42,
+                        43,
+                        44,
+                        45,
+                        46,
+                        47,
+                        48
+                    ],
+                    "lockReduction": 0
+                },
+                "keyServes": {
+                    "WISDOM": [
+                        "WISDOM"
+                    ],
+                    "WILL": [
+                        "WILL"
+                    ],
+                    "EMOTION": [
+                        "EMOTION"
+                    ],
+                    "WILD": [
+                        "WISDOM",
+                        "WILL",
+                        "EMOTION"
+                    ]
+                },
+                "tableau": [
+                    {
+                        "id": 94,
+                        "type": 80,
+                        "keys": [
+                            "EMOTION"
+                        ],
+                        "tapped": true
+                    },
+                    {
+                        "id": 3,
+                        "type": 51,
+                        "keys": [
+                            "WILD"
+                        ],
+                        "tapped": false
+                    },
+                    {
+                        "id": 135,
+                        "type": 2,
+                        "keys": [
+                            "EMOTION"
+                        ],
+                        "tapped": false
+                    },
+                    {
+                        "id": 70,
+                        "type": 87,
+                        "keys": [
+                            "WILL",
+                            "WISDOM"
+                        ],
+                        "tapped": false
+                    }
+                ],
+                "_private": {
+                    "11": {
+                        "hand": [
+                            {
+                                "id": 29,
+                                "type": 39,
+                                "keys": [
+                                    "WILL"
+                                ],
+                                "tapped": false
+                            },
+                            {
+                                "id": 43,
+                                "type": 43,
+                                "keys": [
+                                    "WILD"
+                                ],
+                                "tapped": false
+                            },
+                            {
+                                "id": 59,
+                                "type": 41,
+                                "keys": [
+                                    "WILD"
+                                ],
+                                "tapped": false
+                            },
+                            {
+                                "id": 60,
+                                "type": 35,
+                                "keys": [
+                                    "EMOTION"
+                                ],
+                                "tapped": false
+                            },
+                            {
+                                "id": 75,
+                                "type": 76,
+                                "keys": [
+                                    "WISDOM"
+                                ],
+                                "tapped": false
+                            },
+                            {
+                                "id": 128,
+                                "type": 16,
+                                "keys": [
+                                    "WISDOM"
+                                ],
+                                "tapped": false
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        "steps": [
+            {
+                "click": ".ir-room[data-pos=\"2\"]"
+            },
+            {
+                "click": ".ir-room[data-pos=\"3\"]"
+            },
+            {
+                "click": ".ir-room[data-pos=\"4\"]"
+            }
+        ]
+    },
+    "gamedatas": {
+        "players": {
+            "11": {
+                "id": 11,
+                "no": 1,
+                "name": "Aoi",
+                "color": "b3202a",
+                "score": 8
+            },
+            "22": {
+                "id": 22,
+                "no": 2,
+                "name": "Ren",
+                "color": "2a4fa0",
+                "score": 3
+            },
+            "33": {
+                "id": 33,
+                "no": 3,
+                "name": "Sora",
+                "color": "5f9c3a",
+                "score": 7
+            },
+            "44": {
+                "id": 44,
+                "no": 4,
+                "name": "Mio",
+                "color": "d6b61e",
+                "score": 4
+            }
+        },
+        "playerorder": [
+            11,
+            22,
+            33,
+            44
+        ],
+        "turnPlayer": 11,
+        "turnNo": 6,
+        "phase": "MOVE",
+        "turn": {
+            "enteredRooms": [],
+            "roomsEnteredCount": 0,
+            "skippedRooms": [],
+            "objectiveClaimed": null,
+            "lightsGained": 0,
+            "analysisActionsDone": 0,
+            "turnComposeDiscount": 0,
+            "nextComposeDiscount": 0,
+            "recall": null
+        },
+        "rooms": [
+            {
+                "pos": 1,
+                "floor": 1,
+                "level": 2,
+                "card": {
+                    "id": 101,
+                    "back": "2F",
+                    "faceUp": false
+                },
+                "under": []
+            },
+            {
+                "pos": 2,
+                "floor": 2,
+                "level": 1,
+                "card": {
+                    "id": 110,
+                    "back": "1F",
+                    "faceUp": false
+                },
+                "under": []
+            },
+            {
+                "pos": 3,
+                "floor": 3,
+                "level": 1,
+                "card": {
+                    "id": 100,
+                    "back": "1F",
+                    "faceUp": false
+                },
+                "under": []
+            },
+            {
+                "pos": 4,
+                "floor": 4,
+                "level": 2,
+                "card": {
+                    "id": 86,
+                    "back": "2B",
+                    "faceUp": false
+                },
+                "under": []
+            },
+            {
+                "pos": 5,
+                "floor": 5,
+                "level": 1,
+                "card": {
+                    "id": 98,
+                    "back": "1B",
+                    "faceUp": false
+                },
+                "under": []
+            },
+            {
+                "pos": 6,
+                "floor": 6,
+                "level": 1,
+                "card": {
+                    "id": 106,
+                    "back": "1H",
+                    "faceUp": false
+                },
+                "under": []
+            },
+            {
+                "pos": 7,
+                "floor": 7,
+                "level": 2,
+                "card": {
+                    "id": 30,
+                    "back": "2F",
+                    "faceUp": false
+                },
+                "under": []
+            },
+            {
+                "pos": 8,
+                "floor": 8,
+                "level": 1,
+                "card": {
+                    "id": 58,
+                    "back": "1B",
+                    "faceUp": false
+                },
+                "under": []
+            },
+            {
+                "pos": 9,
+                "floor": 9,
+                "level": 1,
+                "card": {
+                    "id": 111,
+                    "back": "1F",
+                    "faceUp": false
+                },
+                "under": []
+            },
+            {
+                "pos": 10,
+                "floor": 10,
+                "level": 2,
+                "card": {
+                    "id": 73,
+                    "back": "2B",
+                    "faceUp": false
+                },
+                "under": []
+            },
+            {
+                "pos": 11,
+                "floor": 11,
+                "level": 1,
+                "card": {
+                    "id": 47,
+                    "back": "1B",
+                    "faceUp": false
+                },
+                "under": []
+            },
+            {
+                "pos": 12,
+                "floor": 12,
+                "level": 1,
+                "card": {
+                    "id": 61,
+                    "back": "1F",
+                    "faceUp": false
+                },
+                "under": []
+            }
+        ],
+        "open": [
+            {
+                "slot": 0,
+                "id": 42,
+                "type": 48
+            },
+            {
+                "slot": 1,
+                "id": 139,
+                "type": 70
+            },
+            {
+                "slot": 2,
+                "id": 49,
+                "type": 81
+            },
+            {
+                "slot": 3,
+                "id": 34,
+                "type": 34
+            },
+            {
+                "slot": 4,
+                "id": 56,
+                "type": 75
+            },
+            {
+                "slot": 5,
+                "id": 80,
+                "type": 37
+            }
+        ],
+        "decks": {
+            "1": {
+                "count": 78,
+                "top": "1F"
+            },
+            "2": {
+                "count": 18,
+                "top": "2F"
+            }
+        },
+        "discards": {
+            "1": [],
+            "2": []
+        },
+        "spirit": [
+            {
+                "id": "R1B",
+                "tier": 1,
+                "slot": 0,
+                "light": false
+            },
+            {
+                "id": "R1C",
+                "tier": 1,
+                "slot": 1,
+                "light": true
+            },
+            {
+                "id": "R2",
+                "tier": 2,
+                "slot": 0,
+                "light": true
+            },
+            {
+                "id": "R3C",
+                "tier": 3,
+                "slot": 0,
+                "light": true
+            },
+            {
+                "id": "R3B",
+                "tier": 3,
+                "slot": 1,
+                "light": true
+            },
+            {
+                "id": "R4",
+                "tier": 4,
+                "slot": 0,
+                "light": true
+            },
+            {
+                "id": "R5",
+                "tier": 5,
+                "slot": 0,
+                "light": false
+            }
+        ],
+        "enhDeckCount": 4,
+        "objectives": [
+            {
+                "id": 6,
+                "slot": 0,
+                "owner": null
+            },
+            {
+                "id": 4,
+                "slot": 1,
+                "owner": null
+            },
+            {
+                "id": 7,
+                "slot": 2,
+                "owner": null
+            },
+            {
+                "id": 3,
+                "slot": 3,
+                "owner": null
+            },
+            {
+                "id": 5,
+                "slot": 4,
+                "owner": null
+            }
+        ],
+        "playerData": {
+            "11": {
+                "persona": 1,
+                "spirit": "R1B",
+                "tier": 1,
+                "tokens": {
+                    "light": 3,
+                    "wildUp": 1,
+                    "wildUsed": 0,
+                    "compose": 0,
+                    "analysis": 0
+                },
+                "handCount": 6,
+                "score": 8,
+                "keys": {
+                    "WISDOM": 1,
+                    "WILL": 1,
+                    "EMOTION": 2,
+                    "WILD": 1
+                },
+                "composed": [
+                    {
+                        "id": 94,
+                        "type": 80,
+                        "tapped": true,
+                        "underCount": 0
+                    },
+                    {
+                        "id": 3,
+                        "type": 51,
+                        "tapped": false,
+                        "underCount": 0
+                    },
+                    {
+                        "id": 135,
+                        "type": 2,
+                        "tapped": false,
+                        "underCount": 0
+                    },
+                    {
+                        "id": 70,
+                        "type": 87,
+                        "tapped": false,
+                        "underCount": 0
+                    }
+                ],
+                "initialEgo": "I07",
+                "enhancedEgo": null,
+                "objectives": []
+            },
+            "22": {
+                "persona": 4,
+                "spirit": null,
+                "tier": 0,
+                "tokens": {
+                    "light": 1,
+                    "wildUp": 1,
+                    "wildUsed": 0,
+                    "compose": 0,
+                    "analysis": 1
+                },
+                "handCount": 3,
+                "score": 3,
+                "keys": {
+                    "WISDOM": 1,
+                    "WILL": 1,
+                    "EMOTION": 1,
+                    "WILD": 0
+                },
+                "composed": [
+                    {
+                        "id": 79,
+                        "type": 78,
+                        "tapped": false,
+                        "underCount": 0
+                    },
+                    {
+                        "id": 118,
+                        "type": 82,
+                        "tapped": false,
+                        "underCount": 0
+                    }
+                ],
+                "initialEgo": "I02",
+                "enhancedEgo": null,
+                "objectives": []
+            },
+            "33": {
+                "persona": 7,
+                "spirit": null,
+                "tier": 0,
+                "tokens": {
+                    "light": 1,
+                    "wildUp": 1,
+                    "wildUsed": 0,
+                    "compose": 1,
+                    "analysis": 0
+                },
+                "handCount": 4,
+                "score": 7,
+                "keys": {
+                    "WISDOM": 2,
+                    "WILL": 2,
+                    "EMOTION": 1,
+                    "WILD": 0
+                },
+                "composed": [
+                    {
+                        "id": 89,
+                        "type": 12,
+                        "tapped": false,
+                        "underCount": 0
+                    },
+                    {
+                        "id": 37,
+                        "type": 70,
+                        "tapped": false,
+                        "underCount": 0
+                    },
+                    {
+                        "id": 46,
+                        "type": 20,
+                        "tapped": false,
+                        "underCount": 0
+                    },
+                    {
+                        "id": 85,
+                        "type": 88,
+                        "tapped": false,
+                        "underCount": 0
+                    }
+                ],
+                "initialEgo": "I05",
+                "enhancedEgo": null,
+                "objectives": []
+            },
+            "44": {
+                "persona": 10,
+                "spirit": null,
+                "tier": 0,
+                "tokens": {
+                    "light": 2,
+                    "wildUp": 1,
+                    "wildUsed": 0,
+                    "compose": 1,
+                    "analysis": 0
+                },
+                "handCount": 5,
+                "score": 4,
+                "keys": {
+                    "WISDOM": 0,
+                    "WILL": 1,
+                    "EMOTION": 1,
+                    "WILD": 0
+                },
+                "composed": [
+                    {
+                        "id": 91,
+                        "type": 80,
+                        "tapped": false,
+                        "underCount": 0
+                    },
+                    {
+                        "id": 72,
+                        "type": 54,
+                        "tapped": false,
+                        "underCount": 0
+                    }
+                ],
+                "initialEgo": "I03",
+                "enhancedEgo": null,
+                "objectives": []
+            }
+        },
+        "myHand": [
+            {
+                "id": 29,
+                "type": 39,
+                "energy": 2
+            },
+            {
+                "id": 43,
+                "type": 43,
+                "energy": 3
+            },
+            {
+                "id": 59,
+                "type": 41,
+                "energy": 3
+            },
+            {
+                "id": 60,
+                "type": 35,
+                "energy": 2
+            },
+            {
+                "id": 75,
+                "type": 76,
+                "energy": 4
+            },
+            {
+                "id": 128,
+                "type": 16,
+                "energy": 2
+            }
+        ],
+        "myUnder": [],
+        "myPickedEgo": null,
+        "myObjectiveStatus": [
+            {
+                "id": 6,
+                "x": 1,
+                "points": 1,
+                "claimable": false
+            },
+            {
+                "id": 4,
+                "x": 6,
+                "points": 3,
+                "claimable": false
+            },
+            {
+                "id": 7,
+                "x": 1,
+                "points": 1,
+                "claimable": true
+            },
+            {
+                "id": 3,
+                "x": 2,
+                "points": 2,
+                "claimable": false
+            },
+            {
+                "id": 5,
+                "x": 3,
+                "points": 2,
+                "claimable": false
+            }
+        ],
+        "gameEnd": null
+    }
+}

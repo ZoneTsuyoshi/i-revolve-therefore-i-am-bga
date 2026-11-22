@@ -1,0 +1,2061 @@
+{
+    "memory": [
+        {
+            "type": 1,
+            "id": "M001",
+            "nameEn": "Abandoned Idea",
+            "nameId": "abandoned_idea",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "WISDOM"
+            ],
+            "back": "1B",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "DRAW_1"
+        },
+        {
+            "type": 2,
+            "id": "M002",
+            "nameEn": "Deja Vu",
+            "nameId": "deja_vu",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "EMOTION"
+            ],
+            "back": "1H",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "DRAW_1"
+        },
+        {
+            "type": 3,
+            "id": "M003",
+            "nameEn": "Desolation",
+            "nameId": "desolation",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "WILL"
+            ],
+            "back": "1F",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "DRAW_1"
+        },
+        {
+            "type": 4,
+            "id": "M004",
+            "nameEn": "Unsolved Structure",
+            "nameId": "unsolved_structure",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "WISDOM"
+            ],
+            "back": "1B",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "DRAW_1"
+        },
+        {
+            "type": 5,
+            "id": "M005",
+            "nameEn": "Portrait",
+            "nameId": "portrait",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "EMOTION"
+            ],
+            "back": "1H",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "DRAW_1"
+        },
+        {
+            "type": 6,
+            "id": "M006",
+            "nameEn": "Price of Freedom",
+            "nameId": "price_of_freedom",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "WILL"
+            ],
+            "back": "1F",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "DRAW_1"
+        },
+        {
+            "type": 7,
+            "id": "M007",
+            "nameEn": "Faded Photograph",
+            "nameId": "faded_photograph",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "WISDOM"
+            ],
+            "back": "1B",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "DRAW_1"
+        },
+        {
+            "type": 8,
+            "id": "M008",
+            "nameEn": "Prophetic Dream",
+            "nameId": "prophetic_dream",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "EMOTION"
+            ],
+            "back": "1H",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "DRAW_1"
+        },
+        {
+            "type": 9,
+            "id": "M009",
+            "nameEn": "Unreached Feelings",
+            "nameId": "unreached_feelings",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "WILL"
+            ],
+            "back": "1F",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "DRAW_1"
+        },
+        {
+            "type": 10,
+            "id": "M010",
+            "nameEn": "Closed Logic",
+            "nameId": "closed_logic",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "WISDOM"
+            ],
+            "back": "1B",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "DRAW_1"
+        },
+        {
+            "type": 11,
+            "id": "M011",
+            "nameEn": "Glitter of Tears",
+            "nameId": "glitter_of_tears",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "EMOTION"
+            ],
+            "back": "1H",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "DRAW_1"
+        },
+        {
+            "type": 12,
+            "id": "M012",
+            "nameEn": "Hollow Information",
+            "nameId": "hollow_information",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "WILL"
+            ],
+            "back": "1F",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "DRAW_1"
+        },
+        {
+            "type": 13,
+            "id": "M013",
+            "nameEn": "The Question",
+            "nameId": "the_question",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "WISDOM"
+            ],
+            "back": "1B",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "LIGHT_1"
+        },
+        {
+            "type": 14,
+            "id": "M014",
+            "nameEn": "Fate of Wisdom",
+            "nameId": "fate_of_wisdom",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "EMOTION"
+            ],
+            "back": "1H",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "NEXT_COMPOSE_DISCOUNT_1"
+        },
+        {
+            "type": 15,
+            "id": "M015",
+            "nameEn": "Edge of Consciousness",
+            "nameId": "edge_of_consciousness",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "WILL"
+            ],
+            "back": "1F",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "OPEN_DRAW_1"
+        },
+        {
+            "type": 16,
+            "id": "M016",
+            "nameEn": "Forgetting Memories",
+            "nameId": "forgetting_memories",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "WISDOM"
+            ],
+            "back": "1B",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "LIGHT_1"
+        },
+        {
+            "type": 17,
+            "id": "M017",
+            "nameEn": "Pressure",
+            "nameId": "pressure",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "EMOTION"
+            ],
+            "back": "1H",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "NEXT_COMPOSE_DISCOUNT_1"
+        },
+        {
+            "type": 18,
+            "id": "M018",
+            "nameEn": "Mighty Barrier",
+            "nameId": "mighty_barrier",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "WILL"
+            ],
+            "back": "1F",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "OPEN_DRAW_1"
+        },
+        {
+            "type": 19,
+            "id": "M019",
+            "nameEn": "Limit of Understanding",
+            "nameId": "limit_of_understanding",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "WISDOM"
+            ],
+            "back": "1B",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "LIGHT_1"
+        },
+        {
+            "type": 20,
+            "id": "M020",
+            "nameEn": "Childhood Fear",
+            "nameId": "childhood_fear",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "EMOTION"
+            ],
+            "back": "1H",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "NEXT_COMPOSE_DISCOUNT_1"
+        },
+        {
+            "type": 21,
+            "id": "M021",
+            "nameEn": "Formula of the Self",
+            "nameId": "formula_of_the_self",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "WILL"
+            ],
+            "back": "1F",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "OPEN_DRAW_1"
+        },
+        {
+            "type": 22,
+            "id": "M022",
+            "nameEn": "Collapse of Reason",
+            "nameId": "collapse_of_reason",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "WISDOM"
+            ],
+            "back": "1B",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "DISCARD_FOR_LIGHT"
+        },
+        {
+            "type": 23,
+            "id": "M023",
+            "nameEn": "Melancholy",
+            "nameId": "melancholy",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "EMOTION"
+            ],
+            "back": "1H",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "SWAP_SAME_COST"
+        },
+        {
+            "type": 24,
+            "id": "M024",
+            "nameEn": "Weight of Justice",
+            "nameId": "weight_of_justice",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "WILL"
+            ],
+            "back": "1F",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "SWAP_HAND_FIELD"
+        },
+        {
+            "type": 25,
+            "id": "M025",
+            "nameEn": "Broken Continuity",
+            "nameId": "broken_continuity",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "WISDOM"
+            ],
+            "back": "1B",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "DISCARD_FOR_LIGHT"
+        },
+        {
+            "type": 26,
+            "id": "M026",
+            "nameEn": "Forgotten Promise",
+            "nameId": "forgotten_promise",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "EMOTION"
+            ],
+            "back": "1H",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "SWAP_SAME_COST"
+        },
+        {
+            "type": 27,
+            "id": "M027",
+            "nameEn": "Back of Parting",
+            "nameId": "back_of_parting",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "WILL"
+            ],
+            "back": "1F",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "SWAP_HAND_FIELD"
+        },
+        {
+            "type": 28,
+            "id": "M028",
+            "nameEn": "Distorted Record",
+            "nameId": "distorted_record",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "WISDOM"
+            ],
+            "back": "1B",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "DISCARD_FOR_LIGHT"
+        },
+        {
+            "type": 29,
+            "id": "M029",
+            "nameEn": "Ancient Aesthetics",
+            "nameId": "ancient_aesthetics",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "EMOTION"
+            ],
+            "back": "1H",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "SWAP_SAME_COST"
+        },
+        {
+            "type": 30,
+            "id": "M030",
+            "nameEn": "Contradictory Decision",
+            "nameId": "contradictory_decision",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "WILL"
+            ],
+            "back": "1F",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "SWAP_HAND_FIELD"
+        },
+        {
+            "type": 31,
+            "id": "M031",
+            "nameEn": "Vague Memory",
+            "nameId": "vague_memory",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "WISDOM"
+            ],
+            "back": "1B",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "ALT_ANALYSIS"
+        },
+        {
+            "type": 32,
+            "id": "M032",
+            "nameEn": "Suspended Guilt",
+            "nameId": "suspended_guilt",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "EMOTION"
+            ],
+            "back": "1H",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "ALT_COMPOSE"
+        },
+        {
+            "type": 33,
+            "id": "M033",
+            "nameEn": "Spilling Stardust",
+            "nameId": "spilling_stardust",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "WILL"
+            ],
+            "back": "1F",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "MOVE_NEXT_LV1"
+        },
+        {
+            "type": 34,
+            "id": "M034",
+            "nameEn": "Key of Thought",
+            "nameId": "key_of_thought",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "WISDOM"
+            ],
+            "back": "1B",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "ALT_ANALYSIS"
+        },
+        {
+            "type": 35,
+            "id": "M035",
+            "nameEn": "Leaving the Nest",
+            "nameId": "leaving_the_nest",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "EMOTION"
+            ],
+            "back": "1H",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "ALT_COMPOSE"
+        },
+        {
+            "type": 36,
+            "id": "M036",
+            "nameEn": "Repeating Routine",
+            "nameId": "repeating_routine",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "WILL"
+            ],
+            "back": "1F",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "MOVE_NEXT_LV1"
+        },
+        {
+            "type": 37,
+            "id": "M037",
+            "nameEn": "Echoing Question",
+            "nameId": "echoing_question",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "WISDOM"
+            ],
+            "back": "1B",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "ALT_ANALYSIS"
+        },
+        {
+            "type": 38,
+            "id": "M038",
+            "nameEn": "Whisper of the Void",
+            "nameId": "whisper_of_the_void",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "EMOTION"
+            ],
+            "back": "1H",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "ALT_COMPOSE"
+        },
+        {
+            "type": 39,
+            "id": "M039",
+            "nameEn": "Prison of Illusion",
+            "nameId": "prison_of_illusion",
+            "count": 1,
+            "level": 1,
+            "energy": 2,
+            "keys": [
+                "WILL"
+            ],
+            "back": "1F",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "MOVE_NEXT_LV1"
+        },
+        {
+            "type": 40,
+            "id": "M040",
+            "nameEn": "Diary",
+            "nameId": "diary",
+            "count": 1,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "WILD"
+            ],
+            "back": "1B",
+            "score": 2,
+            "effectKind": "NONE",
+            "recall": "DRAW_1"
+        },
+        {
+            "type": 41,
+            "id": "M041",
+            "nameEn": "End of Betrayal",
+            "nameId": "end_of_betrayal",
+            "count": 1,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "WILD"
+            ],
+            "back": "1H",
+            "score": 2,
+            "effectKind": "NONE",
+            "recall": "DRAW_1"
+        },
+        {
+            "type": 42,
+            "id": "M042",
+            "nameEn": "Tangled Opinions",
+            "nameId": "tangled_opinions",
+            "count": 1,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "WILD"
+            ],
+            "back": "1F",
+            "score": 2,
+            "effectKind": "NONE",
+            "recall": "DRAW_1"
+        },
+        {
+            "type": 43,
+            "id": "M043",
+            "nameEn": "Archive",
+            "nameId": "archive",
+            "count": 1,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "WILD"
+            ],
+            "back": "1B",
+            "score": 2,
+            "effectKind": "NONE",
+            "recall": "LIGHT_1"
+        },
+        {
+            "type": 44,
+            "id": "M044",
+            "nameEn": "Thorns of Jealousy",
+            "nameId": "thorns_of_jealousy",
+            "count": 1,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "WILD"
+            ],
+            "back": "1H",
+            "score": 2,
+            "effectKind": "NONE",
+            "recall": "NEXT_COMPOSE_DISCOUNT_1"
+        },
+        {
+            "type": 45,
+            "id": "M045",
+            "nameEn": "Premonition of Innovation",
+            "nameId": "premonition_of_innovation",
+            "count": 1,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "WILD"
+            ],
+            "back": "1F",
+            "score": 2,
+            "effectKind": "NONE",
+            "recall": "OPEN_DRAW_1"
+        },
+        {
+            "type": 46,
+            "id": "M046",
+            "nameEn": "Origin of the Labyrinth",
+            "nameId": "origin_of_the_labyrinth",
+            "count": 1,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "WILD"
+            ],
+            "back": "1B",
+            "score": 2,
+            "effectKind": "NONE",
+            "recall": "DISCARD_FOR_LIGHT"
+        },
+        {
+            "type": 47,
+            "id": "M047",
+            "nameEn": "Vanished Routine",
+            "nameId": "vanished_routine",
+            "count": 1,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "WILD"
+            ],
+            "back": "1H",
+            "score": 2,
+            "effectKind": "NONE",
+            "recall": "SWAP_SAME_COST"
+        },
+        {
+            "type": 48,
+            "id": "M048",
+            "nameEn": "Beyond Existence",
+            "nameId": "beyond_existence",
+            "count": 1,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "WILD"
+            ],
+            "back": "1F",
+            "score": 2,
+            "effectKind": "NONE",
+            "recall": "SWAP_HAND_FIELD"
+        },
+        {
+            "type": 49,
+            "id": "M049",
+            "nameEn": "Echo of Eidos",
+            "nameId": "echo_of_eidos",
+            "count": 1,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "WILD"
+            ],
+            "back": "1B",
+            "score": 2,
+            "effectKind": "NONE",
+            "recall": "ALT_ANALYSIS"
+        },
+        {
+            "type": 50,
+            "id": "M050",
+            "nameEn": "Taste of Tears",
+            "nameId": "taste_of_tears",
+            "count": 1,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "WILD"
+            ],
+            "back": "1H",
+            "score": 2,
+            "effectKind": "NONE",
+            "recall": "ALT_COMPOSE"
+        },
+        {
+            "type": 51,
+            "id": "M051",
+            "nameEn": "Spiral Guidance",
+            "nameId": "spiral_guidance",
+            "count": 1,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "WILD"
+            ],
+            "back": "1F",
+            "score": 2,
+            "effectKind": "NONE",
+            "recall": "MOVE_NEXT_LV1"
+        },
+        {
+            "type": 52,
+            "id": "M052",
+            "nameEn": "Choice and Future",
+            "nameId": "choice_and_future",
+            "count": 1,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "WISDOM"
+            ],
+            "back": "1B",
+            "score": 2,
+            "effectKind": "TURN_START",
+            "recall": "ALT_ANALYSIS"
+        },
+        {
+            "type": 53,
+            "id": "M053",
+            "nameEn": "Subjective and Objective",
+            "nameId": "subjective_and_objective",
+            "count": 1,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "EMOTION"
+            ],
+            "back": "1H",
+            "score": 2,
+            "effectKind": "TURN_START",
+            "recall": "ALT_COMPOSE"
+        },
+        {
+            "type": 54,
+            "id": "M054",
+            "nameEn": "Self-Image",
+            "nameId": "self_image",
+            "count": 1,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "WILL"
+            ],
+            "back": "1F",
+            "score": 2,
+            "effectKind": "TURN_START",
+            "recall": "MOVE_NEXT_LV1"
+        },
+        {
+            "type": 55,
+            "id": "M055",
+            "nameEn": "Catalog of Memories",
+            "nameId": "catalog_of_memories",
+            "count": 1,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "WISDOM"
+            ],
+            "back": "1B",
+            "score": 2,
+            "effectKind": "TURN_START",
+            "recall": "ALT_ANALYSIS"
+        },
+        {
+            "type": 56,
+            "id": "M056",
+            "nameEn": "Boundary of Justice",
+            "nameId": "boundary_of_justice",
+            "count": 1,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "EMOTION"
+            ],
+            "back": "1H",
+            "score": 2,
+            "effectKind": "TURN_START",
+            "recall": "ALT_COMPOSE"
+        },
+        {
+            "type": 57,
+            "id": "M057",
+            "nameEn": "Sealed Choice",
+            "nameId": "sealed_choice",
+            "count": 1,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "WILL"
+            ],
+            "back": "1F",
+            "score": 2,
+            "effectKind": "TURN_START",
+            "recall": "MOVE_NEXT_LV1"
+        },
+        {
+            "type": 58,
+            "id": "M058",
+            "nameEn": "Eve of Observation",
+            "nameId": "eve_of_observation",
+            "count": 2,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "WISDOM"
+            ],
+            "back": "1B",
+            "score": 2,
+            "effectKind": "ACTIVATED",
+            "recall": "LIGHT_1"
+        },
+        {
+            "type": 59,
+            "id": "M059",
+            "nameEn": "Contradictory Axiom",
+            "nameId": "contradictory_axiom",
+            "count": 2,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "WISDOM"
+            ],
+            "back": "1B",
+            "score": 2,
+            "effectKind": "CONSTANT",
+            "recall": "LIGHT_1"
+        },
+        {
+            "type": 60,
+            "id": "M060",
+            "nameEn": "Afterimage of That Day",
+            "nameId": "afterimage_of_that_day",
+            "count": 2,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "EMOTION"
+            ],
+            "back": "1H",
+            "score": 2,
+            "effectKind": "CONSTANT",
+            "recall": "NEXT_COMPOSE_DISCOUNT_1"
+        },
+        {
+            "type": 61,
+            "id": "M061",
+            "nameEn": "Moment of Immersion",
+            "nameId": "moment_of_immersion",
+            "count": 2,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "EMOTION"
+            ],
+            "back": "1H",
+            "score": 2,
+            "effectKind": "ACTIVATED",
+            "recall": "NEXT_COMPOSE_DISCOUNT_1"
+        },
+        {
+            "type": 62,
+            "id": "M062",
+            "nameEn": "Self-Contradiction",
+            "nameId": "self_contradiction",
+            "count": 2,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "WILL"
+            ],
+            "back": "1F",
+            "score": 2,
+            "effectKind": "ACTIVATED",
+            "recall": "OPEN_DRAW_1"
+        },
+        {
+            "type": 63,
+            "id": "M063",
+            "nameEn": "Closed Album",
+            "nameId": "closed_album",
+            "count": 2,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "WILL"
+            ],
+            "back": "1F",
+            "score": 2,
+            "effectKind": "CONSTANT",
+            "recall": "OPEN_DRAW_1"
+        },
+        {
+            "type": 64,
+            "id": "M064",
+            "nameEn": "Preserved Moment",
+            "nameId": "preserved_moment",
+            "count": 1,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "WISDOM"
+            ],
+            "back": "1B",
+            "score": 2,
+            "effectKind": "ACTIVATED",
+            "recall": "ALT_ANALYSIS"
+        },
+        {
+            "type": 65,
+            "id": "M065",
+            "nameEn": "Amid Contemplation",
+            "nameId": "amid_contemplation",
+            "count": 1,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "EMOTION"
+            ],
+            "back": "1H",
+            "score": 2,
+            "effectKind": "ACTIVATED",
+            "recall": "ALT_COMPOSE"
+        },
+        {
+            "type": 66,
+            "id": "M066",
+            "nameEn": "Great Leader",
+            "nameId": "great_leader",
+            "count": 1,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "WILL"
+            ],
+            "back": "1F",
+            "score": 2,
+            "effectKind": "ACTIVATED",
+            "recall": "MOVE_NEXT_LV1"
+        },
+        {
+            "type": 67,
+            "id": "M067",
+            "nameEn": "Great Mind's Inspiration",
+            "nameId": "great_minds_inspiration",
+            "count": 3,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "WISDOM"
+            ],
+            "back": "1B",
+            "score": 2,
+            "effectKind": "ACTIVATED",
+            "recall": "ALT_ANALYSIS"
+        },
+        {
+            "type": 68,
+            "id": "M068",
+            "nameEn": "Summer Solstice Afternoon",
+            "nameId": "summer_solstice_afternoon",
+            "count": 3,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "EMOTION"
+            ],
+            "back": "1H",
+            "score": 2,
+            "effectKind": "ACTIVATED",
+            "recall": "ALT_COMPOSE"
+        },
+        {
+            "type": 69,
+            "id": "M069",
+            "nameEn": "Bonfire of Hope",
+            "nameId": "bonfire_of_hope",
+            "count": 3,
+            "level": 1,
+            "energy": 3,
+            "keys": [
+                "WILL"
+            ],
+            "back": "1F",
+            "score": 2,
+            "effectKind": "ACTIVATED",
+            "recall": "MOVE_NEXT_LV1"
+        },
+        {
+            "type": 70,
+            "id": "M070",
+            "nameEn": "Structure of the Terminus",
+            "nameId": "structure_of_the_terminus",
+            "count": 2,
+            "level": 1,
+            "energy": 4,
+            "keys": [
+                "WISDOM"
+            ],
+            "back": "1B",
+            "score": 2,
+            "effectKind": "CONSTANT",
+            "recall": "DISCARD_FOR_LIGHT"
+        },
+        {
+            "type": 71,
+            "id": "M071",
+            "nameEn": "Lullaby",
+            "nameId": "lullaby",
+            "count": 2,
+            "level": 1,
+            "energy": 4,
+            "keys": [
+                "EMOTION"
+            ],
+            "back": "1H",
+            "score": 2,
+            "effectKind": "ACTIVATED",
+            "recall": "SWAP_SAME_COST"
+        },
+        {
+            "type": 72,
+            "id": "M072",
+            "nameEn": "Beyond the Mirror",
+            "nameId": "beyond_the_mirror",
+            "count": 2,
+            "level": 1,
+            "energy": 4,
+            "keys": [
+                "WILL"
+            ],
+            "back": "1F",
+            "score": 2,
+            "effectKind": "TURN_START",
+            "recall": "SWAP_HAND_FIELD"
+        },
+        {
+            "type": 73,
+            "id": "M073",
+            "nameEn": "Severed Ring of Thought",
+            "nameId": "severed_ring_of_thought",
+            "count": 2,
+            "level": 1,
+            "energy": 4,
+            "keys": [
+                "WISDOM"
+            ],
+            "back": "1B",
+            "score": 2,
+            "effectKind": "ACTIVATED",
+            "recall": "DRAW_1"
+        },
+        {
+            "type": 74,
+            "id": "M074",
+            "nameEn": "Mending the Heart",
+            "nameId": "mending_the_heart",
+            "count": 2,
+            "level": 1,
+            "energy": 4,
+            "keys": [
+                "EMOTION"
+            ],
+            "back": "1H",
+            "score": 2,
+            "effectKind": "ACTIVATED",
+            "recall": "DRAW_1"
+        },
+        {
+            "type": 75,
+            "id": "M075",
+            "nameEn": "Proof of Friendship",
+            "nameId": "proof_of_friendship",
+            "count": 2,
+            "level": 1,
+            "energy": 4,
+            "keys": [
+                "WILL"
+            ],
+            "back": "1F",
+            "score": 2,
+            "effectKind": "ACTIVATED",
+            "recall": "DRAW_1"
+        },
+        {
+            "type": 76,
+            "id": "M076",
+            "nameEn": "Sublimation",
+            "nameId": "sublimation",
+            "count": 4,
+            "level": 1,
+            "energy": 4,
+            "keys": [
+                "WISDOM"
+            ],
+            "back": "1B",
+            "score": 2,
+            "effectKind": "ACTIVATED",
+            "recall": "LIGHT_1"
+        },
+        {
+            "type": 77,
+            "id": "M077",
+            "nameEn": "Moment of Sleep",
+            "nameId": "moment_of_sleep",
+            "count": 4,
+            "level": 1,
+            "energy": 4,
+            "keys": [
+                "EMOTION"
+            ],
+            "back": "1H",
+            "score": 2,
+            "effectKind": "CONSTANT",
+            "recall": "NEXT_COMPOSE_DISCOUNT_1"
+        },
+        {
+            "type": 78,
+            "id": "M078",
+            "nameEn": "Twilight Promise",
+            "nameId": "twilight_promise",
+            "count": 4,
+            "level": 1,
+            "energy": 4,
+            "keys": [
+                "WILL"
+            ],
+            "back": "1F",
+            "score": 2,
+            "effectKind": "ACTIVATED",
+            "recall": "OPEN_DRAW_1"
+        },
+        {
+            "type": 79,
+            "id": "M079",
+            "nameEn": "Door to the Past",
+            "nameId": "door_to_the_past",
+            "count": 3,
+            "level": 1,
+            "energy": 4,
+            "keys": [
+                "WISDOM"
+            ],
+            "back": "1B",
+            "score": 2,
+            "effectKind": "ACTIVATED",
+            "recall": "DISCARD_FOR_LIGHT"
+        },
+        {
+            "type": 80,
+            "id": "M080",
+            "nameEn": "Words of Forgiveness",
+            "nameId": "words_of_forgiveness",
+            "count": 3,
+            "level": 1,
+            "energy": 4,
+            "keys": [
+                "EMOTION"
+            ],
+            "back": "1H",
+            "score": 2,
+            "effectKind": "ACTIVATED",
+            "recall": "SWAP_SAME_COST"
+        },
+        {
+            "type": 81,
+            "id": "M081",
+            "nameEn": "Nameless Longing",
+            "nameId": "nameless_longing",
+            "count": 3,
+            "level": 1,
+            "energy": 4,
+            "keys": [
+                "WILL"
+            ],
+            "back": "1F",
+            "score": 2,
+            "effectKind": "ACTIVATED",
+            "recall": "SWAP_HAND_FIELD"
+        },
+        {
+            "type": 82,
+            "id": "M082",
+            "nameEn": "Between Finite and Infinite",
+            "nameId": "between_finite_and_infinite",
+            "count": 2,
+            "level": 1,
+            "energy": 4,
+            "keys": [
+                "WISDOM",
+                "EMOTION"
+            ],
+            "back": "1B",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "DRAW_1"
+        },
+        {
+            "type": 83,
+            "id": "M083",
+            "nameEn": "Vow of Love",
+            "nameId": "vow_of_love",
+            "count": 2,
+            "level": 1,
+            "energy": 4,
+            "keys": [
+                "EMOTION",
+                "WILL"
+            ],
+            "back": "1H",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "DRAW_1"
+        },
+        {
+            "type": 84,
+            "id": "M084",
+            "nameEn": "Legs That Kept Running",
+            "nameId": "legs_that_kept_running",
+            "count": 2,
+            "level": 1,
+            "energy": 4,
+            "keys": [
+                "WILL",
+                "WISDOM"
+            ],
+            "back": "1F",
+            "score": 1,
+            "effectKind": "NONE",
+            "recall": "DRAW_1"
+        },
+        {
+            "type": 85,
+            "id": "M085",
+            "nameEn": "That Which Illuminates",
+            "nameId": "that_which_illuminates",
+            "count": 2,
+            "level": 2,
+            "energy": 5,
+            "keys": [
+                "WISDOM",
+                "EMOTION"
+            ],
+            "back": "2B",
+            "score": 3,
+            "effectKind": "ACTIVATED",
+            "recall": "DISCARD_FOR_LIGHT"
+        },
+        {
+            "type": 86,
+            "id": "M086",
+            "nameEn": "Spray of Melody",
+            "nameId": "spray_of_melody",
+            "count": 2,
+            "level": 2,
+            "energy": 5,
+            "keys": [
+                "EMOTION",
+                "WILL"
+            ],
+            "back": "2H",
+            "score": 3,
+            "effectKind": "ACTIVATED",
+            "recall": "SWAP_SAME_COST"
+        },
+        {
+            "type": 87,
+            "id": "M087",
+            "nameEn": "Lingering Scent of Courage",
+            "nameId": "lingering_scent_of_courage",
+            "count": 2,
+            "level": 2,
+            "energy": 5,
+            "keys": [
+                "WILL",
+                "WISDOM"
+            ],
+            "back": "2F",
+            "score": 3,
+            "effectKind": "ACTIVATED",
+            "recall": "SWAP_HAND_FIELD"
+        },
+        {
+            "type": 88,
+            "id": "M088",
+            "nameEn": "Ark of Knowledge",
+            "nameId": "ark_of_knowledge",
+            "count": 2,
+            "level": 2,
+            "energy": 5,
+            "keys": [
+                "WISDOM",
+                "WILL"
+            ],
+            "back": "2B",
+            "score": 3,
+            "effectKind": "INSTANT",
+            "recall": "LIGHT_1"
+        },
+        {
+            "type": 89,
+            "id": "M089",
+            "nameEn": "Crush",
+            "nameId": "crush",
+            "count": 2,
+            "level": 2,
+            "energy": 6,
+            "keys": [
+                "EMOTION",
+                "WISDOM"
+            ],
+            "back": "2H",
+            "score": 2,
+            "effectKind": "INSTANT",
+            "recall": "NEXT_COMPOSE_DISCOUNT_1"
+        },
+        {
+            "type": 90,
+            "id": "M090",
+            "nameEn": "Thread of Bonds",
+            "nameId": "thread_of_bonds",
+            "count": 2,
+            "level": 2,
+            "energy": 6,
+            "keys": [
+                "WILL",
+                "EMOTION"
+            ],
+            "back": "2F",
+            "score": 3,
+            "effectKind": "INSTANT",
+            "recall": "OPEN_DRAW_1"
+        },
+        {
+            "type": 91,
+            "id": "M091",
+            "nameEn": "Map of the Infinite Cloister",
+            "nameId": "map_of_the_infinite_cloister",
+            "count": 1,
+            "level": 2,
+            "energy": 5,
+            "keys": [
+                "WILD",
+                "WILD"
+            ],
+            "back": "2B",
+            "score": 3,
+            "effectKind": "NONE",
+            "recall": "LIGHT_1"
+        },
+        {
+            "type": 92,
+            "id": "M092",
+            "nameEn": "Moment of Victory",
+            "nameId": "moment_of_victory",
+            "count": 1,
+            "level": 2,
+            "energy": 5,
+            "keys": [
+                "WILD",
+                "WILD"
+            ],
+            "back": "2H",
+            "score": 3,
+            "effectKind": "NONE",
+            "recall": "NEXT_COMPOSE_DISCOUNT_1"
+        },
+        {
+            "type": 93,
+            "id": "M093",
+            "nameEn": "Crossing Beyond",
+            "nameId": "crossing_beyond",
+            "count": 1,
+            "level": 2,
+            "energy": 5,
+            "keys": [
+                "WILD",
+                "WILD"
+            ],
+            "back": "2F",
+            "score": 3,
+            "effectKind": "NONE",
+            "recall": "OPEN_DRAW_1"
+        },
+        {
+            "type": 94,
+            "id": "M094",
+            "nameEn": "Labyrinth of Knowledge",
+            "nameId": "labyrinth_of_knowledge",
+            "count": 2,
+            "level": 2,
+            "energy": 5,
+            "keys": [
+                "WISDOM",
+                "WISDOM"
+            ],
+            "back": "2B",
+            "score": 3,
+            "effectKind": "CONSTANT",
+            "recall": "ALT_ANALYSIS_DISCOUNT_1"
+        },
+        {
+            "type": 95,
+            "id": "M095",
+            "nameEn": "Remnants of Joy",
+            "nameId": "remnants_of_joy",
+            "count": 2,
+            "level": 2,
+            "energy": 6,
+            "keys": [
+                "EMOTION",
+                "EMOTION"
+            ],
+            "back": "2H",
+            "score": 3,
+            "effectKind": "CONSTANT",
+            "recall": "ALT_COMPOSE_DISCOUNT_1"
+        },
+        {
+            "type": 96,
+            "id": "M096",
+            "nameEn": "Many Facets of Existence",
+            "nameId": "many_facets_of_existence",
+            "count": 2,
+            "level": 2,
+            "energy": 6,
+            "keys": [
+                "WILL",
+                "WILL"
+            ],
+            "back": "2F",
+            "score": 3,
+            "effectKind": "CONSTANT",
+            "recall": "MOVE_NEXT_LV2"
+        },
+        {
+            "type": 97,
+            "id": "M097",
+            "nameEn": "Blessing of Letters",
+            "nameId": "blessing_of_letters",
+            "count": 1,
+            "level": 2,
+            "energy": 7,
+            "keys": [
+                "WISDOM",
+                "WISDOM"
+            ],
+            "back": "2B",
+            "score": 4,
+            "effectKind": "INSTANT",
+            "recall": "DRAW_1"
+        },
+        {
+            "type": 98,
+            "id": "M098",
+            "nameEn": "Warmth of Mother's Hand",
+            "nameId": "warmth_of_mothers_hand",
+            "count": 1,
+            "level": 2,
+            "energy": 7,
+            "keys": [
+                "EMOTION",
+                "EMOTION"
+            ],
+            "back": "2H",
+            "score": 4,
+            "effectKind": "HELD",
+            "recall": "DRAW_1"
+        },
+        {
+            "type": 99,
+            "id": "M099",
+            "nameEn": "Wishes Passed Down",
+            "nameId": "wishes_passed_down",
+            "count": 1,
+            "level": 2,
+            "energy": 7,
+            "keys": [
+                "WILL",
+                "WILL"
+            ],
+            "back": "2F",
+            "score": 4,
+            "effectKind": "INSTANT",
+            "recall": "DRAW_1"
+        }
+    ],
+    "floor": [
+        {
+            "id": 1,
+            "code": "F01",
+            "roomName": "DEMETER",
+            "nameId": "demeter",
+            "level": 2,
+            "bonus": "ANALYSIS_TOKEN",
+            "defaultPosition": 1
+        },
+        {
+            "id": 2,
+            "code": "F02",
+            "roomName": "HERMES",
+            "nameId": "hermes",
+            "level": 1,
+            "bonus": "NONE",
+            "defaultPosition": 2
+        },
+        {
+            "id": 3,
+            "code": "F03",
+            "roomName": "ATHENA",
+            "nameId": "athena",
+            "level": 1,
+            "bonus": "NONE",
+            "defaultPosition": 3
+        },
+        {
+            "id": 4,
+            "code": "F04",
+            "roomName": "POSEIDON",
+            "nameId": "poseidon",
+            "level": 2,
+            "bonus": "LIGHT",
+            "defaultPosition": 4
+        },
+        {
+            "id": 5,
+            "code": "F05",
+            "roomName": "ARES",
+            "nameId": "ares",
+            "level": 1,
+            "bonus": "NONE",
+            "defaultPosition": 5
+        },
+        {
+            "id": 6,
+            "code": "F06",
+            "roomName": "DIONYSUS",
+            "nameId": "dionysus",
+            "level": 1,
+            "bonus": "NONE",
+            "defaultPosition": 6
+        },
+        {
+            "id": 7,
+            "code": "F07",
+            "roomName": "HESTIA",
+            "nameId": "hestia",
+            "level": 2,
+            "bonus": "WILD_MOVE_KEY",
+            "defaultPosition": 7
+        },
+        {
+            "id": 8,
+            "code": "F08",
+            "roomName": "APOLLO",
+            "nameId": "apollo",
+            "level": 1,
+            "bonus": "NONE",
+            "defaultPosition": 8
+        },
+        {
+            "id": 9,
+            "code": "F09",
+            "roomName": "APHRODITE",
+            "nameId": "aphrodite",
+            "level": 1,
+            "bonus": "NONE",
+            "defaultPosition": 9
+        },
+        {
+            "id": 10,
+            "code": "F10",
+            "roomName": "HADES",
+            "nameId": "hades",
+            "level": 2,
+            "bonus": "COMPOSE_TOKEN",
+            "defaultPosition": 10
+        },
+        {
+            "id": 11,
+            "code": "F11",
+            "roomName": "ARTEMIS",
+            "nameId": "artemis",
+            "level": 1,
+            "bonus": "NONE",
+            "defaultPosition": 11
+        },
+        {
+            "id": 12,
+            "code": "F12",
+            "roomName": "HEPHAESTUS",
+            "nameId": "hephaestus",
+            "level": 1,
+            "bonus": "NONE",
+            "defaultPosition": 12
+        }
+    ],
+    "spirit": [
+        {
+            "id": "R1A",
+            "tier": 1,
+            "branch": "A",
+            "cost": {
+                "WISDOM": 2
+            },
+            "hasLight": true
+        },
+        {
+            "id": "R1B",
+            "tier": 1,
+            "branch": "B",
+            "cost": {
+                "WILL": 2
+            },
+            "hasLight": true
+        },
+        {
+            "id": "R1C",
+            "tier": 1,
+            "branch": "C",
+            "cost": {
+                "EMOTION": 2
+            },
+            "hasLight": true
+        },
+        {
+            "id": "R2",
+            "tier": 2,
+            "branch": null,
+            "cost": {
+                "WISDOM": 1,
+                "EMOTION": 1,
+                "WILL": 1
+            },
+            "hasLight": true
+        },
+        {
+            "id": "R3A",
+            "tier": 3,
+            "branch": "A",
+            "cost": {
+                "WISDOM": 3
+            },
+            "hasLight": true
+        },
+        {
+            "id": "R3B",
+            "tier": 3,
+            "branch": "B",
+            "cost": {
+                "WILL": 3
+            },
+            "hasLight": true
+        },
+        {
+            "id": "R3C",
+            "tier": 3,
+            "branch": "C",
+            "cost": {
+                "EMOTION": 3
+            },
+            "hasLight": true
+        },
+        {
+            "id": "R4",
+            "tier": 4,
+            "branch": null,
+            "cost": {
+                "WISDOM": 2,
+                "EMOTION": 2,
+                "WILL": 2
+            },
+            "hasLight": true
+        },
+        {
+            "id": "R5",
+            "tier": 5,
+            "branch": null,
+            "cost": {
+                "WISDOM": 4,
+                "EMOTION": 4,
+                "WILL": 4
+            },
+            "hasLight": false
+        }
+    ],
+    "ego": [
+        {
+            "id": "I01",
+            "kind": "INITIAL",
+            "nameEn": "Maestro",
+            "nameId": "maestro",
+            "effectKind": null
+        },
+        {
+            "id": "I02",
+            "kind": "INITIAL",
+            "nameEn": "Consul",
+            "nameId": "consul",
+            "effectKind": null
+        },
+        {
+            "id": "I03",
+            "kind": "INITIAL",
+            "nameEn": "Architect",
+            "nameId": "architect",
+            "effectKind": null
+        },
+        {
+            "id": "I04",
+            "kind": "INITIAL",
+            "nameEn": "Logician",
+            "nameId": "logician",
+            "effectKind": null
+        },
+        {
+            "id": "I05",
+            "kind": "INITIAL",
+            "nameEn": "Entrepreneur",
+            "nameId": "entrepreneur",
+            "effectKind": null
+        },
+        {
+            "id": "I06",
+            "kind": "INITIAL",
+            "nameEn": "Advocate",
+            "nameId": "advocate",
+            "effectKind": null
+        },
+        {
+            "id": "I07",
+            "kind": "INITIAL",
+            "nameEn": "Adventurer",
+            "nameId": "adventurer",
+            "effectKind": null
+        },
+        {
+            "id": "I08",
+            "kind": "INITIAL",
+            "nameEn": "Protagonist",
+            "nameId": "protagonist",
+            "effectKind": null
+        },
+        {
+            "id": "E01",
+            "kind": "ENHANCEMENT",
+            "nameEn": "Diligent",
+            "nameId": "diligent",
+            "effectKind": "CONSTANT"
+        },
+        {
+            "id": "E02",
+            "kind": "ENHANCEMENT",
+            "nameEn": "Candid",
+            "nameId": "candid",
+            "effectKind": "CONSTANT"
+        },
+        {
+            "id": "E03",
+            "kind": "ENHANCEMENT",
+            "nameEn": "Shy",
+            "nameId": "shy",
+            "effectKind": "TURN_START"
+        },
+        {
+            "id": "E04",
+            "kind": "ENHANCEMENT",
+            "nameEn": "Capricious",
+            "nameId": "capricious",
+            "effectKind": "TURN_START"
+        },
+        {
+            "id": "E05",
+            "kind": "ENHANCEMENT",
+            "nameEn": "Earnest",
+            "nameId": "earnest",
+            "effectKind": "TURN_START"
+        }
+    ],
+    "objective": [
+        {
+            "id": 1,
+            "code": "O001",
+            "nameId": "wild_move_key_goal",
+            "scoreTable": [
+                [
+                    1,
+                    1
+                ],
+                [
+                    2,
+                    2
+                ],
+                [
+                    4,
+                    3
+                ],
+                [
+                    6,
+                    4
+                ]
+            ]
+        },
+        {
+            "id": 2,
+            "code": "O002",
+            "nameId": "level2_composed_goal",
+            "scoreTable": [
+                [
+                    1,
+                    1
+                ],
+                [
+                    2,
+                    2
+                ],
+                [
+                    3,
+                    3
+                ],
+                [
+                    4,
+                    4
+                ]
+            ]
+        },
+        {
+            "id": 3,
+            "code": "O003",
+            "nameId": "single_engine_goal",
+            "scoreTable": [
+                [
+                    1,
+                    1
+                ],
+                [
+                    2,
+                    2
+                ],
+                [
+                    4,
+                    3
+                ],
+                [
+                    6,
+                    4
+                ]
+            ]
+        },
+        {
+            "id": 4,
+            "code": "O004",
+            "nameId": "hand_goal",
+            "scoreTable": [
+                [
+                    1,
+                    1
+                ],
+                [
+                    3,
+                    2
+                ],
+                [
+                    5,
+                    3
+                ],
+                [
+                    7,
+                    4
+                ]
+            ]
+        },
+        {
+            "id": 5,
+            "code": "O005",
+            "nameId": "light_goal",
+            "scoreTable": [
+                [
+                    1,
+                    1
+                ],
+                [
+                    2,
+                    2
+                ],
+                [
+                    4,
+                    3
+                ],
+                [
+                    6,
+                    4
+                ]
+            ]
+        },
+        {
+            "id": 6,
+            "code": "O006",
+            "nameId": "analysis_floor_goal",
+            "scoreTable": [
+                [
+                    1,
+                    1
+                ],
+                [
+                    2,
+                    2
+                ],
+                [
+                    3,
+                    3
+                ],
+                [
+                    4,
+                    4
+                ]
+            ]
+        },
+        {
+            "id": 7,
+            "code": "O007",
+            "nameId": "multi_engine_goal",
+            "scoreTable": [
+                [
+                    1,
+                    1
+                ],
+                [
+                    2,
+                    2
+                ],
+                [
+                    3,
+                    3
+                ],
+                [
+                    4,
+                    4
+                ]
+            ]
+        }
+    ]
+}
