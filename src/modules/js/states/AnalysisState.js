@@ -3,15 +3,16 @@
  * ここは自己構成済みカード・手札・ステータスバーのボタンをつなぐだけ。
  *
  * 流れ: 進む先を選ぶ（払えない先は無効。1 つなら自動）→ 払うものをまとめて選ぶ
- * （縦向きの自己構成済みカード・手札はクリックで選択のオン・オフ、心光は「+1／-1」）。
+ * （縦向きの自己構成済みカード・手札はクリックで選択のオン・オフ、心光はトークンを押して数量）。
  * 軽減で取り除く鍵と各コストへの割り当ては自動（`solveAnalysisPayment`）で、ステータスバーに充足・不足・余りが出る。
- * 全部払えたら「Confirm」で `actAnalyze`。「Reset」で選択を外し、「Change destination」で進む先を選び直し、「Cancel」で戻る。
+ * 全部払えたら「Confirm」で `actAnalyze`。「Change destination」で進む先を選び直し、「Cancel」（赤・右端）で戻る。Reset はない（010 §2.3）。
  * © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
  */
 import { ActionState } from './ActionState.js';
 import { analysisFromArgs, canPay, destinationOf, lightCost, solveAnalysisPayment, toPayment } from './analysis-plan.js';
 import { costText, spiritParts } from './choice-model.js';
-import { cardLabel, keyName, neededText, statusText, stepQuantity } from './payment-ui.js';
+import { lightLimit } from './action-bar-model.js';
+import { cardLabel, keyName, neededText, quantityTokenPick, statusText } from './payment-ui.js';
 
 /** @returns {{ tableau: number[], hand: number[], light: number }} */
 function emptySelection() {
@@ -62,7 +63,7 @@ export class AnalysisState extends ActionState {
     } else {
       this.drawPayment(board);
     }
-    this.button(_('Cancel'), () => this.send('actCancel'), { color: 'secondary' });
+    this.button(_('Cancel'), () => this.send('actCancel'), { color: 'alert' });
   }
 
   /**
@@ -70,6 +71,17 @@ export class AnalysisState extends ActionState {
    * @param {import('./analysis-plan.js').AnalysisBoard} board
    */
   drawDestinations(board) {
+    /** @param {string} id */
+    const choose = (id) => {
+      this.destination = id;
+      this.selection = emptySelection();
+      this.render();
+    };
+    this.pickSpirits(board.destinations.filter((destination) => canPay(board, destination)).map((destination) => destination.id), null, (id) => {
+      if (id !== null) {
+        choose(id);
+      }
+    });
     for (const destination of board.destinations) {
       const { tier, branch } = spiritParts(destination.id);
       const label = _('Tier ${tier} ${branch}: ${cost}')
@@ -78,11 +90,7 @@ export class AnalysisState extends ActionState {
         .replace('${cost}', costText(destination.cost, keyName))
         .replace(/\s+/g, ' ');
       const payable = canPay(board, destination);
-      this.button(label, () => {
-        this.destination = destination.id;
-        this.selection = emptySelection();
-        this.render();
-      }, { disabled: !payable, tooltip: payable ? undefined : _('You cannot pay for this') });
+      this.button(label, () => choose(destination.id), { disabled: !payable, tooltip: payable ? undefined : _('You cannot pay for this') });
     }
   }
 
@@ -136,28 +144,28 @@ export class AnalysisState extends ActionState {
       });
     }
     if (board.maxLightUses > 0 && board.light > 0) {
-      const next = sel.light + 1;
-      const step = lightCost(board, next) - lightCost(board, sel.light);
-      this.button(_('Psychic Light +1 (selected ${count}, cost ${cost})').replace('${count}', String(sel.light)).replace('${cost}', Number.isFinite(step) ? String(step) : '-'), () => {
-        this.selection = { ...sel, light: stepQuantity(sel.light, 1, board.maxLightUses) };
-        this.render();
-      }, {
-        color: 'secondary',
-        disabled: next > board.maxLightUses || lightCost(board, next) > board.light,
-        tooltip: _('Pay 1 key with Psychic Light. The nth use in an action costs more'),
+      playerAreas?.pickTokens({
+        light: quantityTokenPick({
+          kind: 'light',
+          count: sel.light,
+          max: lightLimit((uses) => lightCost(board, uses), board.light, board.maxLightUses),
+          cumulative: (uses) => lightCost(board, uses),
+          onChange: (light) => {
+            this.selection = { ...sel, light };
+            this.render();
+          },
+        }),
       });
-      if (sel.light > 0) {
-        this.button(_('Psychic Light -1'), () => {
-          this.selection = { ...sel, light: sel.light - 1 };
-          this.render();
-        }, { color: 'secondary' });
-      }
     }
-    if (sel.tableau.length + sel.hand.length + sel.light > 0) {
-      this.button(_('Reset'), () => {
-        this.selection = emptySelection();
+    // 行き先の精神カードは選択中の枠で示す（押すと選び直し。行き先が 1 つなら選び直せない）
+    if (this.destination !== null) {
+      this.pickSpirits([this.destination], this.destination, () => {
+        if (board.destinations.length > 1) {
+          this.destination = null;
+          this.selection = emptySelection();
+        }
         this.render();
-      }, { color: 'alert', tooltip: _('Deselect every resource') });
+      });
     }
     if (board.destinations.length > 1) {
       this.button(_('Change destination'), () => {
@@ -168,6 +176,6 @@ export class AnalysisState extends ActionState {
     }
     this.button(_('Confirm'), () => {
       this.send('actAnalyze', { destination: this.destination, payment: JSON.stringify(toPayment(solution.state)) });
-    }, { disabled: !solution.complete });
+    }, { disabled: !solution.complete, tooltip: solution.complete ? undefined : _('Select enough resources to pay') });
   }
 }

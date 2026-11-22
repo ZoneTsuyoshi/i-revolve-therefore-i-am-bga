@@ -12,7 +12,7 @@
  * © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
  */
 import { paintUiSprite } from '../cards/card-face.js';
-import { SelectionController } from '../cards/selection.js';
+import { CLASS_SELECTABLE, CLASS_SELECTED, SelectionController, selectionClasses } from '../cards/selection.js';
 import { el } from '../ui/dom.js';
 import {
     HAND_LIMIT, TOKEN_KINDS, applyTotals, compareHand, composedModel, energyMap, handCard, handCountState, handModel, memoryInfoTable,
@@ -38,6 +38,22 @@ import { egoCard, faceUpMemory, objectivesModel, toInt } from './view-model.js';
  * @property {any} composed
  * @property {any | null} hand
  * @property {any | null} under
+ */
+
+/** 押せる（数量を選べる・使える）トークンの印 */
+export const CLASS_TOKEN_PICK = 'ir-token-pick';
+
+/**
+ * 押せるトークンの設定（`pickTokens`）。
+ * @typedef {object} TokenPick
+ * @property {boolean} canAdd 押せるか（上限に達していたら偽）
+ * @property {number} count 選択中の個数（バッジ。0 なら出さない）
+ * @property {number | null} [cost] 次に選ぶときのコスト（N 回目は N 個で 1 つ分。「+N」に出す）
+ * @property {boolean} [plus] プラスの印「+」を出すか（既定は出す。トークンの使用では出さない）
+ * @property {string} tooltip ツールチップ（押せない理由か、押したときの結果と次のコスト）
+ * @property {string} [removeTooltip] バッジのツールチップ
+ * @property {() => void} onAdd トークンを押したとき
+ * @property {() => void} [onRemove] バッジを押したとき
  */
 
 /** 自己構成するカードとして選んだ手札の印（選択中の印とは別。手札を捨てる選択と重ねる） */
@@ -93,6 +109,12 @@ export class PlayerAreas {
         this.selection = new SelectionController();
         /** @type {HTMLElement[]} 「自己構成するカード」の印を付けた手札の要素 */
         this.marked = [];
+        /** @type {HTMLElement | null} 手札の区画の見出しに足した「Discard 2 for Psychic Light」ボタン */
+        this.discardButton = null;
+        /** @type {(() => void) | null} */
+        this.discardButtonHandler = null;
+        /** @type {Array<() => void>} トークンを押せるようにした設定を元に戻す関数（`clearTokenPicks` で全部呼ぶ） */
+        this.tokenPickCleanups = [];
         /** setup の非同期の追加がすべて終わったら解決する（テスト用） */
         this.ready = Promise.resolve();
         for (const [playerId, area] of this.refs.playerAreas) {
@@ -659,5 +681,135 @@ export class PlayerAreas {
     clearSelection() {
         this.selection.clear();
         this.unmarkHand();
+        this.clearTokenPicks();
+        this.clearDiscardButton();
     }
+
+    /**
+     * 手札の区画の見出しに、小さなボタン（手札を捨てて心光を得る。ターンプレイヤーだけ。010 §2.4）を出す。前のものは外す。
+     * @param {{ label: string, tooltip: string, onClick: () => void }} options
+     */
+    showDiscardButton({ label, tooltip, onClick }) {
+        this.clearDiscardButton();
+        const title = this.me === null ? null : this.refs.playerAreas.get(this.me)?.handTitle;
+        if (title === null || title === undefined) {
+            return;
+        }
+        const button = el('button', { class: 'ir-zone-button', attrs: { type: 'button' } }, [label]);
+        button.setAttribute('title', tooltip);
+        button.addEventListener('click', onClick);
+        this.discardButtonHandler = onClick;
+        title.append(button);
+        this.discardButton = button;
+    }
+
+    /** 見出しの小さなボタンを外す */
+    clearDiscardButton() {
+        if (this.discardButton !== null) {
+            if (this.discardButtonHandler !== null) {
+                this.discardButton.removeEventListener('click', this.discardButtonHandler);
+            }
+            this.discardButton.remove();
+        }
+        this.discardButton = null;
+        this.discardButtonHandler = null;
+    }
+
+    // ---- トークンを押す操作（010 §2.4。心光・万能移動鍵の数量、自己構成・精神分析トークンの使用） ----
+
+    /**
+     * 自分のトークンを押せるようにする（種類ごと）。押せるもの（`canAdd`）に「選べる」の枠と「+」、選んだ個数（`count`）のバッジを出す。
+     * トークンを押すと `onAdd`、バッジを押すと `onRemove`。上限に達したもの（`canAdd` が偽）は枠を出さず、押しても何も起きない。
+     * 前の設定は先に外す。状態を出るときは `clearSelection` が `clearTokenPicks` を呼ぶ。
+     * @param {Partial<Record<'light' | 'wildUp' | 'compose' | 'analysis', TokenPick>>} picks
+     */
+    pickTokens(picks) {
+        this.clearTokenPicks();
+        const els = this.me === null ? undefined : this.tokenEls.get(this.me);
+        if (els === undefined) {
+            return;
+        }
+        for (const [kind, pick] of Object.entries(picks)) {
+            const entry = els[kind];
+            if (entry === undefined || pick === undefined) {
+                continue;
+            }
+            this.tokenPickCleanups.push(this.paintTokenPick(entry.root, kind, pick));
+        }
+    }
+
+    /**
+     * 1 種類のトークンを押せるようにして、元に戻す関数を返す。
+     * @param {HTMLElement} root
+     * @param {string} kind
+     * @param {TokenPick} pick
+     * @returns {() => void}
+     */
+    paintTokenPick(root, kind, pick) {
+        /** @type {Array<[HTMLElement, string, (event: any) => void]>} */
+        const listeners = [];
+        /** @type {HTMLElement[]} */
+        const added = [];
+        const listen = (/** @type {HTMLElement} */ target, /** @type {string} */ type, /** @type {(event: any) => void} */ handler) => {
+            target.addEventListener(type, handler);
+            listeners.push([target, type, handler]);
+        };
+        const classes = selectionClasses({ selectable: pick.canAdd, selected: pick.count > 0 });
+        for (const name of classes) {
+            root.classList.add(name);
+        }
+        root.setAttribute('title', pick.tooltip);
+        if (pick.canAdd) {
+            root.classList.add(CLASS_TOKEN_PICK);
+            root.setAttribute('role', 'button');
+            root.setAttribute('tabindex', '0');
+            root.setAttribute('aria-label', pick.tooltip);
+            listen(root, 'click', () => pick.onAdd());
+            listen(root, 'keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    pick.onAdd();
+                }
+            });
+            if (pick.plus !== false) {
+                const plus = el('span', { class: 'ir-token-plus', attrs: { 'aria-hidden': 'true' } }, [pick.cost !== null && pick.cost !== undefined && pick.cost > 1 ? `+${pick.cost}` : '+']);
+                root.append(plus);
+                added.push(plus);
+            }
+        }
+        if (pick.count > 0 && pick.onRemove !== undefined) {
+            const onRemove = pick.onRemove;
+            const badge = el('button', { class: 'ir-token-badge', attrs: { type: 'button', title: pick.removeTooltip ?? '', 'aria-label': pick.removeTooltip ?? '' } }, [String(pick.count)]);
+            listen(badge, 'click', (event) => {
+                event.stopPropagation();
+                onRemove();
+            });
+            root.append(badge);
+            added.push(badge);
+        }
+        return () => {
+            for (const [target, type, handler] of listeners) {
+                target.removeEventListener(type, handler);
+            }
+            for (const node of added) {
+                node.remove();
+            }
+            for (const name of [CLASS_SELECTABLE, CLASS_SELECTED, CLASS_TOKEN_PICK]) {
+                root.classList.toggle(name, false);
+            }
+            for (const name of ['role', 'tabindex', 'aria-label']) {
+                root.removeAttribute(name);
+            }
+            root.setAttribute('title', tokenTitle(kind));
+        };
+    }
+
+    /** トークンを押せる設定（枠・「+」・バッジ・リスナー）を全部外す */
+    clearTokenPicks() {
+        for (const cleanup of this.tokenPickCleanups) {
+            cleanup();
+        }
+        this.tokenPickCleanups = [];
+    }
+
 }

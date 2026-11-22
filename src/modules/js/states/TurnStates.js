@@ -5,11 +5,12 @@
 import { int } from '../ui/dom.js';
 import { ActionState } from './ActionState.js';
 import { list, obj } from './args.js';
+import { showTokenUseButton } from './action-bar-model.js';
 import { discardExcessReady, floorOptionKey, plainText } from './choice-model.js';
 
 /**
  * 60: 自己構成フェイズの窓。自己構成（フェイズに 1 回）・自己構成トークン・精神分析トークンを任意の順に使い、「End construct phase」で終える。
- * 使えないものは無効にする（args の可否どおり。空撃ち不可）。フリーアクションのボタンも出る。
+ * 使えないものは無効にする（args の可否どおり。空撃ち不可）。トークンが 0 個の使用ボタンは出さず、領域のトークンを押しても使える。フリーアクションも出る。
  */
 export class ConstructState extends ActionState {
   draw() {
@@ -21,15 +22,34 @@ export class ConstructState extends ActionState {
       disabled: a.phaseComposeUsed === true,
       tooltip: a.phaseComposeUsed === true ? _('You already composed in the compose phase') : undefined,
     });
-    this.button(_('Use construct token (${count})').replace('${count}', String(composeTokens)), () => this.send('actUseComposeToken'), {
-      color: 'secondary',
-      disabled: a.canComposeToken !== true,
-      tooltip: composeTokens < 1 ? _('You have no construct token') : (a.canComposeToken === true ? undefined : _('There is no card you can compose')),
-    });
-    this.button(_('Use psychoanalysis token (${count})').replace('${count}', String(analysisTokens)), () => this.send('actUseAnalysisToken'), {
-      color: 'secondary',
-      disabled: a.canAnalysisToken !== true,
-      tooltip: analysisTokens < 1 ? _('You have no psychoanalysis token') : (a.canAnalysisToken === true ? undefined : _('You cannot pay for any psychoanalysis now')),
+    // トークンが 0 個なら使用ボタンを出さない（010 §2.3）。1 個以上で使えないときは灰。領域のトークンを押しても同じ操作になる（§2.4）
+    const composeReason = composeTokens < 1 ? _('You have no construct token') : _('There is no card you can compose');
+    const analysisReason = analysisTokens < 1 ? _('You have no psychoanalysis token') : _('You cannot pay for any psychoanalysis now');
+    const canCompose = a.canComposeToken === true;
+    const canAnalysis = a.canAnalysisToken === true;
+    if (showTokenUseButton(composeTokens)) {
+      this.button(_('Use construct token (${count})').replace('${count}', String(composeTokens)), () => this.send('actUseComposeToken'), {
+        color: 'secondary',
+        disabled: !canCompose,
+        tooltip: canCompose ? undefined : composeReason,
+      });
+    }
+    if (showTokenUseButton(analysisTokens)) {
+      this.button(_('Use psychoanalysis token (${count})').replace('${count}', String(analysisTokens)), () => this.send('actUseAnalysisToken'), {
+        color: 'secondary',
+        disabled: !canAnalysis,
+        tooltip: canAnalysis ? undefined : analysisReason,
+      });
+    }
+    this.getDeps().playerAreas?.pickTokens({
+      compose: {
+        canAdd: canCompose, count: 0, plus: false, onAdd: () => this.send('actUseComposeToken'),
+        tooltip: canCompose ? _('Use a construct token') : composeReason,
+      },
+      analysis: {
+        canAdd: canAnalysis, count: 0, plus: false, onAdd: () => this.send('actUseAnalysisToken'),
+        tooltip: canAnalysis ? _('Use a psychoanalysis token') : analysisReason,
+      },
     });
     this.button(_('End construct phase'), () => this.send('actEndConstruct'), { color: 'alert' });
   }

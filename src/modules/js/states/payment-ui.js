@@ -5,6 +5,7 @@
  */
 
 import { memKey } from '../board/view-model.js';
+import { stepTokenCount, tokenQuantityView } from './action-bar-model.js';
 
 /** 支払いの src（HAND / TABLEAU） */
 const HAND = 'HAND';
@@ -72,12 +73,29 @@ export function statusText({ paid, total, needed, unused, keys = false }) {
 }
 
 /**
- * 「−／＋」の数量ボタンの上限・下限の切り替え（純粋関数）。
- * @param {number} current
- * @param {number} delta
- * @param {number} max
- * @returns {number}
+ * 心光・万能移動鍵の数量を、領域のトークンを押して選ぶための設定（010 §2.4）。上限に達したら押せない。
+ * 次のコスト（N 回目の行使は N 個で 1 つ分）は、押せるときだけツールチップと「+N」に出す。
+ * @param {{ kind: 'light' | 'wildUp', count: number, max: number, cumulative?: (uses: number) => number, onChange: (count: number) => void }} options
+ * @returns {import('../board/PlayerAreas.js').TokenPick}
  */
-export function stepQuantity(current, delta, max) {
-  return Math.max(0, Math.min(max, current + delta));
+export function quantityTokenPick({ kind, count, max, cumulative, onChange }) {
+  const view = tokenQuantityView({ count, max, cumulative });
+  const selected = String(count);
+  let tooltip;
+  if (!view.canAdd) {
+    tooltip = max > 0 ? _('You have selected as many as you can use') : _('You cannot use this now');
+  } else if (kind === 'light') {
+    tooltip = _('Pay with Psychic Light. The next use costs ${cost}. Selected: ${count}').replace('${cost}', String(view.nextCost)).replace('${count}', selected);
+  } else {
+    tooltip = _('Pay 1 lock with an Omni-Move Key. Selected: ${count}').replace('${count}', selected);
+  }
+  return {
+    canAdd: view.canAdd,
+    count,
+    cost: kind === 'light' ? view.nextCost : null,
+    tooltip,
+    removeTooltip: _('Deselect one'),
+    onAdd: () => onChange(stepTokenCount(count, 1, max)),
+    onRemove: () => onChange(stepTokenCount(count, -1, max)),
+  };
 }
