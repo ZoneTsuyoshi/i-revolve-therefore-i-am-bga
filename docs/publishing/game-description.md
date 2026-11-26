@@ -40,6 +40,52 @@ There are three ways to win, and each takes effect immediately. Fleeting Recolle
 Will you remain here, or cross over into the beyond? This is your one chance to prove that you are yourself.
 ```
 
+## BGA の説明文（Metadata タブの Description）
+
+BGA の公式ドキュメント <https://doc.studio.boardgamearena.com/framework-documentation/game-metadata/metadata/> によると、Description はゲームの紹介ページに出る短い紹介文で、段落の配列として入力する。各段落は書式なしのプレーンテキスト（HTML・強調なし）で、全体の目安は 100〜150 語。BGG 用の長文（上の節）は長すぎるため、BGA 用に短くした版を用意した（2026-11-26 確認）。用語は下の「用語の英訳案」の表に合わせた。
+
+管理画面では段落ごとに 1 行ずつ入力するため、段落ごとに別のコードブロックで載せる。
+
+段落 1:
+
+```text
+You were once someone. Now you wander the Psycho Cloister, a labyrinth of the mind where many personalities circle in search of themselves. Only one ego can be established, and establishing yours means losing every other.
+```
+
+訳: かつて君は誰かだった。いま君は精神回廊（サイコ・クロイスター）をさまよう。そこは、数多の人格が自分自身を求めて廻る心の迷宮だ。確立できる自我はただ一つ。君の自我を確立することは、ほかのすべてを失うことを意味する。
+
+段落 2:
+
+```text
+Each turn, guide your personality clockwise around a ring of twelve rooms, paying keys to enter each one. Flip the Memory card in the room where you stop to trigger its recall effect, then take it into your hand and use the room's floor action. Construct Memory cards to build an engine of keys and effects, and use Psychoanalysis to climb the Mind Track.
+```
+
+訳: 毎ターン、人格を 12 の部屋の環に沿って時計回りに進め、部屋に入るたびに鍵を支払う。止まった部屋の想い出カードを表にして想起効果を発動し、それを手札に加えて、その部屋の床アクションを行う。想い出カードを自己構成して鍵と効果のエンジンを作り、精神分析で精神トラックを登っていく。
+
+段落 3:
+
+```text
+Three paths lead to instant victory: enter every room in a single turn, reach a Construction Score of 20, or climb to the fifth tier of the Mind Track. But if either Memory deck runs out, nobody wins.
+```
+
+訳: 即時勝利への道は 3 つ。1 ターンですべての部屋に入る、自己構成スコア 20 に達する、精神トラックの第五階層まで登る。ただし、どちらかの想い出の山札が尽きたら、誰も勝てない。
+
+語数は 3 段落の合計で約 140 語（目安の 100〜150 語に収まる）。
+
+### Metadata タブのその他の欄（参考）
+
+| 欄 | 値 |
+| --- | --- |
+| Publication year | 2025（基本情報の表と同じ） |
+| Minimum age | 10（基本情報の表と同じ） |
+| Complexity | 0〜5 の尺度（0 = 極めて単純、5 = 極めて複雑）。作者が入力（2026-11-26 時点: 2） |
+| Luck | 0〜5 の尺度（0 = 運の要素なし、5 = 完全に運）。作者が入力（同: 3） |
+| Strategy | 0〜5 の尺度（0 = 戦略の余地なし、5 = 完全に戦略）。作者が入力（同: 4） |
+| Diplomacy | 0〜5 の尺度（0 = 相互作用なし、5 = プレイヤー間の相互作用と話し合いが中心）。作者が入力（同: 3） |
+| Zombie Mode level | **0** を推奨（下記） |
+
+Zombie Mode level の理由。BGA の定義（<https://doc.studio.boardgamearena.com/framework-documentation/back-end/zombie-mode/>）では、0 = 何もせず次へ進む（ゲームの進行に必要な行動だけ取る）、1 = 合法手からランダムに選ぶ、2 = 目先の利益が最大の手を選ぶ、3 = 先を読む。複数のレベルが混在する場合は最も多いレベルを、同数なら低いほうを選ぶ。本実装の zombie は仕様書 006 §10（[006-state-machine.md](../specs/006-state-machine.md)）のとおり、ランダムを使わず決定的に、ほとんどの状態で「行わない・スキップ」を選ぶ（自己構成・精神分析は取り消し、目標は獲得しない）。移動や必須の選択も、進行に必要な最小限の行動に限られるため、レベル 0 に当たる。2026-11-26 時点の入力値 1 は 0 に直すことを推奨する。BGA は 1〜2 を目安としているため、審査でレベルの引き上げを求められた場合は、006 §10 を改める仕様 PR から対応する。
+
 ## 用語の英訳案
 
 説明文中の表記を一貫させるための対応表。ゲーム内の英語識別子は仕様書 002（カードデータ仕様）で確定する。この表は紹介文用の案で、確定後に合わせて直す。
