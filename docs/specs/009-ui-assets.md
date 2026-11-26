@@ -8,6 +8,8 @@
 | 関連仕様書 | 001（ゲームルール）、002（カードデータ）、003（BGA プロジェクト構成・技術方針）。後続: T-006（状態遷移）、T-007（データモデル・通知）、T-008（カード効果）、実装タスク（§16） |
 
 > 2026-11-22: Public Alpha 審査の先回りの見直し（仕様書 010、実装 U-11〜U-15）で、§2.4・§2.5・§3.2・§3.7〜§3.11・§4.2・§6・§12.2 と操作 UI の記述を変更した。変更した箇所には「（010 で変更）」と出典を添え、古い記述は新しい記述に置き換えた。
+>
+> 2026-11-26: 作者の依頼で、メタ画像（§14）を Publisher 以外すべて実装者が `data/` から作ることにし、§14 を書き換えた。参照 URL（§0）、§16 の U-9、未確定事項も追従した。
 
 ## 目的
 
@@ -30,7 +32,7 @@
 | 略称 | 内容 |
 | --- | --- |
 | Img | <https://en.doc.boardgamearena.com/Game_art:_img_directory>（画像の制約） |
-| GMM | <https://en.doc.boardgamearena.com/Game_metadata_manager>（メタ画像の要件） |
+| GMM | <https://doc.studio.boardgamearena.com/framework-documentation/game-metadata/media/>（メタ画像の要件。旧 `en.doc.boardgamearena.com/Game_metadata_manager` は移転し 404。2026-11-26 確認） |
 | Checklist | <https://en.doc.boardgamearena.com/Pre-release_checklist> |
 | Guidelines | <https://en.doc.boardgamearena.com/BGA_Studio_Guidelines>（A.5 ズームボタン、C.4・E.3 モバイル・タップ領域、D.3 アニメーション） |
 | Mobile | <https://en.doc.boardgamearena.com/Game_interface_logic:_Mobile>（`game_interface_width`、`mobile_version`、`touch-device`） |
@@ -610,20 +612,54 @@ export function buildCardTexts() {
 | 選択 | 各 stock の `setSelectionMode`、`selectableCardStyle` / `unselectableCardStyle` / `selectedCardStyle` | §4.3 の枠・印のスタイルを上書き |
 | カードの表示 | `CardManager`（`cardWidth`、`cardHeight`、`setupFrontDiv`、`setupBackDiv`、`isCardVisible`、`getId`） | §10.1。ID・枚数は必ず整数に変換（003 §6.1） |
 
-### 14. メタ画像（バナー・ボックス・Display）
+### 14. メタ画像（Box・Icon・Title・Banner・Display）
 
-【確認】（GMM、姉妹 MJ 009 §1.2。2026-10-13 に姉妹が確認）メタ画像は `img/` に置かず、Game Metadata Manager（private alpha 前は Studio の <https://studio.boardgamearena.com/controlpanelgames>、private alpha に入ると本番の <https://boardgamearena.com/controlpanelgames>）から登録する。`src/` には置かず、005 の同期の対象外。
+【確認】（BGA 公式ドキュメント <https://doc.studio.boardgamearena.com/framework-documentation/game-metadata/media/>、2026-11-26 確認。旧 URL は 404）メタ画像は `img/` に置かず、Game Metadata Manager（private alpha 前は Studio の <https://studio.boardgamearena.com/controlpanelgames>、private alpha に入ると本番の <https://boardgamearena.com/controlpanelgames>）の Media タブから登録する。`src/` には置かず、005 の同期の対象外。
 
-| 画像 | 形式・寸法 | 必須の時期 | 現状と担当 |
-| --- | --- | --- | --- |
-| Box（ゲーム箱） | PNG、280 × 280、背景は透明。「ネットショップに出ている実物の 3D の箱」 | public alpha まで | **原本あり**（`data/box/box@4x.png`: 502 × 650、透過あり、斜めの 3D の箱）。高さ 280 に縮小（幅約 216）して 280 × 280 の透明キャンバスの中央に置く。実装者が `build:sprites` とは別の小さなスクリプト、または `magick` で作る（コミットしない。登録は作者または実装者）。原本は変更しない |
-| Icon | PNG、50 × 50、枠なし | public alpha まで | **作者が用意**。他のゲームと見分けがつくもの（例: タイトルの「廻」の字、または箱絵の一部）。仮に箱から切り出した仮アイコンを実装者が作ってよい |
-| Title | PNG、2000 × 2000、透過、2 MB 以下 | beta まで | **作者が用意**（日本語と英語のタイトルロゴの透過画像）。箱の画像に重ねて映えること |
-| Banner | JPG、1386 × 400、文字なし、2 MB 以下 | beta まで | **作者が用意**。ゲームの雰囲気を表す絵（箱絵の回廊の背景など）。左側に重なる箱が目立つように |
-| Display | JPG、高さ 400〜760、幅は高さの 1.5 倍まで、最大 10 枚 | release まで | **作者**（実物の写真など）。カード画像（`data/cards/`）の拡大や構成で実装者が作ってもよい。**BGA 版のスクリーンショットは不可** |
-| Publisher | PNG、280 × 280、任意、最大 2 枚 | 任意 | 「だんじり協奏曲」のロゴを載せるか、作者が決める |
+2026-11-26 に作者から「`data/` を参考に Publisher 以外の画像を作ってほしい」と依頼があり、Publisher 以外は実装者が `data/` から生成する。Publisher は従来どおり作者が決める。
 
-- 画像の中身（日本語のタイトル）は、BGA の英語のゲームページに出ても支障が無いかを作者が判断する（`language_dependency`、003 §8）。
+#### 14.1 要件
+
+| 画像 | 形式・寸法 | 必須の時期 | 公式の要件（原文） | 担当 |
+| --- | --- | --- | --- | --- |
+| Box | PNG、280 × 280 | public alpha まで | "The image must have a transparent background and no shadow." "It should be a 3D image of a physical copy of the game box as it appears in an online shop." | 実装者 |
+| Icon | PNG、50 × 50 | public alpha まで | ゲームやテーブルの一覧に出る。"This image does not have to be transparent. It should not have a border." "Use a distinctive part of the game cover (for example, the game title)." | 実装者 |
+| Title | PNG、2000 × 2000、2 MB 以下 | beta まで | ゲーム名の文字の代わりに表示される。"must have a transparent background." "Must look good when overlaid on the game banner." | 実装者 |
+| Banner | JPG、1386 × 400、2 MB 以下 | beta まで | "Should not contain any text." "an image that captures the atmosphere of the game, such as part of the cover or a promotional image." "The box image overlaid on the left of the banner should stand out, and the title should be readable when placed over the banner." | 実装者 |
+| Display | JPG、高さ 400〜760、幅は高さの 1.5 倍まで、最大 10 枚 | release まで | ゲームページのカルーセル。"Do not use screenshots of the BGA adaptation, as the "see game in action" replay already serves that purpose." 推奨はカードの拡大、盤面の細部、実物のゲームの進行中の様子 | 実装者 |
+| Publisher | PNG、280 × 280、2 MB 以下、任意、透過可 | 任意 | 「だんじり協奏曲」のロゴを載せるか | **作者**（今回の対象外） |
+| Major Variant | PNG、280 × 280、任意 | 任意 | 大きなゲームオプション用 | このゲームでは使わない |
+
+Title の置き方の見本図（<https://en.doc.boardgamearena.com/images/d/df/Title_guidelines.png>）は、上から upper zone（2000 × 612）、title zone（2000 × 776、y = 612〜1388、中央の水平線が y = 1000）、subtitle zone（2000 × 612）。主タイトルは title zone に収める。
+
+#### 14.2 原本（`data/`。メインの作業ツリーにだけある）
+
+- `data/box/box@4x.png`: 502 × 650、RGBA。斜めから見た 3D の箱で、背景は透明（影なし）。
+- `data/cards/memory/1.png`〜`99.png`: 722 × 1006。どのカード（レベル 1・2 とも）でも、額縁（額・白いマット・絵）は x = 128〜598、y = 40〜512（470 × 472）にあり、この範囲に文字は無い（カード名・効果文は額縁の下）。【実測】No.2・3・31・46・51・72・79・91・94・20 で確認。
+- `data/cards/memory/Rev{1,2}{B,F,H}.png`（裏面＝扉と錠前）、`data/cards/floor/F1`〜`F12`（1007 × 723 の横長）、`data/cards/analysis/R1a`〜`R5`（精神カード、横長）、`data/cards/ability/I*`、`data/cards/enhancement/E*`、`data/cards/objective/O*`、`data/tokens/*.png`（357 × 357）、`data/piecies/meeple/*`、`data/piecies/cube/*`。
+- `data/thumbnails/`（作者が 2026-11-26 に追加）: `ゲーム盤面.png`（1800 × 1120。作者の宣伝用の、実物のゲームの盤面の画像。BGA のスクリーンショットではない。文字はカードの印刷のみ）、`thumbnail_gm.png` ほか 3 枚（992 × 496 など。箱と盤面に日本語の宣伝文句「エンジンビルド×周遊ワカプレ」が入る）、`box@4x.png`（`data/box/` と同じ）。
+
+#### 14.3 各画像の設計
+
+- **Box**: `data/box/box@4x.png` を高さ 280 に縮小（約 216 × 280、Lanczos）し、280 × 280 の透明なキャンバスの中央に置く。影は付けない。
+- **Icon**: 箱の表のタイトルの「廻」の字（原本で約 70 × 70 px、おおよそ x = 296〜372、y = 215〜291 の正方形。正確な範囲は実装者が目視で決める）を切り出し、50 × 50 に縮小する。背景は箱絵のセピアのまま。枠なし。判読できない場合の代替は、OFL の明朝体（Shippori Mincho B1 ExtraBold）で「廻」を描き、箱の色に合わせたセピアの地に置く。
+- **Title**: 英語を主にする。BGA のゲーム名は "I Revolve, Therefore I Am"（`src/gameinfos.jsonc`）で、Title 画像はどの言語でもゲーム名の文字の代わりに出るため。title zone に "I Revolve," / "Therefore I Am" の 2 行（セリフのイタリック。OFL の EB Garamond Italic など）、subtitle zone に日本語『我廻る、故に我あり』（OFL の Shippori Mincho B1 ExtraBold。箱にならい「廻」と 2 つ目の「我」を大きく）を置く。upper zone は空ける。文字色はアイボリー（箱の白い文字に近い暖色の白）、濃いセピアの縁取りと柔らかい影で、バナーの上でも明るい背景の上でも読めるようにする。背景は透明、2 MB 以下。
+- **Banner**: 「回廊の画廊」。想い出カードの額縁（14.2 の範囲。文字を含まない）を 5〜6 枚、暗いセピアの壁に横一列に掛け、暖色の展示照明を当てた構図。候補の絵は No.2（回廊）・46（迷宮の起点）・79（過去への扉）・51（螺旋の指南）・91（無限回廊の地図）・94（知識の迷宮）・72（鏡の向こう）・3（荒廃）。左端の約 320 px は暗く無地に近くして、重なる箱が目立つようにする。絵はやや暗くし、タイトルが上に重なっても読めるようにする。文字なし。JPG、2 MB 以下。
+- **Display**: 1140 × 760（高さ 760・幅 1.5 倍）の JPG を 3 枚。
+  - D1 全景: `data/thumbnails/ゲーム盤面.png` を 1.5 : 1（1680 × 1120）に切り出して縮小する。
+  - D2 想い出カードの拡大: 想い出カードの表（レベル 1・2）数枚と裏面（扉と錠前）を、暗い卓の上に並べる。
+  - D3 精神トラックと自我: 精神カード第一〜第五階層をゲームのとおり積み、初期自我・強化自我・目標カード・トークン・キューブ・人格（ミープル）を添える。
+  - `data/thumbnails/thumbnail_gm*.png` は使わない（日本語の宣伝文句を含み、D1 と同じ盤面のため）。BGA 版のスクリーンショットは使わない。
+
+#### 14.4 生成・出力・検査
+
+- フォント: OFL のフォント（Google Fonts の google/fonts リポジトリ）をビルド時に取得して `build/` 配下にキャッシュする（コミットしない）。ライセンスを明確にするため、macOS のシステムフォント（ヒラギノなど）は使わない。
+- スクリプト: `scripts/meta-images/`（npm スクリプト `build:meta-images`）。構図は HTML/CSS を Playwright（`playwright-core` とローカルの Chrome。プレビュー `scripts/preview/` と同じ）で撮影し、縮小・エンコードは sharp で行う。`data/` は `"$(git rev-parse --path-format=absolute --git-common-dir)/../data"` で求めた絶対パスから読む。
+- 出力: メインの作業ツリーの `build/meta-images/`（`.gitignore` の `/build/` で除外済み）。画像はコミットしない（作者の絵からの派生物で、BGA へは同期せず管理画面から登録するため）。確認用に「ゲームページの見本」（バナーの左に箱、上にタイトルを重ねた合成。登録はしない）も出力する。
+- 検査: スクリプトは出力の寸法・形式・容量（Title と Banner は 2 MB 以下）を検査し、違反したら失敗する。
+- 登録の手順書: `docs/publishing/meta-images.md`（実装 PR で作る）。private alpha 前は Studio の <https://studio.boardgamearena.com/controlpanelgames>、以後は本番の <https://boardgamearena.com/controlpanelgames> で、プロジェクトの Media タブの各欄に対応するファイルを登録する。
+
+- 画像の中身（日本語のタイトル）が BGA の英語のゲームページに出ても支障が無いかは、Title を英語主体にすることで解消する（`language_dependency`、003 §8）。
 
 ### 15. 実装との対応で使う DOM・CSS の規則
 
@@ -644,7 +680,7 @@ export function buildCardTexts() {
 | U-6 | プレイヤーパネル（§6） | U-2、007 | `ui/panels.js` |
 | U-7 | 拡大表示・ツールチップ・英語テキスト（§7、§8）。`texts.js` の起草（作者の確認つき）、アイコン描画、想起中の案内パネル、プレイヤー設定 100 | U-1、U-2、002 の素材の生成物 | `ui/card-info.js`、`ui/texts.js` |
 | U-8 | ログ・翻訳（§9）: 通知の i18n、ログのカード名の置き換え、翻訳抽出の確認 | 007 の通知 | `ui/log.js` |
-| U-9 | メタ画像（§14）: Box の縮小、仮アイコン、Studio の GMM への登録の手順書 | 作者の素材 | 登録手順（`docs/publishing/` に追記） |
+| U-9 | メタ画像（§14。Publisher 以外）の生成スクリプト（`scripts/meta-images/`）と登録の手順書 | `data/`（作者の原本） | `build:meta-images`、`docs/publishing/meta-images.md` |
 
 - U-1 と U-2 を先に進める。U-3〜U-6 は 006・007 で状態と通知が決まってから。U-7 の英語テキストの起草は、UI が無くても進められる（作者の確認に時間がかかるため、早めに着手する）。
 
@@ -688,8 +724,10 @@ export function buildCardTexts() {
 | 3 | プレイヤー色の `player_colors`。駒の画像の平均色は暗いので、パネルの名前の読みやすさのために明るめに寄せた値（赤 `b3202a`、黄 `d6b61e`、緑 `5f9c3a`、青 `2a4fa0`）を使ってよいか（駒の画像自体は変更しない） | 暫定案の値。Studio の実画面で確定 | 暫定案の値（2026-10-20、Q-46） |
 | 4 | 「画像は加工せずに使う」に、縮小（解像度を下げる）と WebP への変換・スプライトへの並べ直しは含まれるか。文字や絵は一切変えない | 含まれる（縮小と圧縮のみ。文字・絵・色・角丸には手を加えない） | 含まれる（加工せずに使う範囲内。2026-10-20、Q-47） |
 | 5 | 獲得した目標カードを、実物ではどこに置くか。BGA では獲得者の領域の「Goals」の行へ移し、共通の場に空き枠を残す表現でよいか | 暫定案のとおり | 獲得した目標カードは獲得者の領域へ移す（2026-10-20、Q-48） |
-| 6 | メタ画像（§14）: アイコン（50 × 50）、タイトルロゴ（透過 2000 × 2000）、バナー（1386 × 400、文字なし）、Display（実物の写真など）を作者が用意できるか。出版社ロゴ「だんじり協奏曲」を載せるか。箱の画像は `data/box/box@4x.png` を 280 × 280 に縮小して使ってよいか | Box は縮小して使う。他は作者が用意（時期は §14 の表） | 暫定案のとおり（Box は縮小して使う。他のメタ画像は作者が公開準備までに用意。2026-10-20、Q-45） |
+| 6 | メタ画像（§14）: アイコン（50 × 50）、タイトルロゴ（透過 2000 × 2000）、バナー（1386 × 400、文字なし）、Display（実物の写真など）を作者が用意できるか。出版社ロゴ「だんじり協奏曲」を載せるか。箱の画像は `data/box/box@4x.png` を 280 × 280 に縮小して使ってよいか | Box は縮小して使う。他は作者が用意（時期は §14 の表） | 暫定案のとおり（Box は縮小して使う。他のメタ画像は作者が公開準備までに用意。2026-10-20、Q-45）→ 追補 2026-11-26: 作者の依頼で、Publisher 以外は実装者が `data/` から作る（§14） |
 | 7 | プレイヤー設定「Card captions」（カードの下に英語名を常時表示）を初版に入れるか | 入れる（既定は Off） | 初版に入れる・既定 Off（2026-10-20、Q-49） |
+| 8 | Title を日本語主体にした版を日本語環境向けに用意するか（BGA が言語別の Title を受け付けるかは未確認）。ブロッカーではない | 用意しない（英語主体の 1 枚のみ） | 未回答（2026-11-26 追記） |
+| 9 | Display の追加（実物のプレイ写真など。最大 10 枚）。ブロッカーではない | 生成した 3 枚で足りるが、あれば追加 | 未回答（2026-11-26 追記） |
 
 ### 技術判断
 
