@@ -29,13 +29,10 @@ const MAX_WIDTH = 560;
 /** 画面の端・対象との間（px） */
 const MARGIN = 8;
 /**
- * 「選べる要素」のクラス（1 か所。U-19 で新しいクラス `ir-can`・`ir-picked`・`ir-off` に切り替えたら、旧クラスを消す）。
+ * 「選べる要素」のクラス（1 か所。011 §5.1 の `ir-can`・`ir-picked`・`ir-off`。`ir-token-pick` は押せるトークンのフック）。
  * `ir-off`（選べない理由を出す要素）もタッチではタップを理由に使うので、長押しで出す。
  */
-export const SELECTABLE_SELECTOR = [
-    '.ir-selectable', '.ir-selected', '.bga-cards_selectable-card', '.bga-cards_selected-card', '.ir-room-selectable', '.ir-token-pick',
-    '.ir-can', '.ir-picked', '.ir-off',
-].join(', ');
+export const SELECTABLE_SELECTOR = ['.ir-can', '.ir-picked', '.ir-off', '.ir-token-pick'].join(', ');
 
 /**
  * @typedef {object} Target

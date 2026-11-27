@@ -5,6 +5,8 @@
  */
 
 import { memKey } from '../board/view-model.js';
+import { escapeHtml } from '../ui/log-format.js';
+import { textToHtml } from '../ui/status-title.js';
 import { stepTokenCount, tokenQuantityView } from './action-bar-model.js';
 
 /** 支払いの src（HAND / TABLEAU） */
@@ -44,30 +46,34 @@ export function cardLabel(deps, src, id) {
   return key === undefined ? `#${id}` : (deps.texts?.cards[key]?.name ?? key);
 }
 
+/** 鍵の種類 → アイコン名（`ui/icon-names.js` の `ICONS`） */
+const KEY_ICONS = /** @type {Record<string, string>} */ ({ WISDOM: 'wisdom', WILL: 'will', EMOTION: 'emotion', WILD: 'wild' });
+
 /**
- * 足りない鍵の文言（`1 × Wisdom, 2 × Will`）。
+ * 足りない鍵の文言（`2 {wisdom} 1 {will}`。鍵はアイコンの記法で、`textToHtml` が画像にする。011 §3.4）。
  * @param {Record<string, number>} needed 鍵の種類 → 個数
  * @returns {string}
  */
 export function neededText(needed) {
   return ['WISDOM', 'WILL', 'EMOTION', 'WILD']
     .filter((type) => (needed[type] ?? 0) > 0)
-    .map((type) => `${needed[type]} × ${keyName(type)}`)
-    .join(', ');
+    .map((type) => `${needed[type]} {${KEY_ICONS[type]}}`)
+    .join(' ');
 }
 
 /**
- * ステータスの文言（充足・不足・余り）を 1 つにつなぐ。空の部分は省く。
- * @param {{ paid: number, total: number, needed: string, unused: string, keys?: boolean }} parts keys: 精神分析のコストの鍵（既定は移動の錠前）
+ * ステータスの文言（充足・不足・余り）を 1 つにつなぐ。空の部分は省く。ステータスバーの HTML として渡す（鍵はアイコン、文字は特殊文字を避ける）。
+ * `Locks: 1 / 3. Need: 2 {wisdom}. Unused: Card A`（011 §3.4）。経路は盤面の順番の札で見えるので出さない。
+ * @param {{ paid: number, total: number, needed: string, unused: string, keys?: boolean, iconHtml: (name: string) => string }} parts needed: `neededText` の記法。unused: 平文。keys: 精神分析のコストの鍵（既定は移動の錠前）
  * @returns {string}
  */
-export function statusText({ paid, total, needed, unused, keys = false }) {
-  const out = [(keys ? _('Keys: ${paid} / ${total} paid') : _('Locks: ${paid} / ${total} paid')).replace('${paid}', String(paid)).replace('${total}', String(total))];
+export function statusText({ paid, total, needed, unused, keys = false, iconHtml }) {
+  const out = [(keys ? _('keys ${paid} / ${total}') : _('Locks: ${paid} / ${total}')).replace('${paid}', String(paid)).replace('${total}', String(total))];
   if (needed !== '') {
-    out.push(_('Still needed: ${keys}').replace('${keys}', needed));
+    out.push(_('Need: ${keys}').replace('${keys}', textToHtml(needed, iconHtml)));
   }
   if (unused !== '') {
-    out.push(_('Unused: ${items}').replace('${items}', unused));
+    out.push(_('Unused: ${items}').replace('${items}', escapeHtml(unused)));
   }
   return out.join('. ');
 }

@@ -291,15 +291,17 @@ test('選択の基盤: start で選べる印、onChange、上限、clear で全�
   const changes = [];
   areas.selectHand({ ids: [30, 31], mode: 'multiple', max: 1, onChange: (/** @type {any} */ ids) => changes.push(ids) });
   assert.equal(areas.selection.active, true);
-  assert.equal(hand.getCardElement({ id: 30 }).hasClass('ir-selectable'), true);
-  assert.equal(hand.getCardElement({ id: 32 }).hasClass('ir-selectable'), false, '選べないカードには印を付けない');
+  assert.equal(hand.getCardElement({ id: 30 }).hasClass('ir-can'), true);
+  assert.equal(hand.getCardElement({ id: 32 }).hasClass('ir-can'), false);
+  assert.equal(hand.getCardElement({ id: 32 }).hasClass('ir-off'), true, '選択モードの Stock の、選べないカードだけを暗くする');
+  assert.equal(hand.getCardElement({ id: 32 }).getAttribute('data-ir-why'), null, '理由を渡さなければ属性は付けない（一般の文を出す）');
 
   hand.selectCard({ id: 32 });
   assert.deepEqual(changes, [], '選べないカードのクリックは無視');
   hand.selectCard({ id: 30 });
   assert.deepEqual(changes, [[30]]);
-  assert.equal(hand.getCardElement({ id: 30 }).hasClass('ir-selected'), true);
-  assert.equal(hand.getCardElement({ id: 30 }).hasClass('ir-selectable'), false);
+  assert.equal(hand.getCardElement({ id: 30 }).hasClass('ir-picked'), true);
+  assert.equal(hand.getCardElement({ id: 30 }).hasClass('ir-can'), false);
   hand.selectCard({ id: 31 });
   assert.deepEqual(changes, [[30]], '上限を超える選択は取り消す');
   assert.deepEqual(areas.selection.getSelected(hand), [30]);
@@ -307,14 +309,14 @@ test('選択の基盤: start で選べる印、onChange、上限、clear で全�
   // 自己構成済みも同時に選べる。状態を出るとき clear で全部掃除する
   areas.selectComposed(P1, { mode: 'single' });
   const composed = stockOf(areas, P1).composed;
-  assert.equal(composed.getCardElement({ id: 51 }).hasClass('ir-selectable'), true);
+  assert.equal(composed.getCardElement({ id: 51 }).hasClass('ir-can'), true);
   areas.clearSelection();
   assert.equal(areas.selection.active, false);
   for (const id of [30, 31, 32]) {
     const el = hand.getCardElement({ id });
-    assert.equal(el.hasClass('ir-selectable') || el.hasClass('ir-selected'), false);
+    assert.equal(el.hasClass('ir-can') || el.hasClass('ir-picked') || el.hasClass('ir-off'), false, '状態を出たら ir-off も残らない');
   }
-  assert.equal(composed.getCardElement({ id: 51 }).hasClass('ir-selectable'), false);
+  assert.equal(composed.getCardElement({ id: 51 }).hasClass('ir-can'), false);
   assert.equal(hand.selectionMode, 'none');
   assert.deepEqual(hand.getSelection(), []);
   assert.equal(hand.onSelectionChange, undefined);

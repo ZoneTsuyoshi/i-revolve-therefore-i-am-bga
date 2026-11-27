@@ -5,7 +5,7 @@ import {
   HAND_LIMIT, applyTotals, compareHand, composedModel, energyMap, handCard, handCountState, handModel, intList, memoryInfoTable,
   privateArg, restoreWild, scoreLabel, tokenChip, tokensModel, underModel, handWarning, TOKEN_KINDS,
 } from '../../src/modules/js/board/player-view-model.js';
-import { CLASS_SELECTABLE, CLASS_SELECTED, nextSelection, selectionClasses } from '../../src/modules/js/cards/selection.js';
+import { CLASS_CAN, CLASS_OFF, CLASS_PICKED, nextSelection, selectionClasses } from '../../src/modules/js/cards/selection.js';
 
 const catalog = { memory: [{ type: 1, level: 1, energy: 3 }, { type: 2, level: 1, energy: 1 }, { type: 60, level: 2, energy: 0 }, { type: 5, level: 1, energy: 1 }] };
 
@@ -93,10 +93,12 @@ test('nextSelection: single は置き換え、multiple は切り替えと上限�
   assert.deepEqual(nextSelection(['1'], 1, { mode: 'multiple' }), [], '文字列と数値は同じ ID として扱う');
 });
 
-test('selectionClasses: 選択中は選択中の印だけ。選べないカードにはクラスを付けない（暗くしない）', () => {
-  assert.deepEqual(selectionClasses({ selectable: true, selected: false }), [CLASS_SELECTABLE]);
-  assert.deepEqual(selectionClasses({ selectable: true, selected: true }), [CLASS_SELECTED]);
+test('selectionClasses: 選択中は選択中の印だけ。選べないものは off のときだけ ir-off（暗くする）', () => {
+  assert.deepEqual(selectionClasses({ selectable: true, selected: false }), [CLASS_CAN]);
+  assert.deepEqual(selectionClasses({ selectable: true, selected: true }), [CLASS_PICKED]);
   assert.deepEqual(selectionClasses({ selectable: false, selected: false }), []);
+  assert.deepEqual(selectionClasses({ selectable: false, selected: false, off: true }), [CLASS_OFF]);
+  assert.deepEqual(selectionClasses({ selectable: true, selected: false, off: true }), [CLASS_CAN]);
 });
 
 test('tokenChip: 万能移動鍵は表と使用済みの 2 つの画像で、それぞれ個数つき。0 個の側は zero（011 §1.3）', () => {

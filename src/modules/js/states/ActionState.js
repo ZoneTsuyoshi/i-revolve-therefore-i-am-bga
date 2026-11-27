@@ -4,13 +4,12 @@
  * （手札を捨てて心光を得る `actDiscardForLight`、目標カードの獲得 `actClaimObjective`）のボタンを足す。
  * © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
  */
-import { SelectionController } from '../cards/selection.js';
+import { SelectionController, clearRooms, paintRooms } from '../cards/selection.js';
 import { int } from '../ui/dom.js';
 import { Tips } from '../ui/Tips.js';
 import { sortButtons } from './action-bar-model.js';
 import { toIds } from './choice-model.js';
 import { FreeActionsUi } from './FreeActionsUi.js';
-import { CLASS_ROOM_ROUTE, CLASS_ROOM_SELECTABLE } from './MoveState.js';
 
 /**
  * 状態クラスが盤面に触るための参照（Game.js が setup のあとで渡す）。
@@ -181,30 +180,26 @@ export class ActionState {
   // ---- 部屋の選択 ----
 
   /**
-   * 回廊の部屋を選べるようにする（クリックで onPick）。選択済みの部屋には順番の丸を出す。
+   * 回廊の部屋を選べるようにする（クリックで onPick）。選べる部屋は `ir-can`、選択済みの部屋は `ir-picked` と順番の札、他の部屋は `ir-off`（011 §5.5）。
    * @param {Iterable<number>} rooms 選べる部屋
    * @param {(pos: number) => void} onPick
-   * @param {number[]} [chosen] 選択済みの部屋（順番に丸を出す）
+   * @param {number[]} [chosen] 選択済みの部屋（順番に札を出す）
    */
   pickRooms(rooms, onPick, chosen = []) {
     const refs = this.getDeps().refs;
-    for (const pos of rooms) {
+    const selectable = [...rooms];
+    for (const pos of selectable) {
       const element = refs?.rooms.get(pos);
       if (element === undefined) {
         continue;
       }
-      element.classList.add(CLASS_ROOM_SELECTABLE);
       const handler = () => onPick(pos);
       element.addEventListener('click', handler);
       this.listeners.push([element, handler]);
     }
-    chosen.forEach((pos, i) => {
-      const element = refs?.rooms.get(pos);
-      if (element !== undefined) {
-        element.classList.add(CLASS_ROOM_ROUTE);
-        element.dataset.order = String(i + 1);
-      }
-    });
+    if (refs !== null && refs !== undefined) {
+      paintRooms(refs.rooms, { can: selectable.filter((pos) => !chosen.includes(pos)), route: chosen });
+    }
   }
 
   clearRooms() {
@@ -212,9 +207,9 @@ export class ActionState {
       element.removeEventListener('click', handler);
     }
     this.listeners = [];
-    for (const room of this.getDeps().refs?.rooms.values() ?? []) {
-      room.classList.remove(CLASS_ROOM_SELECTABLE, CLASS_ROOM_ROUTE);
-      delete room.dataset.order;
+    const rooms = this.getDeps().refs?.rooms;
+    if (rooms !== undefined) {
+      clearRooms(rooms);
     }
   }
 
@@ -234,6 +229,8 @@ export class ActionState {
     for (const stock of common.openStocks) {
       const card = stock.getCards().find((/** @type {{ id: number | string }} */ c) => allowed.has(String(c.id)));
       if (card === undefined) {
+        // 選べない場札も、選択モードに入れて暗くする（押すと理由を出す。011 §5.3）
+        playerAreas.selection.start(stock, { ids: [], mode: 'multiple' });
         continue;
       }
       const id = int(card.id);
@@ -294,25 +291,38 @@ export class ActionState {
   // ---- 候補のカード置き場 ----
 
   /**
-   * 一時的な候補のカード（初期自我・強化自我）を並べて、1 枚選べるようにする。置き場は盤面の先頭に出す。
+   * 一時的な候補のカード（初期自我・強化自我）を並べて、1 枚選べるようにする。置き場は環の上（`#ir-main` の先頭）に、
+   * 箱ではなくレール（上端の線とラベル）で出す（011 §3.3）。
    * @param {string[]} keys 候補のカード（`I05`）
    * @param {string | null} selected 選択中
    * @param {(key: string | null) => void} onChange
+   * @param {string} label レールのラベル（翻訳済み。例: `Choose an Initial Ego`）
    * @returns {Promise<void>}
    */
-  async showCandidates(keys, selected, onChange) {
+  async showCandidates(keys, selected, onChange, label) {
     const deps = this.getDeps();
-    const root = deps.refs?.root;
-    if (root === undefined || deps.cards === null || deps.BgaCards === undefined) {
+    const host = deps.refs?.root.querySelector('#ir-main');
+    if (host === null || host === undefined || deps.cards === null || deps.BgaCards === undefined) {
       return;
     }
     const session = this.session;
     this.clearPanel();
     const element = document.createElement('div');
-    element.className = CLASS_PICK_PANEL;
-    root.prepend(element);
+    element.className = `${CLASS_PICK_PANEL} ir-rail`;
+    element.setAttribute('role', 'group');
+    element.setAttribute('aria-label', label);
+    const title = document.createElement('div');
+    title.className = 'ir-rail-title';
+    const labelElement = document.createElement('span');
+    labelElement.className = 'ir-rail-label';
+    labelElement.textContent = label;
+    title.append(labelElement);
+    const cards = document.createElement('div');
+    cards.className = 'ir-pick-cards';
+    element.append(title, cards);
+    host.prepend(element);
     this.panelElement = element;
-    const stock = new deps.BgaCards.LineStock(deps.cards.land, element, { gap: 'var(--ir-gap)', wrap: 'wrap' });
+    const stock = new deps.BgaCards.LineStock(deps.cards.land, cards, { gap: 'var(--ir-gap)', wrap: 'wrap' });
     await Promise.all(keys.map((key) => stock.addCard({ id: key, key })));
     if (session !== this.session || this.panelElement !== element) {
       return;

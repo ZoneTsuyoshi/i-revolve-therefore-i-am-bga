@@ -17,7 +17,7 @@ export class ConstructState extends ActionState {
     const a = obj(this.args);
     const composeTokens = int(a.composeTokens);
     const analysisTokens = int(a.analysisTokens);
-    this.bga.statusBar.setTitle(_('${you} may compose, analyze, or end the compose phase'));
+    this.bga.statusBar.setTitle(_('${you} may compose or analyze'));
     this.button(_('Construct a card'), () => this.send('actStartCompose'), {
       disabled: a.phaseComposeUsed === true,
       tooltip: a.phaseComposeUsed === true ? _('You already composed in the compose phase') : undefined,

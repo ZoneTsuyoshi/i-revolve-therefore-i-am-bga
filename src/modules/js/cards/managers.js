@@ -52,6 +52,11 @@ export function createCardManagers({ BgaCards, BgaAnimations, imgUrl, animations
         cardWidth: width,
         cardHeight: Math.round(width * ratio),
         cardBorderRadius: '0',
+        // bga-cards の既定の選択の見た目（オレンジの破線・紫の実線と持ち上げ・contrast(0.6)）を無効にする。見た目は cards/selection.js が
+        // カード全体の要素に付ける ir-can / ir-picked / ir-off だけ（011 §5.3）。クラス名は空にせず、中身のない名前に差し替える（空文字は classList.remove が例外を出す）
+        selectableCardStyle: { class: 'ir-lib-can', outlineSize: 0 },
+        selectedCardStyle: { class: 'ir-lib-picked', outlineSize: 0 },
+        unselectableCardStyle: { class: 'ir-lib-off' },
         setupDiv: (/** @type {IrCard} */ card, /** @type {HTMLDivElement} */ div) => {
             div.classList.add('ir-card', type);
             div.dataset.irCardId = String(card.id);

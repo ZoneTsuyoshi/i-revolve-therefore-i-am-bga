@@ -175,6 +175,10 @@ writeJson($outDir, '4p-compose-pay', scene($rig2, 11, 'Compose', [
     'turnPlayer' => 11,
     ...$compose['public'],
     '_private' => [11 => $compose['private']],
+], true, null, [
+    // 自己構成するカードを選び（ir-subject になる）、捨てる手札を 1 枚選ぶ（ir-picked。残りの選べる手札は ir-can）
+    ['click' => '.ir-hand .ir-card.ir-can'],
+    ['click' => '.ir-hand .ir-card.ir-can'],
 ]));
 
 // 7. 4p-analysis: 精神分析（第一階層の 2 択）

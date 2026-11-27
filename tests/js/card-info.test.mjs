@@ -174,9 +174,12 @@ test('createCardManagers: captionOf が返す英語名を ir-caption に入れ�
   assert.ok(FakeBgaCards);
 });
 
-test('Tips: 選べる要素のセレクターに、旧クラスと新クラス（U-19）の両方がある', () => {
-  for (const name of ['ir-selectable', 'ir-selected', 'bga-cards_selectable-card', 'bga-cards_selected-card', 'ir-room-selectable', 'ir-token-pick', 'ir-can', 'ir-picked', 'ir-off']) {
+test('Tips: 選べる要素のセレクターは新しいクラス（011 §5.1）だけで、旧クラスは含まない', () => {
+  for (const name of ['ir-token-pick', 'ir-can', 'ir-picked', 'ir-off']) {
     assert.ok(SELECTABLE_SELECTOR.includes(`.${name}`), name);
+  }
+  for (const name of ['ir-selectable', 'ir-selected', 'bga-cards_selectable-card', 'bga-cards_selected-card', 'ir-room-selectable']) {
+    assert.ok(!SELECTABLE_SELECTOR.includes(`.${name}`), name);
   }
 });
 
@@ -198,20 +201,21 @@ test('Tips.dismiss: 管理役がなくても例外にならない', () => {
   Tips.dismiss();
 });
 
-test('recallFromGamedatas: 想起フェイズで表向きの部屋のカードがあるときだけ', () => {
+test('recallFromGamedatas: 想起フェイズで表向きの部屋のカードがあるときだけ（部屋の位置とカードのキー）', () => {
   const rooms = [{ pos: 1, card: { id: 5, back: '1B', faceUp: false } }, { pos: 2, card: { id: 6, back: '1F', faceUp: true, type: 62 } }];
-  assert.deepEqual(recallFromGamedatas({ phase: 'RECALL', rooms, turn: { recall: { activators: ['10', 11] } } }), { key: 'M062', activators: [10, 11] });
-  assert.deepEqual(recallFromGamedatas({ phase: 'RECALL', rooms }), { key: 'M062', activators: [] });
+  assert.deepEqual(recallFromGamedatas({ phase: 'RECALL', rooms, turn: { recall: { activators: ['10', 11] } } }), { pos: 2, key: 'M062' });
+  assert.deepEqual(recallFromGamedatas({ phase: 'RECALL', rooms }), { pos: 2, key: 'M062' });
   assert.equal(recallFromGamedatas({ phase: 'MOVE', rooms }), null);
   assert.equal(recallFromGamedatas({ phase: 'RECALL', rooms: [] }), null);
   assert.equal(recallFromGamedatas(undefined), null);
 });
 
-test('通知: 想起の開始で案内パネルを出し、獲得・クリーンアップ・想起以外のフェイズで閉じる', async () => {
+test('通知: 想起の開始で部屋のカードを表向きにし、獲得・クリーンアップ・想起以外のフェイズで「対象」の印を外す', async () => {
   /** @type {string[]} */
   const log = [];
   const common = {
     revealRoomCard: async () => { log.push('reveal'); },
+    clearRecallSubject: () => { log.push('clear'); },
     syncDecks() {},
     deckElement: () => undefined,
     setRoomCard: async () => {},
@@ -219,17 +223,14 @@ test('通知: 想起の開始で案内パネルを出し、獲得・クリーン
     removeRoomCard: async () => {},
     areaOf: () => undefined,
   };
-  const recall = { showRecall: (/** @type {any} */ p) => log.push(`show ${p.key} ${p.activators.join(',')}`), hideRecall: () => log.push('hide') };
-  const n = new CommonNotifications(/** @type {any} */ (common), null, recall);
+  const n = new CommonNotifications(/** @type {any} */ (common), null);
   await n.notif_recallStarted({ pos: 2, card: { id: 6, type: '62' }, activators: ['10', '11'] });
-  assert.deepEqual(log, ['show M062 10,11', 'reveal']);
+  assert.deepEqual(log, ['reveal']);
   log.length = 0;
   await n.notif_phaseStarted({ phase: 'RECALL' });
   assert.deepEqual(log, []);
   await n.notif_phaseStarted({ phase: 'FLOOR' });
   await n.notif_roomCardAcquired({ pos: 2, player_id: 10 });
   await n.notif_cleanup({ decks: {}, rooms: [], open: [] });
-  assert.deepEqual(log, ['hide', 'hide', 'hide']);
-  // パネル無しでも落ちない
-  await new CommonNotifications(/** @type {any} */ (common)).notif_recallStarted({ pos: 2, card: { id: 6, type: 62 } });
+  assert.deepEqual(log, ['clear', 'clear', 'clear']);
 });

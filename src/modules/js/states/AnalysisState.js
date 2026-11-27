@@ -13,6 +13,7 @@ import { analysisAfterDiscard, analysisFromArgs, canPay, destinationOf, lightCos
 import { costText, spiritParts } from './choice-model.js';
 import { lightLimit } from './action-bar-model.js';
 import { cardLabel, keyName, neededText, quantityTokenPick, statusText } from './payment-ui.js';
+import { iconHtmlOf, setTitleHtml, textToHtml } from '../ui/status-title.js';
 
 /** @returns {{ tableau: number[], hand: number[], light: number }} */
 function emptySelection() {
@@ -123,12 +124,13 @@ export class AnalysisState extends ActionState {
     if (solution.unused.light > 0) {
       unused.push(`${_('Psychic Light')} × ${solution.unused.light}`);
     }
-    let status = statusText({ paid: solution.paid, total: solution.total, needed: neededText(solution.needed), unused: unused.join(', '), keys: true });
+    const iconHtml = iconHtmlOf(this.bga);
+    let status = statusText({ paid: solution.paid, total: solution.total, needed: neededText(solution.needed), unused: unused.join(', '), keys: true, iconHtml });
     const removed = neededText(Object.fromEntries(Object.entries(solution.state.removed).filter(([, n]) => n > 0)));
     if (removed !== '') {
-      status = `${_('Removed by the reduction: ${keys}').replace('${keys}', removed)}. ${status}`;
+      status = `${_('Removed by the reduction: ${keys}').replace('${keys}', textToHtml(removed, iconHtml))}. ${status}`;
     }
-    this.bga.statusBar.setTitle(_('Tier ${tier} ${branch}: ${status}'), { tier: parts.tier, branch: parts.branch, status });
+    setTitleHtml(this.bga, _('Tier ${tier} ${branch}: ${status}'), { tier: parts.tier, branch: parts.branch, status });
 
     const free = (/** @type {Map<number, import('./analysis-plan.js').AnalysisCard>} */ cards) => [...cards.values()].filter((c) => !c.tapped && c.keys.length > 0).map((c) => c.id);
     const tableau = free(board.tableau);

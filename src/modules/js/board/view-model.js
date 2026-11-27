@@ -205,9 +205,9 @@ export function roomsModel(rooms) {
 }
 
 /**
- * ページを開き直したとき（想起フェイズ中）に、想起中の案内パネルに出すカード。想起フェイズで、表向きの部屋のカードがあるときだけ。
+ * ページを開き直したとき（想起フェイズ中）に、「対象」の印（`ir-subject`。011 §3.1）を付ける部屋のカード。想起フェイズで、表向きの部屋のカードがあるときだけ。
  * @param {Record<string, any> | null | undefined} gamedatas
- * @returns {{ key: string, activators: number[] } | null}
+ * @returns {{ pos: number, key: string } | null}
  */
 export function recallFromGamedatas(gamedatas) {
   if (gamedatas?.phase !== 'RECALL') {
@@ -216,8 +216,7 @@ export function recallFromGamedatas(gamedatas) {
   for (const row of Array.isArray(gamedatas.rooms) ? gamedatas.rooms : []) {
     const raw = row?.card;
     if (raw !== null && raw !== undefined && typeof raw === 'object' && raw.faceUp === true && raw.type !== undefined) {
-      const activators = gamedatas.turn?.recall?.activators;
-      return { key: memKey(raw.type), activators: Array.isArray(activators) ? activators.map(toInt) : [] };
+      return { pos: toInt(row.pos), key: memKey(raw.type) };
     }
   }
   return null;

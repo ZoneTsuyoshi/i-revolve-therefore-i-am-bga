@@ -32,6 +32,7 @@ export const KIND = {
  * @property {number} turnPlayer
  * @property {string | null} kind 選択の種類（分岐は null）
  * @property {string} source 出典（カードの ID など）
+ * @property {string} spec 効果の識別子（想起効果は `RC-xx`。011 §3.2）
  * @property {Record<string, any>} data 公開できる候補
  * @property {boolean} skippable
  * @property {[number, number][]} pairs SELECT_SWAP_SAME_COST の (自己構成済み, 手札)
@@ -59,6 +60,7 @@ export function choiceFromArgs(args) {
     turnPlayer: int(a.turnPlayer),
     kind: typeof a.choiceKind === 'string' ? a.choiceKind : null,
     source: typeof a.source === 'string' ? a.source : '',
+    spec: typeof a.spec === 'string' ? a.spec : '',
     data: obj(a.data),
     skippable: a.skippable === true,
     pairs,

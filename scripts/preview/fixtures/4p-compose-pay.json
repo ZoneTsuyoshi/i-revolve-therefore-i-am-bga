@@ -75,7 +75,15 @@
                     }
                 }
             }
-        }
+        },
+        "steps": [
+            {
+                "click": ".ir-hand .ir-card.ir-can"
+            },
+            {
+                "click": ".ir-hand .ir-card.ir-can"
+            }
+        ]
     },
     "gamedatas": {
         "players": {
