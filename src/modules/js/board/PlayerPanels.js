@@ -9,7 +9,7 @@
  * © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
  */
 import { paintUiSprite } from '../cards/card-face.js';
-import { el } from '../ui/dom.js';
+import { el, tipAttrs } from '../ui/dom.js';
 import { createSymbol } from '../ui/icons.js';
 import {
   KEY_KINDS, applyComposedChange, clampTier, exchangeChange, keyCounts, keyTable, panelState, scoreText, scoresFromArgs,
@@ -189,7 +189,7 @@ export class PlayerPanels {
             }
             const value = el('span', { class: 'ir-pp-value', data: { item: name } });
             values[name] = value;
-            return el('span', { class: 'ir-pp-item', data: { item: name }, attrs: { title, 'aria-label': title, role: 'group' } }, [icon, value]);
+            return el('span', { class: 'ir-pp-item', data: { item: name }, attrs: { ...tipAttrs(title), 'aria-label': title, role: 'group' } }, [icon, value]);
         };
         const row = (/** @type {HTMLElement[]} */ ...items) => el('div', { class: 'ir-pp-row' }, items);
         const keys = KEY_KINDS.map(({ kind, sprite }) => item(`key${kind}`, keyTitle(kind), sprite));

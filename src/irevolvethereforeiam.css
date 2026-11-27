@@ -66,6 +66,8 @@
     --ir-pending: #1f5fd1;
     --ir-tip-bg: #fffdf8;
     --ir-tip-border: #8a8478;
+    --ir-tip-text: #222;
+    --ir-tip-muted: #555;
     --ir-tip-shadow: rgb(0 0 0 / 35%);
 }
 
@@ -82,6 +84,8 @@ html[data-theme="dark"] {
     --ir-pending: #6cb6ff;
     --ir-tip-bg: #25252a;
     --ir-tip-border: #7a776f;
+    --ir-tip-text: #e8e6e1;
+    --ir-tip-muted: #b5b1a8;
     --ir-tip-shadow: rgb(0 0 0 / 70%);
 }
 
@@ -1342,25 +1346,33 @@ body::before {
     font-weight: bold;
 }
 
-/* ツールチップ（マウスのみ。body 直下。カードの横に出る）。拡大画像と英語テキスト。縦長は横に並べ、横長は縦に積む */
+/*
+ * ツールチップ（011 §6。ui/Tips.js が body 直下に出す）。カードは拡大画像と英語テキスト、カード以外は文字だけ。
+ * 位置・大きさは JS が決める（tip-placement.js）。ホバーで出したものは pointer-events: none。
+ */
 .ir-tip {
     position: fixed;
     z-index: 10000;
     display: flex;
     gap: 10px;
     box-sizing: border-box;
-    max-width: min(560px, 92vw);
+    max-width: min(560px, calc(100vw - 16px));
     padding: 8px 10px;
     border: 1px solid var(--ir-tip-border);
-    border-radius: 6px;
+    border-radius: 3px;
     background: var(--ir-tip-bg);
+    color: var(--ir-tip-text);
     box-shadow: 0 2px 8px var(--ir-tip-shadow);
     pointer-events: none;
+    overflow: hidden;
 }
 
 .ir-tip.ir-tip-stacked {
     flex-direction: column;
-    max-width: min(340px, 92vw);
+}
+
+.ir-tip.ir-tip-stacked.ir-tip-no-image {
+    flex-direction: row;
 }
 
 .ir-tip-image {
@@ -1368,89 +1380,31 @@ body::before {
 }
 
 .ir-tip > .ir-info {
-    flex: 1 1 180px;
+    flex: 1 1 200px;
+    min-width: 200px;
+    color: var(--ir-tip-text);
+}
+
+.ir-tip.ir-tip-stacked > .ir-info {
+    flex: none;
     min-width: 0;
 }
 
-/* 拡大表示（body 直下。高さと上端は JS が window.innerHeight から決める） */
-.ir-zoom {
-    position: fixed;
-    right: 0;
-    left: 0;
-    z-index: 10001;
-    box-sizing: border-box;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px;
-    background: rgb(0 0 0 / 55%);
+.ir-tip > .ir-info .ir-info-sub {
+    color: var(--ir-tip-muted);
 }
 
-.ir-zoom-dialog {
-    box-sizing: border-box;
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    max-width: 100%;
-    padding: 10px;
-    border: 1px solid var(--ir-tip-border);
-    border-radius: 8px;
-    background: var(--ir-tip-bg);
-    color: var(--ir-text);
-    overflow: hidden;
-}
-
-.ir-zoom-dialog.ir-zoom-stacked {
-    flex-direction: column;
-    align-items: center;
-}
-
-.ir-zoom-image {
-    flex: none;
-    border-radius: 4px;
-}
-
-.ir-zoom-text {
-    box-sizing: border-box;
-    display: flex;
-    flex: 1 1 240px;
-    flex-direction: column;
+.ir-tip-text {
     min-width: 0;
-}
-
-.ir-zoom-scroll {
-    min-height: 0;
-    overflow-y: auto;
-}
-
-.ir-zoom-stacked .ir-zoom-text {
-    flex: none;
-    width: 100%;
-}
-
-.ir-zoom-actions {
-    display: flex;
-    flex: none;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 12px;
-}
-
-.ir-zoom-actions button {
-    min-width: 44px;
-    min-height: 44px;
-    padding: 6px 14px;
-    border: 1px solid var(--ir-tip-border);
-    border-radius: 6px;
-    background: var(--ir-slot-bg);
-    color: var(--ir-text);
     font-size: 14px;
-    cursor: pointer;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
 }
 
-.ir-zoom-actions .ir-zoom-select {
-    border-color: var(--ir-turn-border);
-    font-weight: bold;
+/* タッチで開いたときだけ、最後の手段として中身をスクロールさせる（011 §6.4。§2.4 の唯一の例外） */
+.ir-tip.ir-tip-scroll {
+    overflow-y: auto;
+    pointer-events: auto;
 }
 
 /* 想起中の案内パネル: 左に部屋のカードの拡大画像（幅は標準カードの 2 倍まで）、右に英語の想起効果 */

@@ -121,7 +121,7 @@ test('pickTokens: 押すと +1、バッジを押すと -1、掃除で枠・バ�
     assert.equal(t.querySelector('.ir-token-badge'), null);
     assert.equal((t.listeners.click ?? []).length, 0);
   }
-  assert.equal(token('light').getAttribute('title'), 'Psychic Light: 3', '選択を外すと個数つきのツールチップに戻る');
+  assert.equal(token('light').getAttribute('data-ir-tip-text'), 'Psychic Light: 3', '選択を外すと個数つきのツールチップに戻る');
 });
 
 test('pickTokens: 使えないトークンは「選べる」の枠を出さない。使えるものは押すと onAdd', () => {
@@ -137,5 +137,5 @@ test('pickTokens: 使えないトークンは「選べる」の枠を出さな�
   token('compose').fire('click');
   token('analysis').fire('click');
   assert.equal(used, 1);
-  assert.equal(token('analysis').getAttribute('title'), 'You have no psychoanalysis token');
+  assert.equal(token('analysis').getAttribute('data-ir-tip-text'), 'You have no psychoanalysis token');
 });

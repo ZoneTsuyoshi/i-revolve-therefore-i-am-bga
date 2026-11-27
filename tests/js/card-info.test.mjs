@@ -7,8 +7,7 @@ import { FakeBgaAnimations, FakeBgaCards, FakeElement, installFakeDom } from './
 installFakeDom();
 const { buildCardTexts } = await import('../../src/modules/js/ui/texts.js');
 const { captionOf, describeCard, describeLock, formatScoreTable, fmt, indexCatalog, isLandscapeKey, keyKind } = await import('../../src/modules/js/ui/card-info-model.js');
-const { tooltipImageSize, tooltipPosition, zoomLayout } = await import('../../src/modules/js/ui/zoom-math.js');
-const { CardInfo } = await import('../../src/modules/js/ui/card-info.js');
+const { Tips, SELECTABLE_SELECTOR } = await import('../../src/modules/js/ui/Tips.js');
 const { recallFromGamedatas } = await import('../../src/modules/js/board/view-model.js');
 const { createCardManagers } = await import('../../src/modules/js/cards/managers.js');
 const { CommonNotifications } = await import('../../src/modules/js/notifications.js');
@@ -175,68 +174,28 @@ test('createCardManagers: captionOf が返す英語名を ir-caption に入れ�
   assert.ok(FakeBgaCards);
 });
 
-test('zoomLayout: PC は横に並べ、スマホは縦に積む。高さは innerHeight から決まり、はみ出さない', () => {
-  const pc = zoomLayout({ vw: 1280, vh: 800, landscape: false });
-  assert.equal(pc.stacked, false);
-  assert.ok(pc.imageW <= 360);
-  assert.ok(pc.imageH <= 800 - 16);
-  assert.ok(pc.dialogMaxH <= 800 - 16);
-
-  const phone = zoomLayout({ vw: 390, vh: 700, landscape: false });
-  assert.equal(phone.stacked, true);
-  assert.ok(phone.imageW <= 360 && phone.imageW + 22 <= 390 - 16, '枠（余白・罫線）を含めて画面の幅に収まる');
-  assert.ok(phone.imageH + phone.textMaxH <= phone.dialogMaxH, '画像とテキスト欄が枠の高さに収まる');
-
-  const land = zoomLayout({ vw: 390, vh: 700, landscape: true });
-  assert.ok(land.imageW + 22 <= 390 - 16 && land.imageW <= 480);
-  assert.ok(Math.abs(land.imageH / land.imageW - 287 / 400) < 0.01);
+test('Tips: 選べる要素のセレクターに、旧クラスと新クラス（U-19）の両方がある', () => {
+  for (const name of ['ir-selectable', 'ir-selected', 'bga-cards_selectable-card', 'bga-cards_selected-card', 'ir-room-selectable', 'ir-token-pick', 'ir-can', 'ir-picked', 'ir-off']) {
+    assert.ok(SELECTABLE_SELECTOR.includes(`.${name}`), name);
+  }
 });
 
-test('zoomLayout: ステータスバーの高さ(top)を引き、背の低い画面でも画像の高さを抑える', () => {
-  const withBar = zoomLayout({ vw: 390, vh: 600, top: 80, landscape: false });
-  assert.ok(withBar.dialogMaxH <= 600 - 80 - 16);
-  const short = zoomLayout({ vw: 800, vh: 320, landscape: false });
-  assert.ok(short.imageH <= 320 - 16, '横向きのスマホでも画像が画面に収まる');
-  const tiny = zoomLayout({ vw: 0, vh: 0, landscape: false });
-  assert.ok(tiny.imageW > 0 && tiny.imageH > 0);
-});
-
-test('tooltipPosition: 右に出し、入らなければ左。画面の外に出さない', () => {
-  const card = { left: 100, top: 50, right: 200, bottom: 190 };
-  assert.deepEqual(tooltipPosition({ card, tipW: 200, tipH: 100, vw: 1000, vh: 800 }), { left: 212, top: 50 });
-  assert.deepEqual(tooltipPosition({ card: { left: 800, top: 50, right: 900, bottom: 190 }, tipW: 200, tipH: 100, vw: 1000, vh: 800 }), { left: 588, top: 50 });
-  assert.deepEqual(tooltipPosition({ card: { left: 100, top: 700, right: 200, bottom: 790 }, tipW: 200, tipH: 150, vw: 1000, vh: 800 }), { left: 212, top: 642 });
-  const tight = tooltipPosition({ card, tipW: 500, tipH: 100, vw: 400, vh: 800 });
-  assert.ok(tight.left >= 8);
-});
-
-test('tooltipImageSize: 縦長は横に並べ、横長は積む。低い画面でも画面の半分以内に収まる', () => {
-  const portrait = tooltipImageSize({ landscape: false, vw: 1280, vh: 800 });
-  assert.equal(portrait.stacked, false);
-  assert.equal(portrait.imageW, 210);
-  assert.ok(Math.abs(portrait.imageH / portrait.imageW - 390 / 280) < 0.01);
-  const landscape = tooltipImageSize({ landscape: true, vw: 1280, vh: 800 });
-  assert.equal(landscape.stacked, true);
-  assert.equal(landscape.imageW, 300);
-  const short = tooltipImageSize({ landscape: false, vw: 800, vh: 320 });
-  assert.ok(short.imageH <= 320 * 0.5);
-  assert.ok(tooltipImageSize({ landscape: false, vw: 0, vh: 0 }).imageW > 0);
-});
-
-test('CardInfo: クリックでは拡大を開かない（選択を邪魔しない）。長押しの直後の click だけ止める', () => {
-  const info = new CardInfo({ root: new FakeElement('div'), recallPanel: new FakeElement('div'), texts, catalog: undefined, imgUrl: (f) => f });
-  let opened = 0;
-  info.openZoom = () => { opened += 1; };
+test('Tips: 長押しで出した直後の click だけ止める。通常のクリックは止めない', () => {
+  const tips = new Tips({ root: new FakeElement('div'), texts, catalog: undefined, imgUrl: (f) => f });
   let stopped = 0;
   const event = { target: null, preventDefault() {}, stopPropagation() { stopped += 1; } };
-  info.handleClick(event);
-  assert.equal(opened, 0);
+  tips.handleClick(event);
   assert.equal(stopped, 0, '通常のクリックは止めない（選択に届く）');
-  info.suppressClick = true;
-  info.handleClick(event);
+  tips.suppressClickUntil = performance.now() + 500;
+  tips.handleClick(event);
   assert.equal(stopped, 1);
-  assert.equal(info.suppressClick, false);
-  assert.equal(opened, 0);
+  assert.equal(tips.suppressClickUntil, 0, '1 回だけ');
+  tips.handleClick(event);
+  assert.equal(stopped, 1);
+});
+
+test('Tips.dismiss: 管理役がなくても例外にならない', () => {
+  Tips.dismiss();
 });
 
 test('recallFromGamedatas: 想起フェイズで表向きの部屋のカードがあるときだけ', () => {

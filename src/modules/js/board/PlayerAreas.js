@@ -14,7 +14,7 @@
  */
 import { paintUiSprite } from '../cards/card-face.js';
 import { CLASS_SELECTABLE, CLASS_SELECTED, SelectionController, selectionClasses } from '../cards/selection.js';
-import { el } from '../ui/dom.js';
+import { el, setTip, tipAttrs } from '../ui/dom.js';
 import {
     TOKEN_KINDS, applyTotals, compareHand, composedModel, energyMap, handCard, handCountState, handModel, handWarning, memoryInfoTable,
     restoreWild, scoreLabel, tokenChip, tokensModel, underModel,
@@ -281,7 +281,7 @@ export class PlayerAreas {
             paintUiSprite(icon, sprite, this.imgUrl);
             const count = el('span', { class: 'ir-token-count' });
             // 使用済みの万能移動鍵（新しい要素）には title を付けない（011 §6.5。ラベルは aria-label）
-            const root = el('span', { class: 'ir-token', data: { kind }, attrs: kind === 'wildUsed' ? { role: 'img' } : { title: tokenTitle(kind) } }, [icon, count]);
+            const root = el('span', { class: 'ir-token', data: { kind }, attrs: kind === 'wildUsed' ? { role: 'img' } : tipAttrs(tokenTitle(kind)) }, [icon, count]);
             holder.append(root);
             els[kind] = { root, count };
         }
@@ -330,7 +330,7 @@ export class PlayerAreas {
             entry.root.dataset.label = label;
             if (entry.root.getAttribute('role') !== 'button') {
                 if (kind !== 'wildUsed') {
-                    entry.root.setAttribute('title', label);
+                    setTip(entry.root, label);
                 }
                 entry.root.setAttribute('aria-label', label);
             }
@@ -362,10 +362,10 @@ export class PlayerAreas {
         }
         info.classList.toggle('ir-over-limit', state.over);
         if (warning !== null) {
-            info.setAttribute('title', _('Over the hand limit'));
+            setTip(info, _('Over the hand limit'));
             info.setAttribute('aria-label', `${_('Over the hand limit')}: ${warning.text}`);
         } else {
-            info.removeAttribute('title');
+            setTip(info, '');
             info.removeAttribute('aria-label');
         }
         this.selection.refresh();
@@ -452,7 +452,7 @@ export class PlayerAreas {
             }
             element.querySelector('.ir-energy-badge')?.remove();
             if (card.energy !== card.printed) {
-                element.append(el('span', { class: 'ir-energy-badge', attrs: { title: _('Current composition energy') } }, [`E${card.energy}`]));
+                element.append(el('span', { class: 'ir-energy-badge', attrs: tipAttrs(_('Current composition energy')) }, [`E${card.energy}`]));
             }
         }
     }
@@ -750,7 +750,7 @@ export class PlayerAreas {
             return;
         }
         const button = el('button', { class: 'ir-zone-button', attrs: { type: 'button' } }, [label]);
-        button.setAttribute('title', tooltip);
+        setTip(button, tooltip);
         button.addEventListener('click', onClick);
         this.discardButtonHandler = onClick;
         actions.append(button);
@@ -812,7 +812,7 @@ export class PlayerAreas {
         for (const name of classes) {
             root.classList.add(name);
         }
-        root.setAttribute('title', pick.tooltip);
+        setTip(root, pick.tooltip);
         if (pick.canAdd) {
             root.classList.add(CLASS_TOKEN_PICK);
             root.setAttribute('role', 'button');
@@ -833,7 +833,7 @@ export class PlayerAreas {
         }
         if (pick.count > 0 && pick.onRemove !== undefined) {
             const onRemove = pick.onRemove;
-            const badge = el('button', { class: 'ir-token-badge', attrs: { type: 'button', title: pick.removeTooltip ?? '', 'aria-label': pick.removeTooltip ?? '' } }, [String(pick.count)]);
+            const badge = el('button', { class: 'ir-token-badge', attrs: { type: 'button', ...tipAttrs(pick.removeTooltip ?? ''), 'aria-label': pick.removeTooltip ?? '' } }, [String(pick.count)]);
             listen(badge, 'click', (event) => {
                 event.stopPropagation();
                 onRemove();
@@ -855,7 +855,7 @@ export class PlayerAreas {
                 root.removeAttribute(name);
             }
             const label = root.dataset.label ?? tokenTitle(kind);
-            root.setAttribute('title', label);
+            setTip(root, label);
             root.setAttribute('aria-label', label);
         };
     }

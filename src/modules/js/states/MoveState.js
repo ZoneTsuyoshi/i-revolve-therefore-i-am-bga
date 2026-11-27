@@ -17,6 +17,7 @@ import {
 import { cumulativeOf, lightLimit, sortButtons } from './action-bar-model.js';
 import { FreeActionsUi } from './FreeActionsUi.js';
 import { int } from '../ui/dom.js';
+import { Tips } from '../ui/Tips.js';
 import { cardLabel, neededText, quantityTokenPick, statusText } from './payment-ui.js';
 
 /** 入れる部屋の印 */
@@ -128,6 +129,7 @@ export class MoveState {
    * @param {boolean} isCurrentPlayerActive
    */
   onEnteringState(args, isCurrentPlayerActive) {
+    Tips.dismiss();
     if (this.active) {
       this.snapshot();
     }
@@ -162,6 +164,7 @@ export class MoveState {
    * @param {boolean} _isCurrentPlayerActive
    */
   onLeavingState(_args, _isCurrentPlayerActive) {
+    Tips.dismiss();
     this.snapshot();
     this.active = false;
     this.free.setClaimListener(false);

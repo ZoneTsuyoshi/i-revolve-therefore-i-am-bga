@@ -6,6 +6,7 @@
  */
 import { SelectionController } from '../cards/selection.js';
 import { int } from '../ui/dom.js';
+import { Tips } from '../ui/Tips.js';
 import { sortButtons } from './action-bar-model.js';
 import { toIds } from './choice-model.js';
 import { FreeActionsUi } from './FreeActionsUi.js';
@@ -67,6 +68,7 @@ export class ActionState {
    */
   onEnteringState(args, isCurrentPlayerActive) {
     this.args = args;
+    Tips.dismiss();
     this.active = isCurrentPlayerActive;
     this.session++;
     this.free.reset();
@@ -82,6 +84,7 @@ export class ActionState {
    * @param {boolean} _isCurrentPlayerActive
    */
   onLeavingState(_args, _isCurrentPlayerActive) {
+    Tips.dismiss();
     this.active = false;
     this.session++;
     this.clearUi();

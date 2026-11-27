@@ -6,6 +6,8 @@
  * © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
  */
 
+import { Tips } from '../ui/Tips.js';
+
 /** 選べる印の枠 */
 export const CLASS_SELECTABLE = 'ir-selectable';
 /** 選択中の印の枠 */
@@ -162,6 +164,7 @@ export class SelectionController {
 
   /** 状態を出るとき: すべての Stock の選択モード・選択・見た目のクラスを掃除する */
   clear() {
+    Tips.dismiss();
     for (const entry of this.entries) {
       const { stock } = entry;
       stock.onSelectionChange = undefined;

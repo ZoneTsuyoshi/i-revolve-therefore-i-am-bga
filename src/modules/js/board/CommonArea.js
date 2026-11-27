@@ -7,7 +7,7 @@
  * © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
  */
 import { paintUiSprite } from '../cards/card-face.js';
-import { el } from '../ui/dom.js';
+import { el, setTip, tipAttrs } from '../ui/dom.js';
 import {
     colorName, cubeSprite, decksModel, discardModel, faceUpMemory, faceUpRefs,
     levelTable, meepleSlot, meepleSprite, objectivesModel, objectiveStatusMap, openModel, personaPositions, roomsModel,
@@ -136,7 +136,7 @@ export class CommonArea {
             return;
         }
         const text = `${name}: ${count === 1 ? _('1 card') : _('${n} cards').replace('${n}', String(count))}`;
-        host.setAttribute('title', text);
+        setTip(host, text);
         host.setAttribute('aria-label', text);
         host.setAttribute('role', 'group');
     }
@@ -210,7 +210,7 @@ export class CommonArea {
         const startCubes = el('div', { class: 'ir-cubes' });
         this.startCubes = startCubes;
         // 文字は出さず、アクセシブルな名前とツールチップに移す（010 §4・§9）
-        this.refs.spiritTrack.append(el('div', { class: 'ir-spirit-start', attrs: { role: 'group', title: _('Start (tier 0)'), 'aria-label': _('Start (tier 0)') } }, [
+        this.refs.spiritTrack.append(el('div', { class: 'ir-spirit-start', attrs: { role: 'group', ...tipAttrs(_('Start (tier 0)')), 'aria-label': _('Start (tier 0)') } }, [
             startCubes,
         ]));
         const all = [...this.seatOrder];
@@ -277,7 +277,7 @@ export class CommonArea {
      * @returns {HTMLElement}
      */
     createCube(playerId) {
-        const cube = el('div', { class: 'ir-cube', data: { player: playerId }, attrs: { title: this.players[playerId]?.name ?? '' } });
+        const cube = el('div', { class: 'ir-cube', data: { player: playerId }, attrs: tipAttrs(this.players[playerId]?.name ?? '') });
         paintUiSprite(cube, cubeSprite(this.colorOf(playerId)), this.imgUrl);
         this.cubes.set(playerId, cube);
         return cube;
@@ -293,7 +293,7 @@ export class CommonArea {
             meeple = el('div', {
                 class: 'ir-meeple',
                 data: { player: playerId, slot: meepleSlot(this.seatOrder, playerId) },
-                attrs: { title: this.players[playerId]?.name ?? '' },
+                attrs: tipAttrs(this.players[playerId]?.name ?? ''),
             });
             paintUiSprite(meeple, meepleSprite(this.colorOf(playerId)), this.imgUrl);
             this.meeples.set(playerId, meeple);

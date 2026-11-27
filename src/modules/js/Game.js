@@ -20,10 +20,11 @@ import { CommonNotifications } from './notifications.js';
 import { PlayerNotifications } from './player-notifications.js';
 import { MoveState } from './states/MoveState.js';
 import { registerActionStates } from './states/register.js';
-import { CardInfo } from './ui/card-info.js';
+import { RecallPanel } from './ui/recall-panel.js';
 import { captionOf } from './ui/card-info-model.js';
 import { createIcon } from './ui/icons.js';
 import { Layout } from './ui/Layout.js';
+import { Tips } from './ui/Tips.js';
 import { formatLogArgs } from './ui/log-format.js';
 import { buildCardTexts } from './ui/texts.js';
 import { int } from './ui/dom.js';
@@ -49,8 +50,8 @@ export class Game {
         this.playerAreas = null;
         /** @type {PlayerPanels | null} */
         this.panels = null;
-        /** @type {CardInfo | null} */
-        this.cardInfo = null;
+        /** @type {RecallPanel | null} */
+        this.recallPanel = null;
         /** @type {import('./ui/texts.js').CardTexts | null} */
         this.texts = null;
 
@@ -135,28 +136,34 @@ export class Game {
             playerName: (playerId) => String(gamedatas?.players?.[playerId]?.name ?? playerId),
         });
         this.panels.setup(gamedatas);
-        // ツールチップ・拡大表示・想起中の案内パネル（U-7）。カードの要素から英語の名前と効果を引く
-        const cardInfo = new CardInfo({
+        // ツールチップの管理役（011 §6）。カードの要素から英語の名前と効果を引く。document で受けるので、ログ・パネルの項目も対象
+        const catalog = /** @type {any} */ (gamedatas)?.catalog;
+        const imgUrl = (/** @type {string} */ file) => this.bga.images.getImgUrl(file);
+        new Tips({
             root: board.root,
-            recallPanel: board.recallPanel,
             texts,
-            catalog: /** @type {any} */ (gamedatas)?.catalog,
-            imgUrl: (file) => this.bga.images.getImgUrl(file),
+            catalog,
+            imgUrl,
             objectiveStatus: () => this.common?.objectiveStatus,
             spiritHasLight: (id) => this.common?.lights.has(id),
+        }).attach();
+        // 想起中の案内パネル（U-7。U-19 で廃止する）
+        const recallPanel = new RecallPanel({
+            recallPanel: board.recallPanel,
+            texts,
+            catalog,
+            imgUrl,
             playerName: (playerId) => gamedatas?.players?.[playerId]?.name,
         });
-        cardInfo.attach();
-        this.cardInfo = cardInfo;
+        this.recallPanel = recallPanel;
         const recall = recallFromGamedatas(gamedatas);
         if (recall !== null) {
-            cardInfo.showRecall(recall);
+            recallPanel.showRecall(recall);
         }
         // 幅を測って data-layout と CSS 変数を入れ、以後は ResizeObserver で追従する。layout が変わるたびに piles と open の置き場所を替える
         this.layout = new Layout(board.root, (layout) => placeFloating(board, layout));
 
         // ログの引数の整形（カード名・部屋名・トークン名。009 §9）。ログ・リプレイは setup の後に描かれる
-        cardInfo.attachLog();
         this.hookLogFormat();
         this.setupNotifications();
     }
@@ -198,7 +205,23 @@ export class Game {
     setupNotifications() {
         // notif_xxx という名前のメソッドを通知名に対応させて自動で購読する（共通の領域の通知は CommonNotifications）
         const players = this.playerAreas === null ? null : new PlayerNotifications(this.playerAreas, this.panels);
-        const handlers = this.common === null ? [] : [new CommonNotifications(this.common, players, this.cardInfo), ...(players === null ? [] : [players])];
+        const handlers = this.common === null ? [] : [new CommonNotifications(this.common, players, this.recallPanel), ...(players === null ? [] : [players])];
+        // 通知の処理が終わったら、開いているツールチップを閉じる（盤面が変わるため。011 §6.8）
+        for (const handler of handlers) {
+            const proto = Object.getPrototypeOf(handler);
+            for (const name of Object.getOwnPropertyNames(proto)) {
+                if (name.startsWith('notif_') && typeof proto[name] === 'function') {
+                    const original = proto[name];
+                    /** @type {any} */ (handler)[name] = async (/** @type {any[]} */ ...args) => {
+                        try {
+                            return await original.apply(handler, args);
+                        } finally {
+                            Tips.dismiss();
+                        }
+                    };
+                }
+            }
+        }
         this.bga.notifications.setupPromiseNotifications({ handlers });
     }
 }
