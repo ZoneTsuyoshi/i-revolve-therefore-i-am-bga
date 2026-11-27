@@ -4,6 +4,7 @@ import { chromium } from 'playwright-core';
 import { mkdir, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { runChecks } from './checks.mjs';
 import { startServer } from './serve.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -16,7 +17,7 @@ const CHROME_PATH = process.env.CHROME_PATH ?? '/Applications/Google Chrome.app/
 
 /**
  * 配置の検証（010 §11.1）。ブラウザの中で実行する。
- * @returns {{ layout: string, hv: number, ringBottom: number, ringFits: boolean, margins: boolean, small: string[], wide: string[] }}
+ * @returns {{ layout: string, hv: number, ringBottom: number, ringFits: boolean, margins: boolean, wide: string[] }}
  */
 function measureLayout() {
   const root = document.getElementById('ir-root');
@@ -41,17 +42,14 @@ function measureLayout() {
     return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden';
   };
   const label = (/** @type {Element} */ e) => `${e.tagName.toLowerCase()}.${String(e.className).split(' ').slice(0, 2).join('.')}`;
-  // 操作できる要素は 32 × 32px 以上（ゲームの領域とジャンプリンク）
-  const small = [...document.querySelectorAll('#ir-root button, #ir-root [role="button"], #ir-root .ir-token-pick, .bga-jump-to_link')]
-    .filter((e) => visible(e) && (e.getBoundingClientRect().width < 31.5 || e.getBoundingClientRect().height < 31.5))
-    .map(label);
+  // 操作できる要素の大きさは検査 3（checks.mjs）で見る
   // 盤面の中でページの右端・左端をはみ出す要素
   const wide = [...document.querySelectorAll('#ir-root *')]
     .filter((e) => visible(e) && (e.getBoundingClientRect().right > vw + 0.5 || e.getBoundingClientRect().left < -0.5))
     .slice(0, 5)
     .map(label);
   return { layout, hv, ringBottom, // W が下限 150 まで縮んだときは収まらなくてよい（縦にスクロール。010 §3.3）
-    ringFits: (layout === 'xl' || layout === 'wide') && roomW > 150 ? ringBottom <= hv : true, margins, small, wide };
+    ringFits: (layout === 'xl' || layout === 'wide') && roomW > 150 ? ringBottom <= hv : true, margins, wide };
 }
 
 /** @returns {{ fixture: string[], size: string[], theme: string[], spectator: boolean, strict: boolean }} */
@@ -102,6 +100,10 @@ const overflows = [];
 const layoutNotes = [];
 /** @type {string[]} */
 const layoutWarnings = [];
+/** 検査番号 → 警告（011 §9.2） */
+const CHECK_TITLES = { 2: '浮いた要素（fixed / sticky）', 3: '32px 未満の操作要素', 5: '12px 未満の文字', 6: '入れ子のスクロール', 8: '角丸 3px 超（許可した部品以外）' };
+/** @type {Record<string, string[]>} */
+const checkWarnings = { 2: [], 3: [], 5: [], 6: [], 8: [] };
 let count = 0;
 try {
   for (const fixture of fixtures) {
@@ -162,8 +164,12 @@ try {
         if (!m.margins) {
           layoutWarnings.push(`[${label}] 盤面の左右に 8px の余白がありません`);
         }
-        if (m.small.length > 0) {
-          layoutWarnings.push(`[${label}] 32px 未満の操作要素 ${m.small.length} 件: ${[...new Set(m.small)].join(', ')}`);
+        // 自動検査（仕様書 011 §9.2）。検査 2・3・5・6・8
+        const checks = await page.evaluate(runChecks);
+        for (const [no, list] of Object.entries(checks)) {
+          for (const item of list) {
+            checkWarnings[no].push(`[${label}] ${item}`);
+          }
         }
         if (m.wide.length > 0) {
           layoutWarnings.push(`[${label}] 画面の外へはみ出す要素: ${m.wide.join(', ')}`);
@@ -186,9 +192,16 @@ console.log(`\n配置（${layoutNotes.length} 件）:`);
 for (const n of layoutNotes) {
   console.log(`  ${n}`);
 }
-console.log(`\n配置の検証の警告: ${layoutWarnings.length} 件（環が高さに収まらない・余白なし・32px 未満・はみ出し）`);
+console.log(`\n配置の検証の警告: ${layoutWarnings.length} 件（環が高さに収まらない・余白なし・はみ出し）`);
 for (const w of layoutWarnings) {
   console.warn(`  ${w}`);
+}
+const checkTotal = Object.values(checkWarnings).reduce((sum, list) => sum + list.length, 0);
+console.log(`\n自動検査の警告: ${checkTotal} 件（${Object.entries(CHECK_TITLES).map(([no, title]) => `検査 ${no} ${title} ${checkWarnings[no].length}`).join(' / ')}）`);
+for (const [no, list] of Object.entries(checkWarnings)) {
+  for (const w of list) {
+    console.warn(`  [検査 ${no}] ${w}`);
+  }
 }
 if (overflows.length > 0) {
   console.warn(`\n横はみ出しが ${overflows.length} 件ありました（${args.strict ? '--strict のため失敗にします' : '警告のみ。--strict で失敗にできます'}）:`);
@@ -196,7 +209,8 @@ if (overflows.length > 0) {
     console.warn(`  ${o}`);
   }
 }
-if (args.strict && overflows.length > 0) {
+if (args.strict && (overflows.length > 0 || layoutWarnings.length > 0 || checkTotal > 0)) {
+  console.error('--strict のため、警告があるので失敗にします');
   process.exit(1);
 }
 if (errors.length > 0) {

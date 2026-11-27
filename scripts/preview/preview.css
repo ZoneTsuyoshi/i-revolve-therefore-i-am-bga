@@ -17,6 +17,9 @@ body {
 }
 
 .pv-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 200;
     height: 50px;
     box-sizing: border-box;
     padding: 0 10px;
@@ -34,23 +37,24 @@ body {
     white-space: pre-wrap;
 }
 
-/* デスクトップ: 左にステータスバーとゲーム領域、右にプレイヤーパネルの列（幅 260px）。トップバー + ステータスバーで約 140px */
+/* デスクトップ: 左にゲーム領域、右にプレイヤーパネルの列（幅 260px）。トップバー + ステータスバーで約 140px。ステータスバーは .pv-page の外（grid の領域に閉じ込められると貼り付かない） */
 .pv-page {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 260px;
-    grid-template-areas:
-        "status panels"
-        "game panels";
-    grid-template-rows: auto 1fr;
+    grid-template-areas: "game panels";
     column-gap: 10px;
-    padding: 10px;
+    padding: 0 10px 10px;
     align-items: start;
 }
 
+/* BGA と同じく画面の上に貼り付く（トップバーの下。公式文書には書かれていない【未確認】。仕様書 011 §9.1） */
 .pv-statusbar {
-    grid-area: status;
+    position: sticky;
+    top: 50px;
+    z-index: 150;
     box-sizing: border-box;
     min-height: 70px;
+    margin: 10px 10px 0;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -122,7 +126,7 @@ html[data-theme="dark"] .pv-statusbar {
 
 .pv-panels {
     grid-area: panels;
-    grid-row: 1 / span 2;
+    margin-top: 10px;
 }
 
 .pv-panel {
@@ -157,15 +161,11 @@ html[data-theme="dark"] .pv-panel {
 .mobile_version .pv-page {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
-        "status"
         "panels"
         "game";
-    grid-template-rows: auto;
-    padding: 10px;
 }
 
 .mobile_version .pv-panels {
-    grid-row: auto;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
@@ -174,4 +174,33 @@ html[data-theme="dark"] .pv-panel {
 
 .mobile_version .pv-panel {
     margin-bottom: 0;
+}
+
+/* BGA のフッター（高さ約 200px の暗い帯）。スクロールしたとき、浮いた要素が重ならないかの確認用 */
+.pv-footer {
+    box-sizing: border-box;
+    height: 200px;
+    padding: 12px 10px;
+    background: #1b1b1f;
+    color: #aaa;
+}
+
+/* bga.dialogs.showMessage の代用（画面の上に 3 秒出る。error は赤） */
+.pv-message {
+    position: fixed;
+    top: 60px;
+    left: 50%;
+    z-index: 300;
+    max-width: 90vw;
+    padding: 8px 16px;
+    transform: translateX(-50%);
+    border-radius: 4px;
+    background: #fff;
+    color: #000;
+    box-shadow: 0 2px 8px rgb(0 0 0 / 50%);
+}
+
+.pv-message-error {
+    background: #c62828;
+    color: #fff;
 }
