@@ -22,6 +22,8 @@
     "build:sprites": "node scripts/build-sprites.mjs",
     "check:sprites": "node scripts/check-sprites.mjs",
     "build:meta-images": "node scripts/meta-images/build.mjs",
+    "prepare:rulebook-en": "sh scripts/rulebook-en/prepare.sh",
+    "build:rulebook-en": "node scripts/rulebook-en/build.mjs",
     "build:cards": "node scripts/build-card-data.mjs",
     "check:cards": "node scripts/check-card-data.mjs",
     "preview": "node scripts/preview/serve.mjs",

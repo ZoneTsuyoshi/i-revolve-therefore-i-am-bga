@@ -1,0 +1,40 @@
+<!-- p5: 移動の例、想起、床アクション、自己構成、クリーンアップ。座標は pt（左上原点）。原文は spans/p5.txt -->
+
+<!-- 移動の例: 原本の文中アイコン 8 個を箱の地の色で覆い、英文の中に置き直す -->
+<div class="e" style="--x:151.0;--y:51.7;--w:14.2;--h:14.5;--c:#e6cac0;--r:0"></div>
+<div class="e" style="--x:75.4;--y:86.2;--w:17.2;--h:17.6;--c:#e6cac0;--r:0"></div>
+<div class="e" style="--x:95.4;--y:86.8;--w:17.1;--h:17.8;--c:#e6cac0;--r:0"></div>
+<div class="e" style="--x:193.2;--y:113.4;--w:14.2;--h:14.4;--c:#e6cac0;--r:0"></div>
+<div class="e" style="--x:145.3;--y:123.9;--w:17.1;--h:17.6;--c:#e6cac0;--r:0"></div>
+<div class="e" style="--x:164.7;--y:123.9;--w:17.1;--h:17.6;--c:#e6cac0;--r:0"></div>
+<div class="e" style="--x:47.4;--y:138.1;--w:14.2;--h:14.5;--c:#e6cac0;--r:0"></div>
+<div class="e" style="--x:249.9;--y:149.8;--w:14.2;--h:14.5;--c:#e6cac0;--r:0"></div>
+<div class="t" style="--x:40.6;--y:40.2;--w:246;--h:138;--fs:8;--lh:1.38"><span class="b7">Example:</span> Maria is in the HERMES room and wants to move to the HESTIA room (bottom right). To enter the next room, ATHENA, Maria uses <i class="ic omni"></i>. Level 2 rooms can be skipped, so Maria skips the next room, POSEIDON (top right), and goes on to ARES. The move costs of ARES and the next room, DIONYSUS, are <i class="ic key-emotion" style="--ich:1.5em"></i> and <i class="ic key-will" style="--ich:1.5em"></i>, so Maria turns the constructed card “Vow of Love” sideways and moves on to DIONYSUS. For skipping POSEIDON, Maria gains its Tour Bonus, <i class="ic light"></i>. The move cost of the destination, HESTIA, is <i class="ic key-wisdom" style="--ich:1.5em"></i> <i class="ic key-wisdom" style="--ich:1.5em"></i>. Maria pays the <i class="ic light"></i> just gained and discards “Sublimation” from hand to reach HESTIA. Finally, Maria gains <i class="ic omni"></i> as the Tour Bonus of HESTIA.</div>
+
+<!-- 想起フェイズ -->
+<div class="t nw vm b8" style="--x:34.8;--y:188.5;--w:210;--h:17.2;--fs:10.5;--lh:1"><span class="dia"></span>Recall Phase: Trigger the Recall Effect</div>
+<div class="t" style="--x:37.5;--y:207.5;--w:206;--h:125;--fs:8;--lh:1.33">
+<p>In this phase, resolve the recall effect shown on the Memory card of the room you are in.</p>
+<div class="li bu" style="--ind:1.1">Turn the Memory card of your room face up.</div>
+<div class="li bu" style="--ind:1.1">Every player in that room triggers the card’s recall effect. However, if the recall effect replaces the floor action, only the turn player can trigger it. When the order matters between several players (for example, “take an open card”), resolve it clockwise starting with the turn player.</div>
+<div class="li bu" style="--ind:1.1">Take that room’s Memory card.</div>
+</div>
+<div class="t" style="--x:256.5;--y:195.5;--w:167;--h:134;--fs:8;--lh:1.33"><div style="float:right;width:46px;width:46pt;height:62pt"></div><span class="b7">Example:</span> Maria turns the Memory card of the level 2 room just reached face up. The recall effect of the revealed card, “Labyrinth of Knowledge,” is “Instead of the floor action, you may take a Psychoanalysis action with cost -1.” Maria decides to take the Psychoanalysis action instead of the floor action. Bob is in the same room and would normally trigger the recall effect too, but because this recall effect replaces the floor action, Bob cannot trigger it.</div>
+
+<!-- 床アクションフェイズ -->
+<div class="t nw vm b8" style="--x:34.7;--y:339.4;--w:230;--h:17.2;--fs:10.5;--lh:1"><span class="dia"></span>Floor Action Phase: Take the Floor Action</div>
+<div class="t" style="--x:37.5;--y:358;--w:132;--h:64;--fs:8;--lh:1.33">In this phase, take the floor action shown on the floor card of the room you are in. However, if a recall effect lets you replace the floor action, you may take the replacement action instead.</div>
+<div class="t" style="--x:177.5;--y:357;--w:154;--h:64;--fs:8;--lh:1.27"><span class="b7">Example:</span> The floor action of HESTIA, the room Maria reached, is “gain 1 Psychic Light token, take 1 open card, and draw 1 card from the deck.” However, Maria applies the recall effect and performs Psychoanalysis with cost -1 instead of the floor action.</div>
+
+<!-- 自己構成フェイズ -->
+<div class="t nw vm b8" style="--x:34.7;--y:431.1;--w:320;--h:17.2;--fs:10.5;--lh:1"><span class="dia"></span>Construction Phase: Construct (≈ Build Your Engine)</div>
+<div class="t nw vm" style="--x:37.5;--y:450;--w:385;--h:11.3;--fs:8;--lh:1">In this phase, you may take a Construction action. Construction actions are explained in “4. Actions.”</div>
+
+<!-- クリーンアップフェイズ -->
+<div class="t nw vm b8" style="--x:34.7;--y:471.8;--w:250;--h:17.2;--fs:10.5;--lh:1"><span class="dia"></span>Cleanup Phase: Prepare for the Next Turn</div>
+<div class="t nw vm" style="--x:37.5;--y:490.8;--w:250;--h:11.3;--fs:8;--lh:1">In this phase, do a–d to prepare for the next player’s turn.</div>
+
+<div class="t" style="--x:74.6;--y:507.5;--w:84;--h:41;--fs:7.5;--lh:1.25"><div class="b7 cond">a) Refresh constructed cards</div>Turn your sideways constructed cards back upright.</div>
+<div class="t" style="--x:74.4;--y:555;--w:84;--h:41;--fs:7.5;--lh:1.25"><div class="b7 cond">b) Refresh Omni-Move Keys</div>Flip your used Omni-Move Key tokens back face up.</div>
+<div class="t" style="--x:193.4;--y:507;--w:95;--h:62;--fs:7.5;--lh:1.25"><div class="b7 cond">c) Refill rooms</div>On each floor card of the cloister with no Memory card, place 1 Memory card of the matching level face down.</div>
+<div class="t" style="--x:302;--y:492;--w:121;--h:76;--fs:7.5;--lh:1.25"><div style="float:left;width:60pt;height:61pt"></div><div class="b7 cond">d) Refill the open cards</div>If there are fewer than 6 open cards, add Memory cards face up until there are 6.</div>

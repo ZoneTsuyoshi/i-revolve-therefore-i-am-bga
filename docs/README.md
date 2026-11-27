@@ -18,6 +18,7 @@
 | [publishing/card-texts-review.md](publishing/card-texts-review.md) | カードの英語テキストの対照表（日本語の原文と英語案。作者の確認用） |
 | [publishing/alpha-studio-check.md](publishing/alpha-studio-check.md) | Public Alpha 審査の前の、Studio での UI の確認の依頼（作者向けのチェックリスト） |
 | [publishing/meta-images.md](publishing/meta-images.md) | ゲームページ用のメタ画像（Box・Icon・Title・Banner・Display）の生成と、管理画面への登録の手順 |
+| [publishing/rulebook-en.md](publishing/rulebook-en.md) | 英語版ルールブック（PDF）の翻訳の方針・用語集・原本から変えた箇所・作者への確認事項（原稿とビルドは `scripts/rulebook-en/`） |
 
 ## 一次情報
 
