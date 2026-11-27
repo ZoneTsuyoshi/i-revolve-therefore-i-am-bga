@@ -29,8 +29,15 @@ function pad(n, width) {
   return String(n).padStart(width, '0');
 }
 
-/** 想い出カードの種類（card_type）→ スプライトのキー `M014` */
-export const memKey = (/** @type {unknown} */ type) => `M${pad(toInt(type), 3)}`;
+/**
+ * 想い出カードの種類（card_type）→ スプライトのキー `M014`。数値（14・`'14'`）のほか、サーバーが `$definition->id` で送る `'M056'` 形式もそのまま受ける。
+ * @param {unknown} type
+ * @returns {string}
+ */
+export function memKey(type) {
+  const match = typeof type === 'string' ? /^M(\d+)$/.exec(type) : null;
+  return `M${pad(toInt(match === null ? type : match[1]), 3)}`;
+}
 /** 床カードの ID（1〜12）→ `F01` */
 export const floorKey = (/** @type {unknown} */ id) => `F${pad(toInt(id), 2)}`;
 /** 目標カードの ID（1〜7）→ `O001` */

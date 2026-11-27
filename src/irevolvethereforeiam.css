@@ -119,7 +119,7 @@ body::before {
     --ir-line: #8f8672;
     --ir-line-strong: #a89e88;
     --ir-can: #fff;
-    --ir-can-glow: rgb(255 255 255 / 35%);
+    --ir-can-glow: rgb(255 255 255 / 55%);
     --ir-pick: #ffd23f;
     --ir-on-pick: #1a1408;
     --ir-subject: #f0b84a;
@@ -305,7 +305,7 @@ body::before {
  */
 .ir-room.ir-can,
 .ir-room.ir-picked {
-    outline-offset: -3px;
+    outline-offset: 2px;
     cursor: pointer;
 }
 
@@ -783,7 +783,7 @@ body::before {
 .ir-card.ir-can,
 .ir-token.ir-can {
     outline: 2px solid var(--ir-can);
-    outline-offset: -2px;
+    outline-offset: 2px;
     cursor: pointer;
 }
 
@@ -807,7 +807,7 @@ body::before {
 .ir-card.ir-picked,
 .ir-token.ir-picked {
     outline: 3px solid var(--ir-pick);
-    outline-offset: -3px;
+    outline-offset: 2px;
     cursor: pointer;
 }
 
