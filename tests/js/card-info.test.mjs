@@ -6,7 +6,7 @@ import { FakeBgaAnimations, FakeBgaCards, FakeElement, installFakeDom } from './
 
 installFakeDom();
 const { buildCardTexts } = await import('../../src/modules/js/ui/texts.js');
-const { captionOf, describeCard, describeLock, formatScoreTable, fmt, indexCatalog, isLandscapeKey, keyKind } = await import('../../src/modules/js/ui/card-info-model.js');
+const { captionOf, describeCard, describeLock, formatScoreTable, roomLockIcons, fmt, indexCatalog, isLandscapeKey, keyKind } = await import('../../src/modules/js/ui/card-info-model.js');
 const { Tips, SELECTABLE_SELECTOR } = await import('../../src/modules/js/ui/Tips.js');
 const { recallFromGamedatas } = await import('../../src/modules/js/board/view-model.js');
 const { createCardManagers } = await import('../../src/modules/js/cards/managers.js');
@@ -233,4 +233,17 @@ test('通知: 想起の開始で部屋のカードを表向きにし、獲得・
   await n.notif_roomCardAcquired({ pos: 2, player_id: 10 });
   await n.notif_cleanup({ decks: {}, rooms: [], open: [] });
   assert.deepEqual(log, ['clear', 'clear', 'clear']);
+});
+
+test('roomLockIcons: 裏のキー → 錠前のアイコン名の一覧（レベル 2 は 2 つ。011 §7.2）', () => {
+  const icons = roomLockIcons;
+  assert.deepEqual(icons('Rev1B'), ['lock_wisdom']);
+  assert.deepEqual(icons('Rev1F'), ['lock_will']);
+  assert.deepEqual(icons('1H'), ['lock_emotion']);
+  assert.deepEqual(icons('Rev2B'), ['lock_wisdom', 'lock_wisdom']);
+  assert.deepEqual(icons('2H'), ['lock_emotion', 'lock_emotion']);
+  assert.deepEqual(icons('M014'), [], '表向き（想起中）は出さない');
+  assert.deepEqual(icons(''), []);
+  assert.deepEqual(icons(null), []);
+  assert.deepEqual(icons(undefined), []);
 });

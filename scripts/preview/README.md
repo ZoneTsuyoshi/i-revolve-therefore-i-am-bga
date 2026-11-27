@@ -18,8 +18,8 @@ npm run preview:shots -- --fixture 4p-late --size 1920x1080 --theme dark
 npm run preview:fixtures # 固定データを本物のサーバーのコードから作り直す（Docker）
 ```
 
-- URL の引数: `fixture`（固定データの名前）、`theme`（`light` / `dark`）、`spectator=1`（観戦者）、`animations=1`（アニメーションを有効に。既定は無効）、`touch=0/1`（タッチ端末の扱いを固定）、`captions=1`（Card captions を On に）。
-- `preview:shots` の引数は `--fixture` / `--size` / `--theme`（いずれもカンマ区切りで複数可）、`--spectator`、`--strict`（警告が 1 件でもあれば失敗にする）。サイズは 360x780、390x844、768x1024、1024x768、1280x800、1366x768、1440x900、1920x1080、2560x1440。
+- URL の引数: `fixture`（固定データの名前）、`theme`（`light` / `dark`）、`spectator=1`（観戦者）、`animations=1`（アニメーションを有効に。既定は無効）、`touch=0/1`（タッチ端末の扱いを固定）、`captions=0/1`（Card captions。既定は On。011 §7.3）。
+- `preview:shots` の引数は `--fixture` / `--size` / `--theme`（いずれもカンマ区切りで複数可）、`--spectator`、`--strict`（警告が 1 件でもあれば失敗にする）、`--captions 0/1`（Card captions を固定。既定は On）。サイズは 360x780、390x844、768x1024、1024x768、1280x800、1366x768、1440x900、1920x1080、2560x1440。
 - 出力は `scripts/preview/out/<fixture>/<W>x<H>-<theme>.png`（見えている範囲）と `...-full.png`（ページ全体）。`out/` は `.gitignore` 済み。
 - ページのエラー（`pageerror`、`console.error`、リクエスト失敗、`data-error`）があると一覧を出して終了コード 1 になる。ページの横はみ出し（`scrollWidth > innerWidth`）は別に数えて警告として出す（`--strict` で失敗にする）。読み込みが終わると `<html data-ready="1">` が立つ。
 - 画面の大きさ（`--size`）の高さは、デスクトップ幅（980px 以上）ではブラウザのタブ・アドレスバーの約 130px を引いたものを見える高さ（ビューポート）にする（スクリーンショットの高さは `--size` より 130px 低い）。モバイル幅は `--size` のまま。

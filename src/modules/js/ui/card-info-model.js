@@ -184,6 +184,20 @@ export function describeLock(backKey) {
 }
 
 /**
+ * 部屋の裏向きカードの上に重ねる錠前のアイコン名の一覧（011 §7.2 (a)）。レベル 2 は 2 つ。裏面のキー以外（表向き・不明）は空。
+ * @param {string | null | undefined} backKey `Rev1B`・`2F` など
+ * @returns {string[]} UI スプライトのアイコン名（`lock_wisdom` / `lock_will` / `lock_emotion`）
+ */
+export function roomLockIcons(backKey) {
+    const lock = describeLock(String(backKey ?? ''));
+    if (lock === null) {
+        return [];
+    }
+    const name = { WISDOM: 'lock_wisdom', WILL: 'lock_will', EMOTION: 'lock_emotion' }[lock.type] ?? 'lock_wisdom';
+    return Array.from({ length: lock.count }, () => name);
+}
+
+/**
  * 錠前の本文（「Move cost: 2 × Wisdom key」）。
  * @param {NonNullable<ReturnType<typeof describeLock>>} lock
  * @returns {string}

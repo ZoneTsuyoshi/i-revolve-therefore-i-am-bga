@@ -5,7 +5,7 @@
  * `:root` に入れるのは、アニメーション中のカードが `body` 直下の animation-surface へ移されても大きさが変わらないようにするため（003 §6.2）。
  * © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
  */
-import { resolveSizes } from './layout-math.js';
+import { needsLockOverlay, resolveSizes } from './layout-math.js';
 
 const DEBOUNCE_MS = 80;
 
@@ -62,6 +62,8 @@ export class Layout {
         style.setProperty('--ir-c', `${sizes.landW}px`);
         style.setProperty('--ir-room-card-w', `${sizes.roomCardW}px`);
         this.root.dataset.layout = sizes.layout;
+        // 印刷の錠前が 12px 未満の画面だけ、錠前のアイコンを重ねる（011 §7.2）
+        this.root.dataset.lockOverlay = needsLockOverlay(sizes.roomCardW) ? '1' : '0';
         if (this.layout !== sizes.layout) {
             this.layout = sizes.layout;
             this.onLayoutChange?.(sizes.layout);

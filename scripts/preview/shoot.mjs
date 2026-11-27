@@ -129,7 +129,7 @@ async function checkTips(page, context, mobile, shotBase) {
   return warnings;
 }
 
-/** @returns {{ fixture: string[], size: string[], theme: string[], spectator: boolean, strict: boolean, tips: boolean, tipShots: boolean }} */
+/** @returns {{ fixture: string[], size: string[], theme: string[], spectator: boolean, strict: boolean, tips: boolean, tipShots: boolean, captions?: string }} */
 function parseArgs() {
   const result = { fixture: /** @type {string[]} */ ([]), size: /** @type {string[]} */ ([]), theme: /** @type {string[]} */ ([]), spectator: false, strict: false, tips: true, tipShots: false };
   const argv = process.argv.slice(2);
@@ -143,6 +143,8 @@ function parseArgs() {
       result.tips = false;
     } else if (key === '--tip-shots') {
       result.tipShots = true;
+    } else if (key === '--captions') {
+      result.captions = argv[++i];
     } else if (key === '--fixture' || key === '--size' || key === '--theme') {
       const value = argv[++i];
       if (value === undefined) {
@@ -150,7 +152,7 @@ function parseArgs() {
       }
       result[key.slice(2)].push(...value.split(','));
     } else {
-      throw new Error(`不明な引数: ${key}（--fixture / --size / --theme（カンマ区切り可）、--spectator、--strict、--no-tips、--tip-shots）`);
+      throw new Error(`不明な引数: ${key}（--fixture / --size / --theme（カンマ区切り可）、--spectator、--strict、--no-tips、--tip-shots、--captions 0/1）`);
     }
   }
   return result;
@@ -219,6 +221,9 @@ try {
         const query = new URLSearchParams({ fixture, theme });
         if (args.spectator) {
           query.set('spectator', '1');
+        }
+        if (args.captions !== undefined) {
+          query.set('captions', args.captions);
         }
         await page.goto(`${url}/scripts/preview/index.html?${query}`);
         try {

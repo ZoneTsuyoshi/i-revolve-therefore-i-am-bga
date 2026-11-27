@@ -1,7 +1,7 @@
 // U-2: レイアウトの計算・スプライトの背景指定・プレイヤーの並び（生成物 sprites.js には依存しない）。実行: npm run test:js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { computeSizes, layoutOf, resolveSizes, RING_CELLS } from '../../src/modules/js/ui/layout-math.js';
+import { computeSizes, layoutOf, needsLockOverlay, LOCK_OVERLAY_BELOW, resolveSizes, RING_CELLS } from '../../src/modules/js/ui/layout-math.js';
 import { gridCellStyle, isPortraitKey, rectStyle } from '../../src/modules/js/cards/sprite-css.js';
 import { orderPlayers } from '../../src/modules/js/board/player-order.js';
 
@@ -117,4 +117,15 @@ test('orderPlayers: 自分を先頭に席順の時計回り。観戦者は席順
   assert.deepEqual(orderPlayers(undefined, players, 30), [30, 10, 20]);
   assert.deepEqual(orderPlayers([], {}, 5), []);
   assert.deepEqual(orderPlayers([10, 99], players, 99), [10, 20, 30]);
+});
+
+test('錠前のアイコンを重ねるのは、印刷の錠前が 12px 未満になる幅（部屋のカード 68px 未満）だけ（011 §7.2）', () => {
+  assert.equal(LOCK_OVERLAY_BELOW, 68);
+  assert.equal(needsLockOverlay(67.5), true);
+  assert.equal(needsLockOverlay(68), false);
+  // 代表の画面: xl・wide・medium と、幅 600px の narrow は紙どおり。390px・360px は重ねる
+  for (const [width, expected] of [[1500, false], [1100, false], [700, false], [600, false], [390, true], [360, true]]) {
+    const sizes = computeSizes(width, 900);
+    assert.equal(needsLockOverlay(sizes.roomCardW), expected, `${width}px (${sizes.layout}, card ${sizes.roomCardW}px)`);
+  }
 });
