@@ -302,7 +302,7 @@ bar.setTitle(recall ? _('Recall ${card}: ${you} must take ${count} open card(s)'
 
 #### 3.6 変更するファイル（U-19）
 
-`board/Board.js`、`board/view-model.js`（`pos`）、`notifications.js`、`ui/card-info.js`（想起のパネルの部分の削除。U-18 で残した `showRecall` / `hideRecall` を消す）、`ui/log-format.js`（`cardNameHtml` の切り出し）、`states/ChoiceState.js`、`states/MoveState.js`、`states/ComposeState.js`、`states/AnalysisState.js`、`states/TurnStates.js`、`states/FreeActionsUi.js`、`states/payment-ui.js`、`states/ActionState.js`（候補の置き場）、`board/CommonArea.js`（目標の注記）、`irevolvethereforeiam.css`、`tests/js/choice-model.test.mjs` ほか。
+`board/Board.js`、`board/view-model.js`（`pos`）、`notifications.js`、`ui/recall-panel.js`（想起のパネルの部分。U-18 で `card-info.js` から改名した `RecallPanel`。`showRecall` / `hideRecall` を消す）、`ui/log-format.js`（`cardNameHtml` の切り出し）、`states/ChoiceState.js`、`states/MoveState.js`、`states/ComposeState.js`、`states/AnalysisState.js`、`states/TurnStates.js`、`states/FreeActionsUi.js`、`states/payment-ui.js`、`states/ActionState.js`（候補の置き場）、`board/CommonArea.js`（目標の注記）、`irevolvethereforeiam.css`、`tests/js/choice-model.test.mjs` ほか。
 
 ### 4. プレイヤーの領域とパネル（指摘 R4）
 
@@ -519,6 +519,15 @@ BGA 標準のツールチップに近づける（ライト・ダークのテー�
 | `board/Board.js`・`PlayerAreas.js`・`PlayerPanels.js`・`CommonArea.js` | §0.2 の 16 か所の `title` を `data-ir-tip` / `aria-label` に |
 | `src/irevolvethereforeiam.css` | `.ir-zoom*`（`:1333-1412`）の削除、`.ir-tip*` の作り直し |
 | `tests/js/tip-placement.test.mjs`（新規）、`tests/js/card-info.test.mjs` | `placeTip` の右・左・下・上・端 8px・バーの下・収まらないとき・対象を覆わない |
+
+（U-18 で変更・補足）
+
+- `ui/card-info.js` は `ui/recall-panel.js`（クラス `RecallPanel`。想起の案内パネルだけ。U-19 で廃止）に改名した。`buildInfo` は `ui/tip-content.js` へ。
+- `placeTip` の戻り値に、どの側にも入らないときに選んだ側 `side` を足した（`placement` は `'fit'`）。下に置くときの上端もステータスバーの下（`top + margin`）より下にする（対象がバーの裏にあるときの下置き）。画像の幅の決め方は `tip-placement.js` の `imageWidthRange`（希望と最小）・`imageWidthSteps`（6 段階）・`imageHeight`。
+- 文字だけのツールチップの付け方は `ui/dom.js` の `setTip(要素, 文)` と `tipAttrs(文)`（`data-ir-tip="text"` + `data-ir-tip-text`）。§0.2 の 16 か所に加え、ミープル（`CommonArea`）にも付けた。`Tips.dismiss()` は静的メソッド。
+- 画像と文を横に並べたとき、文の欄は最小 200px（足りなければ次の小さい画像に進む）。幅は測ったあと切り上げて固定し、置いたあとに折り返しが変わらないようにした。
+- 状態の切り替えは `ActionState` / `MoveState` の `onEnteringState` / `onLeavingState` と `SelectionController.clear()`、通知は `Game.setupNotifications` が各 `notif_*` を包んで処理後に `Tips.dismiss()`（BGA が包んだ関数を呼ぶかは Studio で確認）。対象が DOM から外れた・選べるかどうかが変わったときは `MutationObserver` で閉じる。`resize` でも閉じる。
+- 検査 7 は幅 980px 以上でマウス、未満でタッチ（CDP）、最初のテーマだけで測る。`--no-tips` で省略、`--tip-shots` で撮影。
 
 ### 7. 読みやすさ（指摘 R5・A.5）
 

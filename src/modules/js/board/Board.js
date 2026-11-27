@@ -15,7 +15,7 @@
  * ir-piles と ir-open は DOM ノードを付け替えるだけで作り直さない（Stock が壊れない）。
  * © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
  */
-import { el, int } from '../ui/dom.js';
+import { el, int, tipAttrs } from '../ui/dom.js';
 import { createSymbol } from '../ui/icons.js';
 import { RING_CELLS } from '../ui/layout-math.js';
 import { colorName } from './view-model.js';
@@ -200,7 +200,7 @@ function buildPlayerArea(playerId, player, mine) {
     const composed = el('div', { class: 'ir-composed ir-stock-mp', attrs: { 'aria-label': _('Composed cards') } });
     const meeple = el('span', { class: 'ir-player-meeple', attrs: { 'aria-hidden': 'true' } });
     const name = el('span', { class: 'ir-player-name' }, [player.name ?? '']);
-    const score = el('span', { class: 'ir-player-score', attrs: { title: _('Construction score'), 'aria-label': _('Construction score') } }, ['0 / 20']);
+    const score = el('span', { class: 'ir-player-score', attrs: { ...tipAttrs(_('Construction score')), 'aria-label': _('Construction score') } }, ['0 / 20']);
     // レールの上端の線に載るラベル（文字そのものが名前。title は付けない）。手札は警告が横に並ぶ
     const handTitle = el('div', { class: 'ir-rail-title' }, [el('span', { class: 'ir-rail-label' }, [_('Hand')]), ...(handWarn === null ? [] : [handWarn])]);
     const composedTitle = el('div', { class: 'ir-rail-title' }, [el('span', { class: 'ir-rail-label' }, [_('Constructed')])]);

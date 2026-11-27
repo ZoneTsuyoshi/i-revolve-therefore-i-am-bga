@@ -91,7 +91,7 @@ test('setup: 手札・自己構成済み・横向き・下のカード・自我�
   assert.equal(mine.tokens.querySelector('.ir-token[data-kind="wildUsed"]')?.getAttribute('title'), null, '新しい要素に title は付けない');
   assert.equal(theirs.tokens.querySelector('.ir-token[data-kind="wildUsed"]')?.hasClass('ir-zero'), true);
   assert.equal(theirs.tokens.querySelector('.ir-token[data-kind="wildUp"]')?.hasClass('ir-zero'), false);
-  assert.equal(mine.tokens.querySelector('.ir-token[data-kind="light"]')?.getAttribute('title'), 'Psychic Light: 2');
+  assert.equal(mine.tokens.querySelector('.ir-token[data-kind="light"]')?.getAttribute('data-ir-tip-text'), 'Psychic Light: 2');
   assert.equal(theirs.tokens.querySelector('.ir-token[data-kind="light"]')?.hasClass('ir-zero'), true);
   assert.equal(theirs.tokens.querySelector('.ir-token[data-kind="light"]')?.getAttribute('aria-label'), 'Psychic Light: 0');
 

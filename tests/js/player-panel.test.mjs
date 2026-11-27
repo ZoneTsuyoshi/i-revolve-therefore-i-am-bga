@@ -106,7 +106,7 @@ test('setup: 2 行（スコア・手札 / 鍵 4 項目）。トークンと精�
   }
   const items = hosts.get(P1)?.querySelector('.ir-pp')?.querySelectorAll('.ir-pp-item') ?? [];
   assert.equal(items.length, 6);
-  assert.ok(items.every((i) => (i.attrs.title ?? '') !== '' && i.attrs['aria-label'] === i.attrs.title), '各項目に title と aria-label');
+  assert.ok(items.every((i) => (i.attrs['data-ir-tip-text'] ?? '') !== '' && i.attrs['aria-label'] === i.attrs['data-ir-tip-text'] && i.attrs.title === undefined), '各項目にツールチップと aria-label（title は付けない）');
   assert.equal(text(P1, 'keyWISDOM'), '1');
   assert.equal(text(P1, 'keyWILL'), '1');
   assert.equal(text(P1, 'keyWILD'), '1');

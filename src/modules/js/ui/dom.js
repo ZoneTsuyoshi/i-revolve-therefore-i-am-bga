@@ -28,6 +28,30 @@ export function el(tag, opts = {}, children = []) {
 }
 
 /**
+ * 文字だけのツールチップ（011 §6）を付ける。`title` 属性は使わない。描き直しのたびに呼べる（空の文字は外す）。
+ * @param {Element} node
+ * @param {string} text
+ */
+export function setTip(node, text) {
+  if (text === '') {
+    node.removeAttribute('data-ir-tip');
+    node.removeAttribute('data-ir-tip-text');
+    return;
+  }
+  node.setAttribute('data-ir-tip', 'text');
+  node.setAttribute('data-ir-tip-text', text);
+}
+
+/**
+ * `el()` の `attrs` に足す、文字だけのツールチップの属性。
+ * @param {string} text
+ * @returns {Record<string, string>}
+ */
+export function tipAttrs(text) {
+  return text === '' ? {} : { 'data-ir-tip': 'text', 'data-ir-tip-text': text };
+}
+
+/**
  * ID・枚数などの数値は文字列で届くことがあるので、必ず整数に通す（仕様書 003 §6.1）。
  * @param {unknown} value
  * @returns {number} 整数にできなければ 0

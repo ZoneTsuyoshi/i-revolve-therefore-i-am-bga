@@ -4,7 +4,7 @@ import { chromium } from 'playwright-core';
 import { mkdir, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { runChecks } from './checks.mjs';
+import { locateTipTarget, measureTip, runChecks } from './checks.mjs';
 import { startServer } from './serve.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -13,6 +13,27 @@ const MOBILE_MAX_WIDTH = 980;
 const BROWSER_CHROME_HEIGHT = 130;
 const SIZES = ['360x780', '390x844', '768x1024', '1024x768', '1280x800', '1366x768', '1440x900', '1920x1080', '2560x1440'];
 const THEMES = ['light', 'dark'];
+/** 検査 7 の代表の対象（011 §9.2）。カードとカード以外 */
+const TIP_KINDS = [
+  { name: 'hand', selector: '.ir-hand .ir-card' },
+  { name: 'composed', selector: '.ir-composed .ir-card' },
+  { name: 'room-floor', selector: '.ir-room-floor .ir-card' },
+  { name: 'room-back', selector: '.ir-room-card .ir-card' },
+  { name: 'open', selector: '.ir-open-slot .ir-card' },
+  { name: 'spirit', selector: '.ir-spirit-track .ir-card' },
+  { name: 'objective', selector: '.ir-goals .ir-card' },
+  { name: 'ego', selector: '.ir-ego .ir-card' },
+  { name: 'enh-pile', selector: '.ir-enh-pile' },
+  { name: 'token', selector: '.ir-token:not(.ir-zero)' },
+  { name: 'panel-item', selector: '.ir-pp-item' },
+  { name: 'pile-count', selector: '.ir-pile-slot' },
+  { name: 'score', selector: '.ir-player-score' },
+  { name: 'cube', selector: '.ir-cube' },
+];
+/** ツールチップを出す待ち（ホバー 400ms・選択中 700ms・長押し 500ms に余裕を足す） */
+const HOVER_WAIT_MS = 520;
+const HOVER_SELECTING_WAIT_MS = 820;
+const LONG_PRESS_WAIT_MS = 620;
 const CHROME_PATH = process.env.CHROME_PATH ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
 /**
@@ -52,9 +73,64 @@ function measureLayout() {
     ringFits: (layout === 'xl' || layout === 'wide') && roomW > 150 ? ringBottom <= hv : true, margins, wide };
 }
 
-/** @returns {{ fixture: string[], size: string[], theme: string[], spectator: boolean, strict: boolean }} */
+/**
+ * 検査 7: 代表の対象にマウスを乗せる（デスクトップ）か、タップ・長押しする（タッチ）。出たツールチップを測り、必要なら撮る。
+ * @param {import('playwright-core').Page} page
+ * @param {import('playwright-core').BrowserContext} context
+ * @param {boolean} mobile
+ * @param {string | null} shotBase 撮影するときの、ファイル名の前の部分（null なら撮らない）
+ * @returns {Promise<string[]>}
+ */
+async function checkTips(page, context, mobile, shotBase) {
+  const warnings = [];
+  const cdp = mobile ? await context.newCDPSession(page) : null;
+  for (const kind of TIP_KINDS) {
+    // 対象ごとに探し直す（スクロールで位置が変わるため）
+    // （スクロールが滑らかに動くので、止まるのを待ってもう一度測る）
+    await page.evaluate(locateTipTarget, kind);
+    await page.waitForTimeout(450);
+    const target = await page.evaluate(locateTipTarget, kind);
+    if (target === null) {
+      continue;
+    }
+    const label = `${target.name}（${mobile ? (target.selectable ? '長押し' : 'タップ') : (target.selectable ? 'ホバー 700ms' : 'ホバー')}）`;
+    if (mobile && cdp !== null) {
+      const point = [{ x: target.x, y: target.y, id: 1 }];
+      if (target.selectable) {
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: point });
+        await page.waitForTimeout(LONG_PRESS_WAIT_MS);
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      } else {
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: point });
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await page.waitForTimeout(80);
+      }
+    } else {
+      await page.mouse.move(1, 1);
+      await page.mouse.move(target.x, target.y);
+      await page.waitForTimeout(target.selectable ? HOVER_SELECTING_WAIT_MS : HOVER_WAIT_MS);
+    }
+    for (const w of await page.evaluate(measureTip, { x: target.x, y: target.y })) {
+      warnings.push(`${label} ${w}`);
+    }
+    if (shotBase !== null) {
+      await page.screenshot({ path: `${shotBase}-tip-${target.name}.png` });
+    }
+    // 閉じる（Esc）。出たままでないこと
+    await page.keyboard.press('Escape');
+    await page.mouse.move(1, 1);
+    await page.waitForTimeout(30);
+    if (await page.evaluate(() => document.querySelector('.ir-tip') !== null)) {
+      warnings.push(`${label} Esc で閉じない`);
+    }
+  }
+  await cdp?.detach();
+  return warnings;
+}
+
+/** @returns {{ fixture: string[], size: string[], theme: string[], spectator: boolean, strict: boolean, tips: boolean, tipShots: boolean }} */
 function parseArgs() {
-  const result = { fixture: /** @type {string[]} */ ([]), size: /** @type {string[]} */ ([]), theme: /** @type {string[]} */ ([]), spectator: false, strict: false };
+  const result = { fixture: /** @type {string[]} */ ([]), size: /** @type {string[]} */ ([]), theme: /** @type {string[]} */ ([]), spectator: false, strict: false, tips: true, tipShots: false };
   const argv = process.argv.slice(2);
   for (let i = 0; i < argv.length; i++) {
     const key = argv[i];
@@ -62,6 +138,10 @@ function parseArgs() {
       result.spectator = true;
     } else if (key === '--strict') {
       result.strict = true;
+    } else if (key === '--no-tips') {
+      result.tips = false;
+    } else if (key === '--tip-shots') {
+      result.tipShots = true;
     } else if (key === '--fixture' || key === '--size' || key === '--theme') {
       const value = argv[++i];
       if (value === undefined) {
@@ -69,7 +149,7 @@ function parseArgs() {
       }
       result[key.slice(2)].push(...value.split(','));
     } else {
-      throw new Error(`不明な引数: ${key}（--fixture / --size / --theme（カンマ区切り可）、--spectator、--strict）`);
+      throw new Error(`不明な引数: ${key}（--fixture / --size / --theme（カンマ区切り可）、--spectator、--strict、--no-tips、--tip-shots）`);
     }
   }
   return result;
@@ -101,9 +181,9 @@ const layoutNotes = [];
 /** @type {string[]} */
 const layoutWarnings = [];
 /** 検査番号 → 警告（011 §9.2） */
-const CHECK_TITLES = { 2: '浮いた要素（fixed / sticky）', 3: '32px 未満の操作要素', 5: '12px 未満の文字', 6: '入れ子のスクロール', 8: '角丸 3px 超（許可した部品以外）' };
+const CHECK_TITLES = { 2: '浮いた要素（fixed / sticky）', 3: '32px 未満の操作要素', 4: 'title 属性', 5: '12px 未満の文字', 6: '入れ子のスクロール', 7: 'ツールチップの位置・大きさ', 8: '角丸 3px 超（許可した部品以外）' };
 /** @type {Record<string, string[]>} */
-const checkWarnings = { 2: [], 3: [], 5: [], 6: [], 8: [] };
+const checkWarnings = { 2: [], 3: [], 4: [], 5: [], 6: [], 7: [], 8: [] };
 let count = 0;
 try {
   for (const fixture of fixtures) {
@@ -164,7 +244,7 @@ try {
         if (!m.margins) {
           layoutWarnings.push(`[${label}] 盤面の左右に 8px の余白がありません`);
         }
-        // 自動検査（仕様書 011 §9.2）。検査 2・3・5・6・8
+        // 自動検査（仕様書 011 §9.2）。検査 2・3・4・5・6・8（7 は撮影のあと）
         const checks = await page.evaluate(runChecks);
         for (const [no, list] of Object.entries(checks)) {
           for (const item of list) {
@@ -178,6 +258,12 @@ try {
         await page.screenshot({ path: `${base}.png` });
         await page.screenshot({ path: `${base}-full.png`, fullPage: true });
         count += 2;
+        // 検査 7（ツールチップ）。位置は色に依らないので、最初のテーマだけで測る
+        if (args.tips && theme === themes[0]) {
+          for (const w of await checkTips(page, context, mobile, args.tipShots ? base : null)) {
+            checkWarnings[7].push(`[${label}] ${w}`);
+          }
+        }
         await context.close();
       }
     }

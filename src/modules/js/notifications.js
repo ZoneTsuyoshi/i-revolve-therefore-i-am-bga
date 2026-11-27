@@ -12,7 +12,7 @@ import { cleanupRefills, faceDownMemory, faceUpMemory, faceUpRefs, levelOfPositi
 /** @typedef {Record<string, any>} Args */
 
 /**
- * 想起中の案内パネル（ui/card-info.js の CardInfo）。通知から出し入れする。
+ * 想起中の案内パネル（ui/recall-panel.js の RecallPanel）。通知から出し入れする。
  * @typedef {object} RecallPanel
  * @property {(p: { key: string, activators?: number[] }) => void} showRecall
  * @property {() => void} hideRecall
