@@ -16,7 +16,9 @@
  * © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
  */
 import { el, int } from '../ui/dom.js';
+import { createSymbol } from '../ui/icons.js';
 import { RING_CELLS } from '../ui/layout-math.js';
+import { colorName } from './view-model.js';
 import { orderPlayers } from './player-order.js';
 
 /** 四隅（レベル 2）の巡り順の位置 */
@@ -56,13 +58,13 @@ const OPEN_SLOTS = 6;
  * @property {HTMLElement} tokens
  * @property {HTMLElement} ownedGoals 獲得した目標カード
  * @property {HTMLElement | null} hand 自分の領域だけ（他は枚数チップ）
- * @property {HTMLElement | null} handTitle 自分の領域だけ。手札のマットのタブ（ターンプレイヤー用の小さなボタンを置く。010 §2.4）
- * @property {HTMLElement | null} handInfo 自分の領域だけ。手札が上限を超えたときだけ出す警告（N / 8。タブの「Hand」の横）
+ * @property {HTMLElement | null} handActions 自分の領域だけ。手札のレールの右端（ターンプレイヤー用の小さなボタンを置く。010 §2.4、011 §8）
+ * @property {HTMLElement | null} handWarn 自分の領域だけ。手札が上限を超えたときだけ出す警告（SVG + N / 8。レールの「Hand」の横）
+ * @property {HTMLElement | null} handInfo 自分の領域だけ。警告の文字（N / 8）
  * @property {HTMLElement | null} under 自分の領域だけ。I08 の下のカード（中身）
  * @property {HTMLElement} composed 自己構成済みエリア
  * @property {HTMLElement} meeple 名前の行のミープル（プレイヤー色。PlayerAreas がスプライトを描く）
  * @property {HTMLElement} score 名前の行の「N / 20」
- * @property {HTMLElement} turnMark 名前の行の手番の印（手番のときだけ表示）
  */
 
 /**
@@ -170,7 +172,8 @@ export function buildBoard(host, { players = {}, playerOrder = [], me = null } =
 }
 
 /**
- * 領域の上から: 名前の行（ミープル・名前・N / 20・手番の印）→ 上の行（初期自我・強化自我・獲得した目標・トークン）→ 手札のマット（自分だけ）→ 自己構成済みのマット。
+ * 領域の上から: 名前の行（ミープル・名前・N / 20）→ 上の行（初期自我・強化自我・獲得した目標・トークン）→ 手札のレール（自分だけ）→ 自己構成済みのレール。
+ * 領域は箱で囲まない（011 §4.1）。手番は BGA 標準のパネルの強調とステータスバーで示す。
  * 強化自我の枠と獲得した目標の欄は、持つまで `hidden`（場所を取らない。010 §5.2）。他プレイヤーは手札のマットを持たない（枚数はパネルだけ。010 §4）。
  * @param {number} playerId
  * @param {{ name?: string, color?: string }} player
@@ -186,38 +189,37 @@ function buildPlayerArea(playerId, player, mine) {
     ownedGoals.hidden = true;
     const hand = mine ? el('div', { class: 'ir-hand ir-stock-mp', attrs: { 'aria-label': _('Your hand') } }) : null;
     const handInfo = mine ? el('span', { class: 'ir-hand-info' }) : null;
-    if (handInfo !== null) {
+    // 手札の上限超過の警告: SVG の「!」と N / 8（CSS の content の記号は使わない。011 §1.1）
+    const handWarn = handInfo === null ? null : el('span', { class: 'ir-hand-warn' }, [createSymbol('warn'), handInfo]);
+    if (handInfo !== null && handWarn !== null) {
         handInfo.hidden = true;
+        handWarn.hidden = true;
     }
+    const handActions = mine ? el('div', { class: 'ir-rail-actions' }) : null;
     const under = mine ? el('div', { class: 'ir-under ir-stock-mp', attrs: { 'aria-label': _('Cards under a composed card') } }) : null;
     const composed = el('div', { class: 'ir-composed ir-stock-mp', attrs: { 'aria-label': _('Composed cards') } });
     const meeple = el('span', { class: 'ir-player-meeple', attrs: { 'aria-hidden': 'true' } });
     const name = el('span', { class: 'ir-player-name' }, [player.name ?? '']);
-    if (typeof player.color === 'string' && /^[0-9a-fA-F]{6}$/.test(player.color)) {
-        name.style.setProperty('--ir-player-color', `#${player.color}`);
-    }
     const score = el('span', { class: 'ir-player-score', attrs: { title: _('Construction score'), 'aria-label': _('Construction score') } }, ['0 / 20']);
-    const turnMark = el('span', { class: 'ir-turn-mark' }, [mine ? _('Your turn') : _('Current turn')]);
-    turnMark.hidden = true;
-    // マットの縁にかかる小さなタブ（旧・見出しの行。手札はタブに枚数の警告とターンプレイヤー用のボタンが載る）
-    const handTab = el('div', { class: 'ir-zone-tab', attrs: { title: _('Hand') } }, [el('span', { class: 'ir-zone-name' }, [_('Hand')]), ...(handInfo === null ? [] : [handInfo])]);
-    const composedTab = el('div', { class: 'ir-zone-tab', attrs: { title: _('Constructed') } }, [el('span', { class: 'ir-zone-name' }, [_('Constructed')])]);
+    // レールの上端の線に載るラベル（文字そのものが名前。title は付けない）。手札は警告が横に並ぶ
+    const handTitle = el('div', { class: 'ir-rail-title' }, [el('span', { class: 'ir-rail-label' }, [_('Hand')]), ...(handWarn === null ? [] : [handWarn])]);
+    const composedTitle = el('div', { class: 'ir-rail-title' }, [el('span', { class: 'ir-rail-label' }, [_('Constructed')])]);
     const area = el('section', {
         id: `ir-player-area-${playerId}`,
         class: `ir-player-area${mine ? ' ir-mine' : ''}`,
         data: { player: int(playerId) },
     }, [
-        el('header', { class: 'ir-player-header' }, [meeple, name, score, turnMark]),
+        el('header', { class: 'ir-player-header', data: { color: colorName(player.color) } }, [meeple, name, score]),
         el('div', { class: 'ir-player-top' }, [ego, enhEgo, ownedGoals, tokens]),
-        // 手札と自己構成済みは色の違うマットに分ける（作者指示。010 §5・§6）
-        ...(hand === null ? [] : [el('div', { class: 'ir-zone ir-zone-hand', attrs: { role: 'group', 'aria-label': _('Hand') } }, [handTab, hand])]),
-        el('div', { class: 'ir-zone ir-zone-composed', attrs: { role: 'group', 'aria-label': _('Constructed') } }, [
-            composedTab,
+        // 手札と自己構成済みは、レールのラベルと薄いマットの色合いで分ける（作者指示。010 No.3、011 §1.2）
+        ...(hand === null || handActions === null ? [] : [el('div', { class: 'ir-rail ir-zone ir-zone-hand', attrs: { role: 'group', 'aria-label': _('Hand') } }, [handTitle, handActions, hand])]),
+        el('div', { class: 'ir-rail ir-zone ir-zone-composed', attrs: { role: 'group', 'aria-label': _('Constructed') } }, [
+            composedTitle,
             composed,
             ...(under === null ? [] : [under]),
         ]),
     ]);
-    return { area, ego, enhEgo, tokens, ownedGoals, hand, handTitle: mine ? handTab : null, handInfo, under, composed, meeple, score, turnMark };
+    return { area, ego, enhEgo, tokens, ownedGoals, hand, handActions, handWarn, handInfo, under, composed, meeple, score };
 }
 
 /**

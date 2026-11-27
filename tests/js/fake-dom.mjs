@@ -119,7 +119,7 @@ export class FakeElement {
 export function installFakeDom() {
   const g = /** @type {any} */ (globalThis);
   g.HTMLElement = FakeElement;
-  g.document = { createElement: (/** @type {string} */ tag) => new FakeElement(tag) };
+  g.document = { createElement: (/** @type {string} */ tag) => new FakeElement(tag), createElementNS: (/** @type {string} */ _ns, /** @type {string} */ tag) => new FakeElement(tag) };
   g._ = (/** @type {string} */ text) => text;
 }
 

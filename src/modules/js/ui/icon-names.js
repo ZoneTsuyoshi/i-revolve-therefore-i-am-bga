@@ -30,6 +30,17 @@ export const ICONS = {
     token_analysis: { sprite: 'token_analysis', label: 'Psychoanalysis token' },
 };
 
+/**
+ * 記号のアイコン（CSS の `content` の文字をやめ、インライン SVG にする。仕様書 011 §1.1）。英語テキストの `{name}` 記法には使わない（`ICONS` とは別）。
+ * `paths` は viewBox 0 0 16 16 の線（stroke。色は currentColor）。
+ * @type {Record<string, { paths: string[], label: string }>}
+ */
+export const SYMBOLS = {
+    check: { paths: ['M3 8.5l3.2 3.2L13 4.8'], label: 'Selected' },
+    'chevron-down': { paths: ['M3.5 6l4.5 4.5L12.5 6'], label: 'Down' },
+    warn: { paths: ['M8 2.2L14.6 13.6H1.4Z', 'M8 6.4v3.6', 'M8 11.7v0.3'], label: 'Warning' },
+};
+
 /** @typedef {{ text: string } | { icon: string }} TextPart */
 
 /**

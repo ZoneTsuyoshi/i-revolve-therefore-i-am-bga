@@ -74,7 +74,7 @@ export default defineConfig([
 
   // 撮影スクリプトは、page.evaluate に渡す関数の中でブラウザのグローバルも使う
   {
-    files: ['scripts/preview/shoot.mjs'],
+    files: ['scripts/preview/shoot.mjs', 'scripts/preview/checks.mjs'],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
 

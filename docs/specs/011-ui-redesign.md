@@ -121,14 +121,15 @@
 [手札のカード …（折り返す）]
 ```
 
-- DOM / CSS: `.ir-rail`（`border-top: 1px solid var(--ir-line)`、`padding-top: 4px`、`position: relative`）と `.ir-rail-label`（12px、`--ir-ink-dim`、字間 0.04em、`margin-top: -9px` で線の上に載せ、背景なし）。ラベルは文字そのものが名前で、`title` を付けない。
+- DOM / CSS: `.ir-rail`（`border-top: 1px solid var(--ir-line)`、`padding-top: 4px`、`position: relative`）と `.ir-rail-label`（12px、`--ir-ink-dim`、字間 0.04em、背景なし）。ラベルは文字そのものが名前で、`title` を付けない。（U-17 で変更: `margin-top: -9px` ではラベルの下半分を線が横切って読みにくいので、ラベルを入れる `.ir-rail-title` を `position: absolute; bottom: 100%` で線の真上に置き、レールの上に `margin-top: 14px` の余白を取った。手札の警告・ボタンの置き場 `.ir-rail-actions` もレールの中。）
 - **プレイヤーの領域の見出し**: 左端だけプレイヤー色の 3px の線 + 名前 + 自己構成スコア「N / 20」。名前は暗い卓の上で 4.5:1 以上の**明るいプレイヤー色の文字**（§1.4 の `--ir-pc-*-ink`）。`.ir-player-header` に `border-left: 3px solid var(--ir-player-ink)`。ミープルの形（色だけにしない。010 §6・E.2）は名前の前に残す。
 - **手札と自己構成済みの区別**（作者指示・010 未確定事項 No.3 を維持）: レールのラベルの文字（"Hand" / "Constructed"）と、**ごく薄いマットの色合いの違い**で保つ。マットは角丸 3px 以下の薄い面で、手札は青系（`rgb(96 150 240 / 10%)`）、自己構成済みは琥珀系（`rgb(224 172 80 / 10%)`）。上端の線の色もそれぞれ（手札 `#6f93d0`、自己構成済み `#c49a50`）。**010 の丸いタブ（`.ir-zone-tab`）と枠の太い箱はやめる**。マットはカードの行の背景だけで、枠は上端の線のみ。
 - 他プレイヤーの領域の見出し・レールも同じ（手札のレールは出さない。§4）。
+- （U-17 で変更: 領域の箱をやめたので、領域の内側の余白の合計 `--ir-area-chrome` / `AREA_CHROME` は 28px から、薄いマットの余白 6px を両側で 12px にした。領域の幅 `P_w` が 16px 狭くなり、xl の境目が 16px 下がる。`tests/js/layout.test.mjs` の境目の値を更新した。）
 
 #### 1.3 トークン（丸い札の入れ物をやめる）
 
-- 入れ物（`.ir-token` の枠・背景・`999px`）をやめ、**トークンの画像（幅 40px）+ 個数の数字**を並べる（画像は `token_light`・`token_wildkey`・`token_compose`・`token_analysis` のスプライトのまま。`board/player-view-model.js:12-17`）。数字は 14px の太字・`--ir-ink`。押せる要素は 32×32px 以上（画像 40px で満たす）。
+- 入れ物（`.ir-token` の枠・背景・`999px`）をやめ、**トークンの画像（幅 40px）+ 個数の数字**を並べる（画像は `token_light`・`token_wildkey`・`token_compose`・`token_analysis` のスプライトのまま。`board/player-view-model.js:12-17`）。数字は 14px の太字・`--ir-ink`。押せる要素は 32×32px 以上（画像 40px で満たす）。（U-17 の実装: トークンの種類は `light`・`wildUp`（表）・`wildUsed`（使用済み）・`compose`・`analysis` の 5 つで、`wildUsed` は押せず `title` も付けない（`aria-label` のみ）。`tokenChip` の `usedCount` は廃止。）
 - **万能移動鍵**: 現状は「1 + 0 used」の文字 1 つ（`board/PlayerAreas.js:322`）。**表（`token_wildkey`）と使用済み（`token_wildkey_used`。`ui/sprites.js:319` に既にある）の 2 つの画像を、それぞれ個数つきで並べる**形にする（紙と同じ見え方）。0 個の側は薄く（`opacity: 0.45`）出して位置を固定する（009 §3.8 の方針を維持）。
 - 押せるトークン（支払いの数量。010 §2.4）の見た目は §5.4。選択数のバッジ（`.ir-token-badge`）は金の小さな長方形（32×32px、角丸 2px）。
 
@@ -223,7 +224,7 @@ narrow:  [ 回廊の環（中央に山札 2x2）]
 
 - 廃止するもの: `Game.js:33` の `importEsmLib('bga-jump-to', '1.x')`、`:48` の `this.jumpTo`、`:160` の呼び出し、`:169-192` の `setupJumpTo`、`localStorageFoldedKey`、CSS の `.bga-jump-to_controls` の規則（`:1505-1513`）、`<html data-ir-layout>`（`ui/Layout.js`。他に使う所がなければ。実装時に grep）。プレビューの検査の `.bga-jump-to_link`（`scripts/preview/shoot.mjs:45`）。
 - **各プレイヤーパネルの右端に、そのプレイヤーの領域へ移る小さなボタン**を置く。32×32px、下向き矢印の SVG（`chevron-down`）、`aria-label` は `Go to ${player_name}'s area`（`_()` で翻訳可能。`replace` で名前を入れる）。押すと `document.getElementById('ir-player-area-' + playerId).scrollIntoView({ behavior, block: 'start' })`（`prefers-reduced-motion` のときは `behavior: 'auto'`）。観戦者は全員分、プレイヤーは自分のパネルからは自分の領域へ。全配置で出す（xl・wide でも害がない。010 の「medium・narrow だけ」から変える。理由: パネルのボタンは浮かず、配置でレイアウトが変わらない。ただし xl・wide では領域が見えているので出さない選択も可 → 未確定事項 No.8）。
-- ボタンの位置: パネルの 2 行の右端に**縦に跨って**置く（パネルの高さは 33px【実測】なので、32px のボタンが 2 行の高さに収まり、パネルは高くならない）。仕様の「1 行目の右端」からの読み替えで、1 行目だけに置くと行が 32px に伸びてパネルが約 50px になるため。390px の 2 列の格子（パネル幅 約 170px）で 2 行目の鍵 4 種（約 125px）と並ぶかをプレビューで確かめ、入らなければ 1 行目に置く（その場合は 1 行目が高くなるのを許す）→ 未確定事項 No.9。
+- ボタンの位置: パネルの 2 行の右端に**縦に跨って**置く（パネルの高さは 33px【実測】なので、32px のボタンが 2 行の高さに収まり、パネルは高くならない）。仕様の「1 行目の右端」からの読み替えで、1 行目だけに置くと行が 32px に伸びてパネルが約 50px になるため。390px の 2 列の格子（パネル幅 約 170px）で 2 行目の鍵 4 種（約 125px）と並ぶかをプレビューで確かめ、入らなければ 1 行目に置く（その場合は 1 行目が高くなるのを許す）→ 未確定事項 No.9。（U-17 の結果: 縦に跨る形に決めた。390×844 と 360×780 のどちらでも `.ir-pp` は高さ 33px、2 行のままで、1920×1080 でも同じ。鍵の行の隙間を 6px から 3px、ボタンとの隙間を 2px に詰めたので 360px でも収まる。ボタンの `title` は付けない。）
 - スクロール位置: BGA のステータスバーが上に貼り付く（【未確認】。審査の「フッターに重なる」の文脈と 014 の前提）なら、領域の見出しがバーに隠れる。`.ir-player-area { scroll-margin-top: 96px }`（【提案】。値は Studio で測る）を付ける。
 - ボタンは `button type="button"`。ツールチップは `Go to …` の文字だけ（§6）。
 
@@ -602,7 +603,7 @@ BGA 標準のツールチップに近づける（ライト・ダークのテー�
 | 8 | 角丸 3px を超える要素は、許可した部品（トークン・心光・キューブ・コマの画像の要素）だけ。許可のリストは `shoot.mjs` の定数 | U-17 |
 | 9 | `ir-off` の要素を押すと `window.__irMessages` が増える（無反応でない） | U-19 |
 
-- 検査は撮影の既存の枠組み（`measureLayout` の隣）に足す。出力は「N 件の警告」のまとめと、警告の一覧。
+- 検査は撮影の既存の枠組み（`measureLayout` の隣）に足す。出力は「N 件の警告」のまとめと、警告の一覧。（U-17 で変更: `--strict` は横はみ出しだけでなく、配置の検証と自動検査の警告も失敗にする。）
 - `README.md` の「BGA の画面との違い」の記述（sticky にしていない、など）を更新する。
 
 #### 9.3 変更するファイル

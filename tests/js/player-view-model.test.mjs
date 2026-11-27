@@ -99,14 +99,17 @@ test('selectionClasses: 選択中は選択中の印だけ。選べないカー�
   assert.deepEqual(selectionClasses({ selectable: false, selected: false }), []);
 });
 
-test('tokenChip: 万能移動鍵は表 + 使用済みで 1 つ、0 個は zero', () => {
-  assert.deepEqual(TOKEN_KINDS.map((k) => k.kind), ['light', 'wildUp', 'compose', 'analysis']);
+test('tokenChip: 万能移動鍵は表と使用済みの 2 つの画像で、それぞれ個数つき。0 個の側は zero（011 §1.3）', () => {
+  assert.deepEqual(TOKEN_KINDS.map((k) => k.kind), ['light', 'wildUp', 'wildUsed', 'compose', 'analysis']);
+  assert.equal(TOKEN_KINDS.find((k) => k.kind === 'wildUsed')?.sprite, 'token_wildkey_used');
   const t = tokensModel({ light: 3, wildUp: 3, wildUsed: 1, compose: 0, analysis: 2 });
-  assert.deepEqual(tokenChip('wildUp', t), { count: 3, usedCount: 1, zero: false });
-  assert.deepEqual(tokenChip('light', t), { count: 3, usedCount: null, zero: false });
-  assert.deepEqual(tokenChip('compose', t), { count: 0, usedCount: null, zero: true });
-  assert.equal(tokenChip('wildUp', tokensModel({ wildUsed: 2 })).zero, false, '裏だけでも 0 個ではない');
-  assert.equal(tokenChip('wildUp', tokensModel(null)).zero, true);
+  assert.deepEqual(tokenChip('wildUp', t), { count: 3, zero: false });
+  assert.deepEqual(tokenChip('wildUsed', t), { count: 1, zero: false });
+  assert.deepEqual(tokenChip('light', t), { count: 3, zero: false });
+  assert.deepEqual(tokenChip('compose', t), { count: 0, zero: true });
+  assert.equal(tokenChip('wildUp', tokensModel({ wildUsed: 2 })).zero, true, '表が 0 個なら、裏があっても表の側は薄く出す');
+  assert.equal(tokenChip('wildUsed', tokensModel({ wildUsed: 2 })).zero, false);
+  assert.equal(tokenChip('wildUsed', tokensModel(null)).zero, true);
 });
 
 test('handWarning: 上限 8 を超えたときだけ警告', () => {

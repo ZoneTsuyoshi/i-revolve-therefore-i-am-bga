@@ -63,6 +63,10 @@ const registered = {};
 const actions = [];
 /** @type {any[]} */
 window.__irActions = actions;
+/** @type {{ message: string, type: string }[]} */
+const messages = [];
+/** @type {any[]} */
+window.__irMessages = messages;
 /** @type {{ handlers: any[] }} */
 const notifications = { handlers: [] };
 
@@ -72,8 +76,9 @@ function playerNameHtml(id) {
   return p === undefined ? String(id) : `<span class="pv-player-name" style="font-weight:bold;color:#${p.color}">${escapeHtml(p.name)}</span>`;
 }
 
-const titleEl = /** @type {HTMLElement} */ (document.getElementById('pv-title'));
-const buttonsEl = /** @type {HTMLElement} */ (document.getElementById('pv-buttons'));
+// BGA の標準の構造（#page-title の中に #pagemaintitletext と #generalactions）に合わせた id
+const titleEl = /** @type {HTMLElement} */ (document.getElementById('pagemaintitletext'));
+const buttonsEl = /** @type {HTMLElement} */ (document.getElementById('generalactions'));
 const gameArea = /** @type {HTMLElement} */ (document.getElementById('game_play_area'));
 const panelsEl = /** @type {HTMLElement} */ (document.getElementById('pv-panels'));
 
@@ -106,7 +111,7 @@ const bga = {
     addActionButton(
       /** @type {string} */ label,
       /** @type {(event: Event) => unknown} */ callback,
-      /** @type {{ color?: string, disabled?: boolean, tooltip?: string, id?: string }} */ options = {},
+      /** @type {{ color?: string, disabled?: boolean, tooltip?: string, id?: string, destination?: HTMLElement | string, title?: string }} */ options = {},
     ) {
       const color = options.color ?? 'primary';
       const button = document.createElement('button');
@@ -119,6 +124,10 @@ const bga = {
       if (options.tooltip !== undefined) {
         button.title = options.tooltip;
       }
+      // BGA の `title` は、ラベルがアイコンのときの平文の説明（ボタンの title 属性になる）
+      if (options.title !== undefined) {
+        button.title = options.title;
+      }
       if (options.disabled === true) {
         button.disabled = true;
         button.classList.add('pv-disabled');
@@ -128,11 +137,25 @@ const bga = {
           .then(() => callback(event))
           .catch(showError);
       });
-      buttonsEl.appendChild(button);
+      // `destination` を渡すと、ステータスバーではなくその要素に置く（BGA の文書: 「ボタンを足す DOM 要素」）
+      const destination = typeof options.destination === 'string' ? document.getElementById(options.destination) : options.destination;
+      (destination ?? buttonsEl).appendChild(button);
       return button;
     },
+    // 文書は対象を書いていない【未確認】。悪い側に寄せ、`destination` に置いたボタンは外さない（実装が自分で remove() する。仕様書 011 §8・§9.1）
     removeActionButtons() {
       buttonsEl.replaceChildren();
+    },
+  },
+  dialogs: {
+    // 画面の上に 3 秒出る箱の代用。内容は window.__irMessages に積む（検査 9）
+    showMessage(/** @type {string} */ message, /** @type {string} */ type = 'info') {
+      messages.push({ message, type });
+      const box = document.createElement('div');
+      box.className = `pv-message${type === 'error' ? ' pv-message-error' : ''}`;
+      box.textContent = message;
+      document.body.appendChild(box);
+      setTimeout(() => box.remove(), 3000);
     },
   },
   actions: {

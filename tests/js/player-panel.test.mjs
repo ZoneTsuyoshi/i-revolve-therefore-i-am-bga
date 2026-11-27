@@ -93,7 +93,12 @@ function build() {
 test('setup: 2 行（スコア・手札 / 鍵 4 項目）。トークンと精神階層は出さない。標準のスコア欄を隠す', () => {
   const { text, hosts, scoreHolder } = build();
   const rows = hosts.get(P1)?.querySelector('.ir-pp')?.children ?? [];
-  assert.deepEqual(rows.map((r) => r.children.length), [2, 4]);
+  assert.deepEqual(rows.map((r) => r.children.length), [2, 4, 1], '2 行 + 領域へ移るボタン（011 §2.3）');
+  const nav = hosts.get(P1)?.querySelector('.ir-pp-nav');
+  assert.equal(nav?.tag, 'button');
+  assert.equal(nav?.getAttribute('aria-label'), `Go to ${P1}'s area`, 'aria-label は Go to … 。title は付けない');
+  assert.equal(nav?.getAttribute('title'), null);
+  assert.notEqual(nav?.querySelector('.ir-sym-chevron-down'), null, '下向き矢印は SVG');
   assert.equal(text(P1, 'score'), '7 / 20');
   assert.equal(text(P1, 'hand'), '5');
   for (const item of ['light', 'wild', 'compose', 'analysis', 'tier']) {
@@ -144,4 +149,16 @@ test('通知のフック: 手札・トークン・スコア・階層・自己構
     await pn.notif_cardComposed(/** @type {any} */ (args));
   }
   assert.equal(text(P2, 'hand'), '7');
+});
+
+test('領域へ移るボタン: 押すとそのプレイヤーの領域へ scrollIntoView（block: start）。浮かない・全員分', () => {
+  const { hosts } = build();
+  const calls = /** @type {any[]} */ ([]);
+  const doc = /** @type {any} */ (globalThis).document;
+  doc.getElementById = (/** @type {string} */ id) => ({ id, scrollIntoView: (/** @type {any} */ options) => calls.push([id, options]) });
+  for (const id of [P1, P2]) {
+    hosts.get(id)?.querySelector('.ir-pp-nav')?.fire('click');
+  }
+  assert.deepEqual(calls.map((c) => c[0]), [`ir-player-area-${P1}`, `ir-player-area-${P2}`]);
+  assert.ok(calls.every((c) => c[1].block === 'start' && c[1].behavior === 'smooth'));
 });

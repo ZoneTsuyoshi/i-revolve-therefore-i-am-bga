@@ -37,10 +37,10 @@ export const LAND_RATIO = 287 / 400;
 export const LAYOUT_RANK = { narrow: 0, medium: 1, wide: 2, xl: 3 };
 
 /**
- * プレイヤーの領域の内側の枠と余白の合計（領域の枠 1 + 余白 6、手札・自己構成済みのマットの枠 1 + 余白 6 を両側で 28。
- * 手番の太い枠 3px は余白を 2px 減らして打ち消すので同じ）。CSS の `--ir-area-chrome` と一致させる。仕様 010 §3.3 の 22 からの読み替え。
+ * プレイヤーの領域の内側の余白の合計。領域の箱はなく（011 §4.1）、手札・自己構成済みの薄いマットの余白 6px を両側で 12。
+ * CSS の `--ir-area-chrome` と一致させる。仕様 010 §3.3 の 22（箱の枠と余白を含めた 28）から、011 で 12 に変更。
  */
-export const AREA_CHROME = 28;
+export const AREA_CHROME = 12;
 
 /**
  * プレイヤーの列の幅 P_w = 4 × wp + 3g + AREA_CHROME。

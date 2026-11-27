@@ -10,14 +10,16 @@
 <body id="ebd-body">
   <div id="pv-topbar" class="pv-topbar">Board Game Arena (preview)</div>
   <div id="pv-error" class="pv-error" hidden></div>
+  <!-- BGA の標準の構造に寄せる: #page-title の中に #pagemaintitletext（文）と #generalactions（ボタン）。トップバーの下に貼り付く（sticky）。仕様書 011 §9.1 -->
+  <div id="page-title" class="pv-statusbar">
+    <div id="pagemaintitletext" class="pv-title"></div>
+    <div id="generalactions" class="pv-buttons"></div>
+  </div>
   <div id="pv-page" class="pv-page">
-    <div id="pv-statusbar" class="pv-statusbar">
-      <div id="pv-title" class="pv-title"></div>
-      <div id="pv-buttons" class="pv-buttons"></div>
-    </div>
     <div id="game_play_area" class="pv-gamearea"></div>
     <aside id="pv-panels" class="pv-panels"></aside>
   </div>
+  <div id="pv-footer" class="pv-footer">BGA footer (preview)</div>
   <script type="module" src="/scripts/preview/preview.js"></script>
 </body>
 </html>

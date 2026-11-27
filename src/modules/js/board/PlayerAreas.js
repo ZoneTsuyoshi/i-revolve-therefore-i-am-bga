@@ -2,11 +2,11 @@
  * プレイヤーの領域の描画（仕様書 009 §3.7〜§3.11、§4、§13）。U-2 の器（`board/Board.js` の `playerAreas`）に bga-cards の Stock を作り、
  * getAllDatas と通知で更新する。表示の元になる値の変換は `player-view-model.js`（純粋関数）にある。
  *
- * - 全員: 名前の行（ミープル・名前・N / 20・手番の印）、初期自我・強化自我（LineStock、横長。強化自我は獲得するまで非表示）、
- *   獲得した目標カード（1 枚以上のときだけ表示）、トークンのチップ 4 種（心光・万能移動鍵（表 + 使用済み）・自己構成・精神分析）、
+ * - 全員: 名前の行（ミープル・名前・N / 20）、初期自我・強化自我（LineStock、横長。強化自我は獲得するまで非表示）、
+ *   獲得した目標カード（1 枚以上のときだけ表示）、トークン（画像 + 個数。心光・万能移動鍵の表・万能移動鍵の使用済み・自己構成・精神分析。011 §1.3）、
  *   自己構成済みカード（LineStock、折り返し。横向き＝`ir-tapped` ＋「Used」帯）、I08 の下のカードの枚数バッジ
- * - 自分だけ: 手札（LineStock、折り返し、レベル・エネルギー・番号順。上限 8 を超えたときだけタブに警告）、I08 の下のカードの中身
- * - 他人: 手札のマットを持たない（枚数はパネルだけ。010 §4・§5.1）
+ * - 自分だけ: 手札（LineStock、折り返し、レベル・エネルギー・番号順。上限 8 を超えたときだけレールのラベルの横に警告）、I08 の下のカードの中身
+ * - 他人: 手札のレールを持たない（枚数はパネルだけ。010 §4・§5.1）
  * - 選択: `this.selection`（`cards/selection.js` の SelectionController）。`selectHand`・`selectComposed`・`clearSelection`
  *
  * U-4 の `CommonArea.playerStocks`（自我・目標の最小の Stock）はここへ引き取った。
@@ -71,6 +71,7 @@ function tokenTitle(kind) {
     switch (kind) {
         case 'light': return _('Psychic Light');
         case 'wildUp': return _('Omni-Move Key');
+        case 'wildUsed': return _('Omni-Move Key (used)');
         case 'compose': return _('Construct token');
         case 'analysis': return _('Psychoanalysis token');
         default: return '';
@@ -110,7 +111,7 @@ export class PlayerAreas {
         this.selection = new SelectionController();
         /** @type {HTMLElement[]} 「自己構成するカード」の印を付けた手札の要素 */
         this.marked = [];
-        /** @type {HTMLElement | null} 手札のタブに足した「Discard 2 for Psychic Light」ボタン */
+        /** @type {HTMLElement | null} 手札のレールの右端に足した「Discard 2 for Psychic Light」ボタン */
         this.discardButton = null;
         /** @type {(() => void) | null} */
         this.discardButtonHandler = null;
@@ -201,13 +202,16 @@ export class PlayerAreas {
     }
 
     /**
-     * 手番のプレイヤーの領域の枠を太くする（`ir-turn`。色だけに頼らない）。0 なら全部外す。
+     * 手番のプレイヤーの領域に `data-turn` を付ける（見た目はない。手番は BGA 標準のパネルの強調とステータスバーで示す。011 §4.1）。0 なら全部外す。
      * @param {number} playerId
      */
     setTurn(playerId) {
         for (const [id, area] of this.refs.playerAreas) {
-            area.area.classList.toggle('ir-turn', id === playerId);
-            area.turnMark.hidden = id !== playerId;
+            if (id === playerId) {
+                area.area.dataset.turn = '1';
+            } else {
+                delete area.area.dataset.turn;
+            }
         }
     }
 
@@ -276,7 +280,8 @@ export class PlayerAreas {
             const icon = el('span', { class: 'ir-token-icon', attrs: { 'aria-hidden': 'true' } });
             paintUiSprite(icon, sprite, this.imgUrl);
             const count = el('span', { class: 'ir-token-count' });
-            const root = el('span', { class: 'ir-token', data: { kind }, attrs: { title: tokenTitle(kind) } }, [icon, count]);
+            // 使用済みの万能移動鍵（新しい要素）には title を付けない（011 §6.5。ラベルは aria-label）
+            const root = el('span', { class: 'ir-token', data: { kind }, attrs: kind === 'wildUsed' ? { role: 'img' } : { title: tokenTitle(kind) } }, [icon, count]);
             holder.append(root);
             els[kind] = { root, count };
         }
@@ -319,15 +324,17 @@ export class PlayerAreas {
         for (const { kind } of TOKEN_KINDS) {
             const entry = els[kind];
             const chip = tokenChip(kind, tokens);
-            entry.count.textContent = chip.usedCount === null ? String(chip.count) : _('${n} + ${m} used').replace('${n}', String(chip.count)).replace('${m}', String(chip.usedCount));
+            entry.count.textContent = String(chip.count);
             entry.root.classList.toggle('ir-zero', chip.zero);
             const label = `${tokenTitle(kind)}: ${entry.count.textContent}`;
             entry.root.dataset.label = label;
             if (entry.root.getAttribute('role') !== 'button') {
-                entry.root.setAttribute('title', label);
+                if (kind !== 'wildUsed') {
+                    entry.root.setAttribute('title', label);
+                }
                 entry.root.setAttribute('aria-label', label);
             }
-            const changed = previous !== undefined && (previous[kind] !== tokens[kind] || (kind === 'wildUp' && previous.wildUsed !== tokens.wildUsed));
+            const changed = previous !== undefined && previous[kind] !== tokens[kind];
             if (flip && changed) {
                 // 反転は CSS のアニメーション（.ir-token-flip）。クラスは付け直して再生する
                 entry.root.classList.toggle('ir-token-flip', false);
@@ -338,10 +345,11 @@ export class PlayerAreas {
 
     // ---- 手札 ----
 
-    /** 自分の手札が上限を超えたときだけ、手札のタブに印と「N / 8」の警告を出す（色だけにしない。010 §4） */
+    /** 自分の手札が上限を超えたときだけ、手札のレールのラベルの横に SVG の印と「N / 8」の警告を出す（色だけにしない。010 §4、011 §4.1） */
     refreshHandCount() {
         const mine = this.me === null ? undefined : this.stocks.get(this.me);
-        const info = this.me === null ? null : this.refs.playerAreas.get(this.me)?.handInfo;
+        const refs = this.me === null ? undefined : this.refs.playerAreas.get(this.me);
+        const info = refs?.handInfo;
         if (mine?.hand === null || mine?.hand === undefined || info === null || info === undefined) {
             return;
         }
@@ -349,6 +357,9 @@ export class PlayerAreas {
         const warning = handWarning(state.count);
         info.textContent = warning === null ? '' : `${warning.text} ${_('(over the limit)')}`;
         info.hidden = warning === null;
+        if (refs?.handWarn !== null && refs?.handWarn !== undefined) {
+            refs.handWarn.hidden = warning === null;
+        }
         info.classList.toggle('ir-over-limit', state.over);
         if (warning !== null) {
             info.setAttribute('title', _('Over the hand limit'));
@@ -728,28 +739,27 @@ export class PlayerAreas {
     }
 
     /**
-     * 手札のマットのタブに、小さなボタン（手札を捨てて心光を得る。ターンプレイヤーだけ。010 §2.4）を出す。前のものは外す。
+     * 手札のレールの右端に、小さなボタン（手札を捨てて心光を得る。ターンプレイヤーだけ。010 §2.4）を出す。前のものは外す。
+     * 見た目は控えめな角丸 2px の形。BGA 標準のボタン（`destination`）への置き換えは U-19（011 §8）。
      * @param {{ label: string, tooltip: string, onClick: () => void }} options
      */
     showDiscardButton({ label, tooltip, onClick }) {
         this.clearDiscardButton();
-        const title = this.me === null ? null : this.refs.playerAreas.get(this.me)?.handTitle;
-        if (title === null || title === undefined) {
+        const actions = this.me === null ? null : this.refs.playerAreas.get(this.me)?.handActions;
+        if (actions === null || actions === undefined) {
             return;
         }
         const button = el('button', { class: 'ir-zone-button', attrs: { type: 'button' } }, [label]);
         button.setAttribute('title', tooltip);
         button.addEventListener('click', onClick);
         this.discardButtonHandler = onClick;
-        title.append(button);
-        title.parentElement?.classList.add('ir-zone-has-button');
+        actions.append(button);
         this.discardButton = button;
     }
 
-    /** タブの小さなボタンを外す */
+    /** レールの右端の小さなボタンを外す */
     clearDiscardButton() {
         if (this.discardButton !== null) {
-            this.discardButton.parentElement?.parentElement?.classList.remove('ir-zone-has-button');
             if (this.discardButtonHandler !== null) {
                 this.discardButton.removeEventListener('click', this.discardButtonHandler);
             }
