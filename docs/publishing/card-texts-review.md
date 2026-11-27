@@ -30,10 +30,10 @@
 
 ## 迷った点（作者に聞きたいこと）
 
-1. **用語の統一**: 仕様書 009 §8.5 の案は compose / light / analysis action / persona でしたが、紹介文の英訳案（Construction / Psychic Light / Psychoanalysis / personality）に合わせて書き換えました。これでよいか。
+1. **用語の統一**: 仕様書 009 §8.5 の案は compose / light / analysis action / persona でしたが、紹介文の英訳案（Construction / Psychic Light / Psychoanalysis / personality）に合わせて書き換えました。これでよいか。 → **回答（2026-11-27）: このままでよい**（英語版ルールブックの用語集の確認。[rulebook-en.md](rulebook-en.md) 6 節 No. 7）
 2. **万能鍵と万能移動鍵**: 万能鍵は Wild key、万能移動鍵トークンは Omni-Move Key token（紹介文の案）にしたため、名前が似ず別物として読めます。一方、目標カード O001 の名前案（002）は Wild Move Key Goal です。Omni-Move Key Goal に揃えるか。
 3. **目標カードの名前案の不揃い**: 002 の名前案は Level 2 Composed Goal、Light Goal、Analysis Floor Goal など、本文の用語（Construction、Psychic Light、Psychoanalysis、Mind Track）とずれています。本文の用語に揃えるか、002 の案のままか。
-4. **場札**: open cards としました（Memory deck に対して、表向きに並ぶカード）。紹介文の案に無いので、別の呼び方があれば。
+4. **場札**: open cards としました（Memory deck に対して、表向きに並ぶカード）。紹介文の案に無いので、別の呼び方があれば。 → **回答（2026-11-27）: このままでよい**（英語版ルールブックの用語集の確認。[rulebook-en.md](rulebook-en.md) 6 節 No. 7）
 5. **M058（観測前夜）**: 「[心光]が配置されていない[精神]を精神分析したとき」を "When you Psychoanalyze a Mind Track card that has no Psychic Light on it" としました。「その精神カードに進んだとき」の意味で合っているか。
 6. **M064・M065・M066**: 原文（`card.csv`）は「…入る場合、[移動コスト]-1」です（作者の裁定。Q-70）。英語は "the move cost of that room is reduced by 1" としました。
 7. **M069（希望の篝火）**: 原文は「4歩以上」ですが、M067・M068 と同じ意味（Q-35）なので "4 or more rooms" にそろえました。
