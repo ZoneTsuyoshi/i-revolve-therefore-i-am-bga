@@ -18,8 +18,8 @@ npm run preview:shots -- --fixture 4p-late --size 1920x1080 --theme dark
 npm run preview:fixtures # 固定データを本物のサーバーのコードから作り直す（Docker）
 ```
 
-- URL の引数: `fixture`（固定データの名前）、`theme`（`light` / `dark`）、`spectator=1`（観戦者）、`animations=1`（アニメーションを有効に。既定は無効）、`touch=0/1`（タッチ端末の扱いを固定）、`captions=1`（Card captions を On に）。
-- `preview:shots` の引数は `--fixture` / `--size` / `--theme`（いずれもカンマ区切りで複数可）、`--spectator`、`--strict`（警告が 1 件でもあれば失敗にする）。サイズは 360x780、390x844、768x1024、1024x768、1280x800、1366x768、1440x900、1920x1080、2560x1440。
+- URL の引数: `fixture`（固定データの名前）、`theme`（`light` / `dark`）、`spectator=1`（観戦者）、`animations=1`（アニメーションを有効に。既定は無効）、`touch=0/1`（タッチ端末の扱いを固定）、`captions=0/1`（Card captions。既定は On。011 §7.3）。
+- `preview:shots` の引数は `--fixture` / `--size` / `--theme`（いずれもカンマ区切りで複数可）、`--spectator`、`--strict`（警告が 1 件でもあれば失敗にする）、`--captions 0/1`（Card captions を固定。既定は On）。サイズは 360x780、390x844、768x1024、1024x768、1280x800、1366x768、1440x900、1920x1080、2560x1440。
 - 出力は `scripts/preview/out/<fixture>/<W>x<H>-<theme>.png`（見えている範囲）と `...-full.png`（ページ全体）。`out/` は `.gitignore` 済み。
 - ページのエラー（`pageerror`、`console.error`、リクエスト失敗、`data-error`）があると一覧を出して終了コード 1 になる。ページの横はみ出し（`scrollWidth > innerWidth`）は別に数えて警告として出す（`--strict` で失敗にする）。読み込みが終わると `<html data-ready="1">` が立つ。
 - 画面の大きさ（`--size`）の高さは、デスクトップ幅（980px 以上）ではブラウザのタブ・アドレスバーの約 130px を引いたものを見える高さ（ビューポート）にする（スクリーンショットの高さは `--size` より 130px 低い）。モバイル幅は `--size` のまま。
@@ -61,6 +61,7 @@ npm run preview:fixtures # 固定データを本物のサーバーのコード�
 | 7 | 代表の対象（手札・自己構成済み・部屋の床・部屋の裏向き・場札・精神・目標・自我・強化自我の山・トークン・パネルの項目・山札の枚数・スコア・キューブ）にマウスを乗せる（幅 980px 以上）か、タップ・長押しする（980px 未満。CDP の `Input.dispatchTouchEvent`）。出たツールチップが画面内（端から 8px）・ステータスバーの下・対象を覆わない・画像が卓の同じカードの 1.25 倍以上。Esc で閉じる。最初のテーマだけで測る（`--no-tips` で省く。`--tip-shots` で出した状態を `<サイズ>-<テーマ>-tip-<対象>.png` に撮る） |
 | 8 | 角丸 3px を超える要素（`::before` / `::after` を含む）は、許可した部品（トークン・心光・キューブ・コマの画像、手札のレールの BGA 標準のボタン。`checks.mjs` の定数）だけ |
 | 9 | `ir-off`（今は選べない）の要素（部屋・カード・トークンの種類ごとに 1 つ）を押すと `window.__irMessages` が増える（無反応でない。同じ文は 2 秒以内に出さないので、増えないときは直前が同じ文のときだけ許す）。メッセージが出ている画面を `<サイズ>-<テーマ>-blocked.png` に撮る |
+| 10 | 表示中の英語名（`.ir-caption`。Card captions が On のとき）が、他の表示中の文字の要素（レールのラベル・見出し・注記・他の英語名）やカードと交差しない（U-20）。自分のカードの中は除く |
 
 ## BGA の画面との違い
 

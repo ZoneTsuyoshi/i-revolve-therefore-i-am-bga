@@ -7,6 +7,7 @@
  * © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
  */
 import { paintUiSprite } from '../cards/card-face.js';
+import { roomLockIcons } from '../ui/card-info-model.js';
 import { setSubject } from '../cards/selection.js';
 import { el, setTip, tipAttrs } from '../ui/dom.js';
 import {
@@ -114,6 +115,9 @@ export class CommonArea {
         for (const [pos, cardEl] of this.refs.roomCards) {
             this.roomStocks.set(pos, new this.lib.LineStock(this.cards.mem, cardEl, { gap: '0' }));
         }
+        for (const [pos, cardEl] of this.refs.roomCards) {
+            this.watchRoomLock(pos, cardEl);
+        }
         const adds = [];
         for (const room of rooms) {
             adds.push(this.floorStocks.get(room.pos)?.addCard(room.floor));
@@ -122,6 +126,46 @@ export class CommonArea {
             }
         }
         this.ready = Promise.all(adds).then(() => undefined);
+    }
+
+    /**
+     * 部屋の裏向きカードの上の錠前のアイコン（011 §7.2 (a)）。カードが差し替わる・表向きになるたびに、DOM のキーから作り直す（出す・出さないは CSS が幅で決める）。
+     * 読み上げは既存のツールチップに任せる（aria-hidden）。
+     * @param {number} pos
+     * @param {HTMLElement} cardEl 部屋の想い出カードの置き場
+     */
+    watchRoomLock(pos, cardEl) {
+        const box = cardEl.closest?.('.ir-room-card-box') ?? null;
+        if (box === null) {
+            return;
+        }
+        const holder = document.createElement('span');
+        holder.className = 'ir-room-lock';
+        holder.setAttribute('aria-hidden', 'true');
+        box.append(holder);
+        const sync = () => {
+            const keys = [...cardEl.querySelectorAll('[data-ir-key]')].map((e) => /** @type {HTMLElement} */ (e).dataset.irKey ?? '');
+            const names = roomLockIcons(keys.find((key) => roomLockIcons(key).length > 0));
+            const next = names.join(',');
+            if (holder.dataset.icons === next) {
+                return;
+            }
+            holder.dataset.icons = next;
+            holder.replaceChildren(...names.map((name) => {
+                // スプライトの枠は余白が大きい（錠前は枠の幅の約 37%）ので、外側の枠で錠前の部分だけを切り出す（CSS .ir-room-lock-icon）
+                const icon = document.createElement('span');
+                icon.className = 'ir-room-lock-icon';
+                const glyph = document.createElement('span');
+                glyph.className = 'ir-room-lock-glyph';
+                paintUiSprite(glyph, name, this.imgUrl);
+                icon.append(glyph);
+                return icon;
+            }));
+        };
+        if (typeof MutationObserver !== 'undefined') {
+            new MutationObserver(sync).observe(cardEl, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-ir-key'] });
+        }
+        sync();
     }
 
     /** @param {{ slot: number, card: import('./view-model.js').CardView }[]} open */

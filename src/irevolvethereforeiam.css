@@ -966,24 +966,86 @@ body::before {
     --height: var(--ir-room-card-h) !important;
 }
 
-/* カードの下の英語名（プレイヤー設定 100 Card captions。cssPref のクラスが html または body に付く。009 §8.7） */
+/*
+ * カードの下の英語名（プレイヤー設定 100 Card captions。cssPref のクラスが html または body に付く。009 §8.7、011 §7.3）。
+ * 出す行は手札・自己構成済み・場札・自我・目標だけ（環の床カード・山札・精神トラックには出さない）。12px、--ir-ink-dim。
+ * カードの下に 16px の行の余白を確保し、次の行のカードに重ならないようにする（bga-cards の .card-stock.line-stock の gap に勝つよう !important）。
+ */
 .ir-caption {
     display: none;
 }
 
-.ir-captions-on .ir-caption {
+.ir-captions-on :is(.ir-hand, .ir-composed, .ir-open, .ir-ego, .ir-enh-ego, .ir-goals, .ir-owned-goals) .ir-caption {
     display: block;
     position: absolute;
     top: 100%;
     left: 0;
     right: 0;
+    padding-top: 2px;
     overflow: hidden;
     font-size: 12px;
     line-height: 1.2;
     text-align: center;
     text-overflow: ellipsis;
     white-space: nowrap;
-    color: var(--ir-ink);
+    color: var(--ir-ink-dim);
+    pointer-events: none;
+}
+
+.ir-captions-on :is(.ir-hand, .ir-composed, .ir-open, .ir-goals, .ir-owned-goals) {
+    row-gap: calc(var(--ir-gap) + 18px) !important;
+}
+
+.ir-captions-on :is(.ir-hand, .ir-composed, .ir-open, .ir-owned-goals) {
+    padding-bottom: 18px;
+}
+
+/* 自我・獲得した目標の下に、折り返したトークンの行が来るので行の間を空ける。行の下端（自我とトークンが 1 行に収まるとき）にも、英語名の分の余白を取り、直後のレールのラベルと重ならないようにする */
+.ir-captions-on .ir-player-top {
+    row-gap: calc(var(--ir-gap) + 18px);
+    padding-bottom: 18px;
+}
+
+/* 共通の目標は現在値の注記（.ir-goal-badge）も下に出るので、英語名の下へ送り、2 行ぶん空ける */
+.ir-captions-on .ir-goals {
+    row-gap: calc(var(--ir-gap) + 34px) !important;
+    padding-bottom: 34px;
+}
+
+/* 部屋の裏向きカードの錠前のアイコン（011 §7.2 (a)）。印刷の錠前が 12px 未満の画面（Layout.js が #ir-root の data-lock-overlay を 1 にする）だけ、印刷の錠前（カードの縦 59〜84% の位置）をちょうど覆う位置に重ねる（bottom 15% = 印刷の錠前の下端）。表向き（想起中）は空 */
+.ir-room-lock {
+    display: none;
+}
+
+#ir-root[data-lock-overlay="1"] .ir-room-lock {
+    position: absolute;
+    right: 0;
+    bottom: 15%;
+    left: 0;
+    z-index: 2;
+    display: flex;
+    justify-content: center;
+    gap: 1px;
+    pointer-events: none;
+}
+
+/* UI スプライトの錠前の枠（66 × 64）は余白が大きく、錠前そのものは約 25 × 23。1.5 倍に近い 42 × 41 で描いて、錠前の部分（約 16 × 15）だけを外側の枠で切り出す */
+.ir-room-lock-icon {
+    position: relative;
+    display: block;
+    flex: none;
+    width: 16px;
+    height: 15px;
+    overflow: hidden;
+}
+
+.ir-room-lock-glyph {
+    position: absolute;
+    top: -13px;
+    left: -13px;
+    display: block;
+    width: 42px;
+    height: 41px;
 }
 
 /* ---- 8. 共通の領域の部品（U-4）: ミープル・キューブ・心光・山札の枚数・目標のバッジ ---- */
@@ -1112,6 +1174,11 @@ body::before {
     font-size: 12px;
     line-height: 1.3;
     text-align: center;
+}
+
+/* 英語名（Card captions）が On のときは、共通の目標の注記を英語名の下へ送る（行の余白は 8 の captions の規則） */
+.ir-captions-on .ir-goals .ir-goal-badge {
+    top: calc(100% + 17px);
 }
 
 /* プレイヤーパネル（009 §6・010 §4）: 2 行。幅 150 px まで 1 行に収める。アイコンの高さは 14 px、数字は変化時に 0.3 秒だけ強調する */

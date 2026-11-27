@@ -171,3 +171,15 @@ export const RING_CELLS = [
   [3, 4], [2, 4], [1, 4],
   [1, 3], [1, 2],
 ];
+
+/** 印刷の錠前が見かけ 12px 未満になる部屋の裏向きカードの幅（px。錠前の幅はカード幅の 17.7%、12 / 0.177 = 67.8。011 §7.2） */
+export const LOCK_OVERLAY_BELOW = 68;
+
+/**
+ * 錠前のアイコンを重ねるか（部屋の裏向きカードの幅で決める。xl・wide・medium は通常 false で、紙どおりの見た目）。
+ * @param {number} roomCardW 部屋の裏向きカードの幅（px）
+ * @returns {boolean}
+ */
+export function needsLockOverlay(roomCardW) {
+  return roomCardW < LOCK_OVERLAY_BELOW;
+}

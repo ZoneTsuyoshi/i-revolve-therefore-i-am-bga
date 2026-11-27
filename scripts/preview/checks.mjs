@@ -9,8 +9,9 @@
  * - 5: テキストを持つ要素の文字が 12px 以上（`#ir-root`・パネル・ツールチップ）
  * - 6: 実際にスクロールする入れ子の要素がない
  * - 8: 角丸が 3px を超える要素は、許可した部品（トークン・心光・キューブ・コマの画像、BGA 標準のボタン）だけ
+ * - 10: 表示中の英語名（`.ir-caption`。Card captions）が、他の表示中の文字の要素（レールのラベル・見出し・注記・他の英語名）やカードと交差しない（U-20）
  * （検査 9 は `runBlockedClickCheck`。検査 7 は `locateTipTarget` / `measureTip`）
- * @returns {{ 2: string[], 3: string[], 4: string[], 5: string[], 6: string[], 8: string[] }}
+ * @returns {{ 2: string[], 3: string[], 4: string[], 5: string[], 6: string[], 8: string[], 10: string[] }}
  */
 export function runChecks() {
   /** 検査 8 で角丸を許す部品（物理的に丸い部品の画像の要素。仕様書 011 §1.1） */
@@ -27,8 +28,8 @@ export function runChecks() {
     return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden';
   };
   const uniq = (/** @type {string[]} */ list) => [...new Set(list)];
-  /** @type {{ 2: string[], 3: string[], 4: string[], 5: string[], 6: string[], 8: string[] }} */
-  const out = { 2: [], 3: [], 4: [], 5: [], 6: [], 8: [] };
+  /** @type {{ 2: string[], 3: string[], 4: string[], 5: string[], 6: string[], 8: string[], 10: string[] }} */
+  const out = { 2: [], 3: [], 4: [], 5: [], 6: [], 8: [], 10: [] };
 
   // 2: 浮いた要素
   for (const e of document.querySelectorAll(scope)) {
@@ -102,7 +103,32 @@ export function runChecks() {
     }
   }
 
-  for (const key of /** @type {const} */ ([2, 3, 4, 5, 6, 8])) {
+  // 10: 英語名（Card captions）が他の文字・カードと重ならない（枠の 1px 内側で測る。英語名は幅いっぱいの要素なので、実際の文字より広めに見る）
+  const rectOf = (/** @type {Element} */ e) => e.getBoundingClientRect();
+  const crosses = (/** @type {DOMRect} */ a, /** @type {DOMRect} */ b) =>
+    Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1;
+  const captions = [...document.querySelectorAll('#ir-root .ir-caption')].filter((e) => visible(e));
+  if (captions.length > 0) {
+    const texts = [...document.querySelectorAll('#ir-root *')].filter((e) =>
+      visible(e) && !e.classList.contains('ir-caption') && !e.closest('.ir-caption')
+      && [...e.childNodes].some((n) => n.nodeType === Node.TEXT_NODE && (n.textContent ?? '').trim() !== ''));
+    const cards = [...document.querySelectorAll('#ir-root .ir-card')].filter((e) => visible(e));
+    for (const caption of captions) {
+      const own = caption.closest('.ir-card');
+      const box = rectOf(caption);
+      const name = (caption.textContent ?? '').trim();
+      for (const other of [...texts, ...cards, ...captions.filter((c) => c !== caption)]) {
+        if (other === caption || other === own || (own !== null && own.contains(other)) || other.contains(caption)) {
+          continue;
+        }
+        if (crosses(box, rectOf(other))) {
+          out[10].push(`「${name}」が ${label(other)} と重なる`);
+        }
+      }
+    }
+  }
+
+  for (const key of /** @type {const} */ ([2, 3, 4, 5, 6, 8, 10])) {
     out[key] = uniq(out[key]);
   }
   return out;

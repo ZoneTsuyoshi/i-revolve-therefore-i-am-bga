@@ -129,7 +129,7 @@ async function checkTips(page, context, mobile, shotBase) {
   return warnings;
 }
 
-/** @returns {{ fixture: string[], size: string[], theme: string[], spectator: boolean, strict: boolean, tips: boolean, tipShots: boolean }} */
+/** @returns {{ fixture: string[], size: string[], theme: string[], spectator: boolean, strict: boolean, tips: boolean, tipShots: boolean, captions?: string }} */
 function parseArgs() {
   const result = { fixture: /** @type {string[]} */ ([]), size: /** @type {string[]} */ ([]), theme: /** @type {string[]} */ ([]), spectator: false, strict: false, tips: true, tipShots: false };
   const argv = process.argv.slice(2);
@@ -143,6 +143,8 @@ function parseArgs() {
       result.tips = false;
     } else if (key === '--tip-shots') {
       result.tipShots = true;
+    } else if (key === '--captions') {
+      result.captions = argv[++i];
     } else if (key === '--fixture' || key === '--size' || key === '--theme') {
       const value = argv[++i];
       if (value === undefined) {
@@ -150,7 +152,7 @@ function parseArgs() {
       }
       result[key.slice(2)].push(...value.split(','));
     } else {
-      throw new Error(`不明な引数: ${key}（--fixture / --size / --theme（カンマ区切り可）、--spectator、--strict、--no-tips、--tip-shots）`);
+      throw new Error(`不明な引数: ${key}（--fixture / --size / --theme（カンマ区切り可）、--spectator、--strict、--no-tips、--tip-shots、--captions 0/1）`);
     }
   }
   return result;
@@ -182,9 +184,9 @@ const layoutNotes = [];
 /** @type {string[]} */
 const layoutWarnings = [];
 /** 検査番号 → 警告（011 §9.2） */
-const CHECK_TITLES = { 2: '浮いた要素（fixed / sticky）', 3: '32px 未満の操作要素', 4: 'title 属性', 5: '12px 未満の文字', 6: '入れ子のスクロール', 7: 'ツールチップの位置・大きさ', 8: '角丸 3px 超（許可した部品以外）', 9: 'ir-off を押してもメッセージが出ない' };
+const CHECK_TITLES = { 2: '浮いた要素（fixed / sticky）', 3: '32px 未満の操作要素', 4: 'title 属性', 5: '12px 未満の文字', 6: '入れ子のスクロール', 7: 'ツールチップの位置・大きさ', 8: '角丸 3px 超（許可した部品以外）', 10: '英語名が他の文字・カードと重なる', 9: 'ir-off を押してもメッセージが出ない' };
 /** @type {Record<string, string[]>} */
-const checkWarnings = { 2: [], 3: [], 4: [], 5: [], 6: [], 7: [], 8: [], 9: [] };
+const checkWarnings = { 2: [], 3: [], 4: [], 5: [], 6: [], 7: [], 8: [], 9: [], 10: [] };
 let count = 0;
 try {
   for (const fixture of fixtures) {
@@ -220,6 +222,9 @@ try {
         if (args.spectator) {
           query.set('spectator', '1');
         }
+        if (args.captions !== undefined) {
+          query.set('captions', args.captions);
+        }
         await page.goto(`${url}/scripts/preview/index.html?${query}`);
         try {
           await page.waitForFunction(() => document.documentElement.dataset.ready === '1' || document.documentElement.dataset.error !== undefined, null, { timeout: 30000 });
@@ -245,7 +250,7 @@ try {
         if (!m.margins) {
           layoutWarnings.push(`[${label}] 盤面の左右に 8px の余白がありません`);
         }
-        // 自動検査（仕様書 011 §9.2）。検査 2・3・4・5・6・8（7・9 は撮影のあと）
+        // 自動検査（仕様書 011 §9.2）。検査 2・3・4・5・6・8・10（7・9 は撮影のあと）
         const checks = await page.evaluate(runChecks);
         for (const [no, list] of Object.entries(checks)) {
           for (const item of list) {

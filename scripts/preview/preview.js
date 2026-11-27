@@ -1,5 +1,5 @@
 // BGA の API を模して、このゲームのクライアント（src/modules/js/Game.js）をブラウザで表示するプレビュー（使い方は README.md）。
-// URL の引数: fixture（固定データの名前）、theme（light / dark）、spectator=1、animations=1、touch=0/1、captions=1
+// URL の引数: fixture（固定データの名前）、theme（light / dark）、spectator=1、animations=1、touch=0/1、captions=0/1
 
 /** この幅（px）未満をモバイル表示にする。BGA の実際の境目は未確認なのでここで仮置きしている */
 const MOBILE_MAX_WIDTH = 980;
@@ -39,7 +39,7 @@ function updateBodyClasses() {
   document.body.classList.toggle('touch-device', isTouch);
   document.body.classList.toggle('notouch-device', !isTouch);
   // プレイヤー設定 100 Card captions（cssPref のクラスは html にも body にも付く）
-  document.body.classList.toggle('ir-captions-on', params.get('captions') === '1');
+  document.body.classList.toggle('ir-captions-on', params.get('captions') !== '0');
 }
 updateBodyClasses();
 window.addEventListener('resize', updateBodyClasses);
