@@ -6,7 +6,7 @@
  * © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
  */
 import { paintUiSprite } from '../cards/card-face.js';
-import { ICONS, tokenizeText } from './icon-names.js';
+import { ICONS, SYMBOLS, tokenizeText } from './icon-names.js';
 
 /**
  * アイコンの読み上げ名（翻訳済み。`_()` は setup 以降に呼ぶ。抽出のため `_()` のリテラルで書く）。表に無い名前は英語の原文。
@@ -86,6 +86,32 @@ function letterSvg(letter) {
     text.textContent = letter;
     svg.append(rect, text);
     return svg;
+}
+
+/**
+ * 記号（チェック・下向き矢印・警告）のインライン SVG。色は currentColor。装飾なので aria-hidden（意味は隣の文字や aria-label が持つ）。
+ * @param {string} name `SYMBOLS` のキー
+ * @returns {HTMLElement}
+ */
+export function createSymbol(name) {
+    const ns = 'http://www.w3.org/2000/svg';
+    const span = document.createElement('span');
+    span.className = `ir-sym ir-sym-${name}`;
+    span.setAttribute('aria-hidden', 'true');
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', '0 0 16 16');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '1.8');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    for (const d of SYMBOLS[name]?.paths ?? []) {
+        const path = document.createElementNS(ns, 'path');
+        path.setAttribute('d', d);
+        svg.append(path);
+    }
+    span.append(svg);
+    return span;
 }
 
 /**

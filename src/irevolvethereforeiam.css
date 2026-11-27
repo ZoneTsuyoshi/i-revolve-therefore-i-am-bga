@@ -14,6 +14,7 @@
  * 注意: @import は使えない。
  * 構成: 1. 変数（寸法・色・ダークモード） 2. ルートと盤面の配置（wide / medium / narrow） 3. 器（スロット）
  *       4. 回廊 5. 共通の領域 6. プレイヤーの領域 7. カード（スプライト・bga-cards の寸法の上書き・キャプション）
+ * 視覚体系（仕様書 011 §1）: 暗い卓の上に部品と、卓に印刷した線（レール）・小さなラベルだけを置く。箱・丸い札・太い色枠・影の浮いた箱は使わない。
  */
 
 /* ---- 1. 変数 ---- */
@@ -41,36 +42,34 @@
     --ir-room-h: calc(var(--ir-room-w) * 287 / 400 + var(--ir-room-w) * 0.3);
 
     /*
-     * プレイヤーの領域（手札・自己構成済み）のカード幅 wp と、領域の幅 P_w = 4 wp + 3 g + 枠と余白（010 §3.3）。
-     * --ir-wp は JS（ui/Layout.js）が上書きする。--ir-area-chrome は領域の内側の枠・余白の合計（領域の枠 1 + 余白 6、マットの枠 1 + 余白 6 を両側で 28px。
-     * 手番の太い枠は余白で打ち消す）。layout-math.js の AREA_CHROME と一致させる。
+     * プレイヤーの領域（手札・自己構成済み）のカード幅 wp と、領域の幅 P_w = 4 wp + 3 g + 余白（010 §3.3）。
+     * --ir-wp は JS（ui/Layout.js）が上書きする。--ir-area-chrome は領域の内側の余白の合計（領域の箱はなく、手札・自己構成済みの薄いマットの余白 6px を両側で 12px。
+     * 011 §1.2・§4.1 で 28px から変更）。layout-math.js の AREA_CHROME と一致させる。
      */
-    --ir-area-chrome: 28px;
+    --ir-area-chrome: 12px;
     --ir-pw: calc(4 * var(--ir-wp) + 3 * var(--ir-gap) + var(--ir-area-chrome));
 
-    /* 色（背景・枠・空き枠・パネル・文字。カード画像は共通） */
+    /* 部品以外の UI の角丸（011 §1.1）と、マットの余白 */
+    --ir-r: 2px;
+    --ir-pad: 6px;
+
+    /*
+     * 盤面の外・BGA のテーマに従う要素（ツールチップ・拡大表示・プレイヤーパネルの一部）が使う色。U-18（ツールチップ）・U-19（選択の見た目）まで残す。
+     * 盤面（.ir-root の中）は下の .ir-root で暗い卓用に固定する。
+     */
     --ir-text: #222;
     --ir-text-muted: #555;
     --ir-panel-bg: rgb(255 255 255 / 70%);
     --ir-panel-border: #b8b2a6;
     --ir-slot-bg: rgb(0 0 0 / 4%);
-    --ir-slot-border: #9a948a;
     --ir-turn-border: #c0392b;
     --ir-pending: #1f5fd1;
     --ir-tip-bg: #fffdf8;
     --ir-tip-border: #8a8478;
     --ir-tip-shadow: rgb(0 0 0 / 35%);
-
-    /* 背景（暗いセピア）の上に直接描くもの用（箱の外。テーマに関わらず固定。010 §7.2）。#a89e88 / #d8d0c0 は背景の最も明るい所（約 #3a3225）に対しても 6.2 / 8.1 以上 */
-    --ir-bare-line: #a89e88;
-    --ir-bare-fill: rgb(255 255 255 / 6%);
-    --ir-bare-text: #d8d0c0;
 }
 
-/*
- * 上の :root と下の html[data-theme="dark"] の値は、BGA 側のテーマに従う要素（ツールチップ・拡大表示・山札一覧の --ir-tip-*、プレイヤーパネルなど盤面の外）が使う。
- * 盤面（.ir-root の中）は、テーマに関わらず暗い背景（body::before）の上に載るので、文字・マット・枠の変数を .ir-root で暗い背景用に固定する（010 §7.2）。
- */
+/* 上の :root と下の html[data-theme="dark"] の値は、BGA 側のテーマに従う要素が使う。盤面（.ir-root の中）は、テーマに関わらず暗い背景（body::before）の上に載るので、.ir-root で固定する（010 §7.2） */
 
 /* BGA のダークモードは html の data-theme="dark"（@media (prefers-color-scheme) は BGA の切り替えを無視するので使わない。009 §12.2） */
 html[data-theme="dark"] {
@@ -79,7 +78,6 @@ html[data-theme="dark"] {
     --ir-panel-bg: rgb(30 30 34 / 80%);
     --ir-panel-border: #5c5a55;
     --ir-slot-bg: rgb(255 255 255 / 6%);
-    --ir-slot-border: #7a776f;
     --ir-turn-border: #ff7b6b;
     --ir-pending: #6cb6ff;
     --ir-tip-bg: #25252a;
@@ -121,38 +119,51 @@ body::before {
     max-width: 2000px;
     margin: 0 auto;
     padding: 0 8px;
-    color: var(--ir-text);
+    color: var(--ir-ink);
     display: grid;
     grid-template-columns: minmax(0, max-content);
     place-content: start center;
     align-items: start;
     gap: var(--ir-gap);
 
-    /* 盤面の色（暗い背景用に固定。背景色を指定する要素は文字色も指定する）。背景の最も明るい所（約 #3a3225）+ マットの上でも、文字は 4.5:1 以上 */
-    --ir-text: #ece7db;
-    --ir-text-muted: #bdb6a6;
+    /* 盤面の色（暗い卓用に固定。011 §1.4。コントラスト比は卓の基調 #1c1812 と最も明るい所の近似 #3a3225 に対して計算した） */
+    --ir-ink: #ece7db;
+    --ir-ink-dim: #bdb6a6;
+    --ir-line: #8f8672;
+    --ir-line-strong: #a89e88;
+    --ir-can: #fff;
+    --ir-can-glow: rgb(255 255 255 / 35%);
+    --ir-pick: #ffd23f;
+    --ir-on-pick: #1a1408;
+    --ir-subject: #f0b84a;
+    --ir-warn: #ff9c8b;
+    --ir-pc-r-ink: #ff8a80;
+    --ir-pc-b-ink: #7db4ff;
+    --ir-pc-g-ink: #6fd68f;
+    --ir-pc-y-ink: #f0c75a;
+    --ir-hand-label: #c4d9ff;
+    --ir-composed-label: #f5dca8;
+
+    /* 手札・自己構成済みの薄いマットの色合いと、上端の線（010 No.3 の維持。011 §1.2） */
+    --ir-hand-mat: rgb(96 150 240 / 10%);
+    --ir-hand-line: #6f93d0;
+    --ir-composed-mat: rgb(224 172 80 / 10%);
+    --ir-composed-line: #c49a50;
+
+    /* 枚数・注記の札の地（卓に重ねた暗い面。文字は --ir-ink で 14 以上） */
+    --ir-tag-bg: rgb(0 0 0 / 55%);
+
+    /* U-18（ツールチップ）・U-19（選択の見た目・想起の案内パネル・候補の置き場）まで残す変数。盤面の中では暗い卓用の値にする */
+    --ir-text: var(--ir-ink);
+    --ir-text-muted: var(--ir-ink-dim);
     --ir-panel-bg: rgb(26 22 16 / 92%);
-    --ir-panel-border: #8f8672;
+    --ir-panel-border: var(--ir-line);
     --ir-slot-bg: rgb(255 255 255 / 6%);
-    --ir-slot-border: #a89e88;
     --ir-turn-border: #ff9c8b;
     --ir-pending: #7cc0ff;
-    --ir-slot-line: var(--ir-bare-line);
-    --ir-slot-fill: var(--ir-bare-fill);
-
-    /* マット（卓に敷いた布のような半透明の区画。010 §6） */
     --ir-mat-bg: rgb(255 255 255 / 7%);
     --ir-mat-border: rgb(255 255 255 / 22%);
     --ir-mat-radius: 10px;
-    --ir-mat-pad: 6px;
-    --ir-zone-hand-bg: rgb(96 150 240 / 17%);
-    --ir-zone-hand-border: #7fa6e6;
-    --ir-zone-hand-tab-bg: #1d2b47;
-    --ir-zone-hand-tab-text: #dbe8ff;
-    --ir-zone-composed-bg: rgb(224 172 80 / 15%);
-    --ir-zone-composed-border: #d4a65a;
-    --ir-zone-composed-tab-bg: #3d2f14;
-    --ir-zone-composed-tab-text: #ffe9bf;
 }
 
 .ir-root *,
@@ -243,11 +254,12 @@ body::before {
 
 /* ---- 3. 器（スロット） ---- */
 
+/* 空き枠: 卓に印刷した破線（011 §1.4。角丸 3px 以下） */
 .ir-slot {
     flex: none;
-    border: 1px dashed var(--ir-slot-line, var(--ir-slot-border));
-    border-radius: 4px;
-    background: var(--ir-slot-fill, var(--ir-slot-bg));
+    border: 1px dashed var(--ir-line-strong);
+    border-radius: 3px;
+    background: rgb(255 255 255 / 6%);
 }
 
 .ir-slot-m {
@@ -333,7 +345,7 @@ body::before {
 .ir-room-floor,
 .ir-slot-room-card {
     border: 0;
-    outline: 1px dashed var(--ir-slot-border);
+    outline: 1px dashed var(--ir-line-strong);
     outline-offset: -1px;
 }
 
@@ -466,15 +478,18 @@ body::before {
     contain: inline-size;
 }
 
+/*
+ * 領域の見出し・レール（011 §1.2・§4.1）: 領域は箱で囲まない。見出しは左端だけプレイヤー色（明るい版）の 3px の線 + ミープルの形 + 名前 + N / 20。
+ * 手札・自己構成済みは上端の 1px の線（レール）と、線の上に載る 12px のラベル。薄いマットの色合いで区別する（010 No.3）。
+ */
 .ir-player-area {
     display: flex;
     flex-direction: column;
-    gap: var(--ir-mat-pad);
-    padding: var(--ir-mat-pad);
-    border: 1px solid var(--ir-mat-border);
-    border-radius: var(--ir-mat-radius);
-    background: var(--ir-mat-bg);
-    color: var(--ir-text);
+    gap: var(--ir-gap);
+    color: var(--ir-ink);
+
+    /* パネルの移動ボタン（scrollIntoView）で見出しが貼り付いたステータスバーに隠れない。値は Studio で測る（011 §2.3） */
+    scroll-margin-top: 96px;
 }
 
 /* xl・wide・medium: 領域は内容の幅 P_w（narrow は全幅） */
@@ -483,18 +498,28 @@ body::before {
     width: var(--ir-pw);
 }
 
-/* 手番プレイヤーの領域は枠を太くする（色だけに頼らない。U-5 が .ir-turn を付ける）。幅の変化を余白で打ち消して、中身を動かさない */
-.ir-player-area.ir-turn {
-    padding: calc(var(--ir-mat-pad) - 2px);
-    border: 3px solid var(--ir-turn-border);
-}
-
-/* 名前の行: プレイヤー色のミープルの形・名前・N / 20・手番の印。名前は明るい文字 + プレイヤー色の縁の帯（色付きの文字にしない。010 §6） */
+/* 名前の行: 左端だけプレイヤー色（明るい版）の 3px の線。ミープルの形（色だけにしない。010 §6）・名前・N / 20 */
 .ir-player-header {
+    --ir-player-ink: var(--ir-pc-r-ink);
+
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 4px 8px;
+    padding-left: 8px;
+    border-left: 3px solid var(--ir-player-ink);
+}
+
+.ir-player-header[data-color="blue"] {
+    --ir-player-ink: var(--ir-pc-b-ink);
+}
+
+.ir-player-header[data-color="green"] {
+    --ir-player-ink: var(--ir-pc-g-ink);
+}
+
+.ir-player-header[data-color="yellow"] {
+    --ir-player-ink: var(--ir-pc-y-ink);
 }
 
 .ir-player-meeple {
@@ -505,9 +530,7 @@ body::before {
 
 .ir-player-name {
     min-width: 0;
-    padding-left: 6px;
-    border-left: 6px solid var(--ir-player-color, var(--ir-panel-border));
-    color: var(--ir-text);
+    color: var(--ir-player-ink);
     font-size: 15px;
     font-weight: bold;
     overflow-wrap: anywhere;
@@ -515,26 +538,14 @@ body::before {
 
 .ir-player-score {
     margin-left: auto;
-    padding: 1px 10px;
-    border-radius: 999px;
-    background: rgb(0 0 0 / 35%);
-    color: var(--ir-text);
-    font-size: 13px;
+    color: var(--ir-ink);
+    font-size: 14px;
     font-weight: bold;
 }
 
-.ir-turn-mark {
-    padding: 1px 10px;
-    border-radius: 999px;
-    background: var(--ir-turn-border);
-    color: #1a0f0c;
-    font-size: 12px;
-    font-weight: bold;
-}
-
-.ir-turn-mark[hidden],
 .ir-enh-ego[hidden],
 .ir-owned-goals[hidden],
+.ir-hand-warn[hidden],
 .ir-hand-info[hidden] {
     /* bga-cards の LineStock は要素に display を直接書くので、hidden が負けないよう !important */
     display: none !important;
@@ -561,111 +572,125 @@ body::before {
     gap: var(--ir-gap);
 }
 
-/* 手札と自己構成済みのマット: 色の違う半透明の区画。縁にかかる小さなタブが名前（旧・見出しの行。010 §5.2・§6） */
-.ir-zone {
+/* レール: 上端の 1px の線。ラベルは線の上に載る（線の上の余白 = margin-top。011 §1.2） */
+.ir-rail {
     position: relative;
+    margin-top: 14px;
+    padding-top: 4px;
+    border-top: 1px solid var(--ir-line);
+}
+
+.ir-rail-title {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 100%;
+    padding-bottom: 1px;
+    line-height: 16px;
+}
+
+.ir-rail-label {
+    color: var(--ir-ink-dim);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+}
+
+/* 手札と自己構成済みのマット: ごく薄い色合い。枠は上端の線だけ（角丸 3px 以下） */
+.ir-zone {
     min-height: 28px;
-    margin-top: 12px;
-    padding: 14px var(--ir-mat-pad) var(--ir-mat-pad);
-    border: 1px solid var(--ir-zone-border);
-    border-radius: var(--ir-mat-radius);
-    background: var(--ir-zone-bg);
-    color: var(--ir-text);
+    padding: calc(var(--ir-pad) + 2px) var(--ir-pad) var(--ir-pad);
+    border-radius: 0 0 3px 3px;
 }
 
 .ir-zone-hand {
-    --ir-zone-bg: var(--ir-zone-hand-bg);
-    --ir-zone-border: var(--ir-zone-hand-border);
-    --ir-zone-tab-bg: var(--ir-zone-hand-tab-bg);
-    --ir-zone-tab-text: var(--ir-zone-hand-tab-text);
+    border-top-color: var(--ir-hand-line);
+    background: var(--ir-hand-mat);
+}
+
+.ir-zone-hand .ir-rail-label {
+    color: var(--ir-hand-label);
 }
 
 .ir-zone-composed {
-    --ir-zone-bg: var(--ir-zone-composed-bg);
-    --ir-zone-border: var(--ir-zone-composed-border);
-    --ir-zone-tab-bg: var(--ir-zone-composed-tab-bg);
-    --ir-zone-tab-text: var(--ir-zone-composed-tab-text);
+    border-top-color: var(--ir-composed-line);
+    background: var(--ir-composed-mat);
 }
 
-/* タブのボタン（32px）が載るときは、カードに被らないよう上の余白を広げる */
-.ir-zone.ir-zone-has-button {
-    padding-top: 30px;
+.ir-zone-composed .ir-rail-label {
+    color: var(--ir-composed-label);
 }
 
-.ir-zone-tab {
-    position: absolute;
-    top: -11px;
-    left: 12px;
-    z-index: 3;
+/* レールの右端の操作（手札を捨てて心光を得る。ターンプレイヤーだけ。U-19 で BGA 標準のボタンに置き換える。010 §2.4） */
+.ir-rail-actions {
     display: flex;
-    align-items: center;
-    gap: 6px;
-    max-width: calc(100% - 24px);
-    min-height: 22px;
-    padding: 0 10px;
-    border: 1px solid var(--ir-zone-border);
-    border-radius: 999px;
-    background: var(--ir-zone-tab-bg);
-    color: var(--ir-zone-tab-text);
-    font-size: 12px;
-    font-weight: bold;
-    line-height: 20px;
+    justify-content: flex-end;
+    margin-bottom: var(--ir-pad);
 }
 
-/* タブの小さなボタン（手札を捨てて心光を得る。ターンプレイヤーだけ。010 §2.4） */
+.ir-rail-actions:empty {
+    display: none;
+}
+
 .ir-zone-button {
     min-width: 32px;
     min-height: 32px;
-    margin: 0 -6px 0 4px;
     padding: 2px 12px;
-    border: 0;
-    border-radius: 999px;
-    background: var(--ir-zone-border);
-    color: #10141c;
-    font-size: 12px;
+    border: 1px solid var(--ir-hand-line);
+    border-radius: var(--ir-r);
+    background: rgb(96 150 240 / 22%);
+    color: var(--ir-ink);
+    font-size: 13px;
     font-weight: bold;
     cursor: pointer;
 }
 
-/* 手札が上限を超えたときだけ、タブに出す警告（「!」と N / 8。色だけにしない） */
-.ir-hand-info {
+/* 手札が上限を超えたときだけ、手札のラベルの横に出す警告（SVG の「!」と N / 8。色だけにしない） */
+.ir-hand-warn {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 0 8px;
-    border-radius: 999px;
-    background: var(--ir-turn-border);
-    color: #1a0f0c;
+    color: var(--ir-warn);
 }
 
-.ir-hand-info::before {
-    content: "!";
+.ir-hand-info {
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.ir-sym {
     display: inline-block;
-    width: 1.3em;
-    border: 2px solid currentcolor;
-    border-radius: 50%;
-    text-align: center;
-    line-height: 1.1;
+    flex: none;
+    width: 14px;
+    height: 14px;
+    vertical-align: middle;
 }
 
-/* カードの束のアイコン（CSS だけで描く。プレイヤーパネルの手札の枚数） */
+.ir-sym svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* カードの束のアイコン（CSS だけで描く。プレイヤーパネルの手札の枚数。パネルは盤面の外なので currentColor で BGA のテーマに従う） */
 .ir-hand-icon {
     position: relative;
     display: inline-block;
     width: 14px;
     height: 20px;
-    border: 1px solid var(--ir-text);
+    border: 1px solid currentcolor;
     border-radius: 2px;
-    background: var(--ir-panel-bg);
-    box-shadow: 3px -3px 0 -1px var(--ir-panel-bg), 3px -3px 0 0 var(--ir-text);
+    box-shadow: 3px -3px 0 -1px transparent, 3px -3px 0 0 currentcolor;
 }
 
-/* トークン: 種類ごとに「画像 + 個数」。0 個は薄く出して行の位置を固定する（009 §3.8） */
+/* トークン: 入れ物をやめ、画像 + 個数（011 §1.3）。0 個は薄く出して行の位置を固定する（009 §3.8）。万能移動鍵は表と使用済みの 2 画像 */
 .ir-tokens {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 6px 8px;
+    gap: 4px 12px;
 }
 
 .ir-token {
@@ -673,23 +698,19 @@ body::before {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    min-height: 44px;
-    padding: 2px 10px 2px 6px;
-    border: 1px solid var(--ir-mat-border);
-    border-radius: 999px;
-    background: rgb(0 0 0 / 28%);
-    color: var(--ir-text);
+    min-height: 40px;
+    color: var(--ir-ink);
 }
 
-/* 押せるトークン（010 §2.4）: 「選べる」の枠、選んだ個数のバッジ（押すと 1 つ外す）、「+」 */
+/* 押せるトークン（010 §2.4）: 「選べる」の枠、選んだ個数のバッジ（押すと 1 つ外す）、「+」。見た目は U-19（011 §5.4）で整える */
 .ir-token.ir-token-pick {
     cursor: pointer;
 }
 
 .ir-token.ir-selectable,
 .ir-token.ir-selected {
-    border-radius: 6px;
-    outline: 2px solid var(--ir-text);
+    border-radius: var(--ir-r);
+    outline: 2px solid var(--ir-ink);
     outline-offset: 2px;
 }
 
@@ -703,15 +724,17 @@ body::before {
     right: -6px;
     z-index: 2;
     min-width: 1.5em;
-    border-radius: 999px;
-    background: var(--ir-panel-bg);
-    color: var(--ir-text);
+    padding: 0 3px;
+    border-radius: var(--ir-r);
+    background: var(--ir-tag-bg);
+    color: var(--ir-ink);
     font-size: 12px;
     font-weight: bold;
     text-align: center;
     pointer-events: none;
 }
 
+/* 選んだ個数の札: 金の小さな長方形（32 × 32px、角丸 2px） */
 .ir-token-badge {
     position: absolute;
     bottom: -6px;
@@ -720,9 +743,9 @@ body::before {
     min-width: 32px;
     min-height: 32px;
     border: 0;
-    border-radius: 50%;
-    background: var(--ir-turn-border);
-    color: #fff;
+    border-radius: var(--ir-r);
+    background: var(--ir-pick);
+    color: var(--ir-on-pick);
     font-size: 14px;
     font-weight: bold;
     cursor: pointer;
@@ -741,7 +764,7 @@ body::before {
     min-width: 1.2em;
     font-size: 14px;
     font-weight: bold;
-    color: var(--ir-text);
+    color: var(--ir-ink);
 }
 
 .ir-token.ir-token-flip .ir-token-icon {
@@ -764,9 +787,9 @@ body::before {
     top: 0;
     right: 0;
     padding: 1px 5px;
-    background: var(--ir-panel-bg);
-    border: 1px solid var(--ir-panel-border);
-    color: var(--ir-text);
+    border-radius: var(--ir-r);
+    background: var(--ir-tag-bg);
+    color: var(--ir-ink);
     font-size: 12px;
     font-weight: bold;
 }
@@ -787,10 +810,10 @@ body::before {
     top: 0;
     left: 0;
     padding: 1px 4px;
-    background: var(--ir-panel-bg);
-    border: 1px solid var(--ir-panel-border);
-    color: var(--ir-text);
-    font-size: 11px;
+    border-radius: var(--ir-r);
+    background: var(--ir-tag-bg);
+    color: var(--ir-ink);
+    font-size: 12px;
     font-weight: bold;
 }
 
@@ -800,10 +823,10 @@ body::before {
     right: 0;
     bottom: 0;
     padding: 1px 4px;
-    background: var(--ir-panel-bg);
-    border: 1px solid var(--ir-panel-border);
-    color: var(--ir-text);
-    font-size: 11px;
+    border-radius: var(--ir-r);
+    background: var(--ir-tag-bg);
+    color: var(--ir-ink);
+    font-size: 12px;
     font-weight: bold;
 }
 
@@ -825,11 +848,9 @@ body::before {
     left: 0;
     z-index: 3;
     padding: 1px 0;
-    background: var(--ir-panel-bg);
-    border-top: 1px solid var(--ir-panel-border);
-    border-bottom: 1px solid var(--ir-panel-border);
-    color: var(--ir-text);
-    font-size: 11px;
+    background: var(--ir-tag-bg);
+    color: var(--ir-ink);
+    font-size: 12px;
     font-weight: bold;
     text-align: center;
 }
@@ -933,7 +954,7 @@ body::before {
 
 /* スプライトに無いキー: 空の面（破線だけ見える） */
 .ir-sprite-missing {
-    outline: 1px dashed var(--ir-slot-border);
+    outline: 1px dashed var(--ir-line-strong);
     outline-offset: -1px;
 }
 
@@ -1032,12 +1053,12 @@ body::before {
     left: 0;
     right: 0;
     overflow: hidden;
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1.2;
     text-align: center;
     text-overflow: ellipsis;
     white-space: nowrap;
-    color: var(--ir-text);
+    color: var(--ir-ink);
 }
 
 /* ---- 8. 共通の領域の部品（U-4）: ミープル・キューブ・心光・山札の枚数・目標のバッジ ---- */
@@ -1139,18 +1160,17 @@ body::before {
     justify-content: center;
     gap: var(--ir-gap);
     min-height: calc(var(--ir-c) * 0.16);
-    border: 1px dashed var(--ir-bare-line);
-    border-radius: 4px;
-    background: var(--ir-bare-fill);
+    border: 1px dashed var(--ir-line-strong);
+    border-radius: var(--ir-r);
+    background: rgb(255 255 255 / 6%);
 }
 
 /* 山札・捨札の枚数バッジ（bga-cards の Deck の counter） */
 .ir-count {
     padding: 0 6px;
-    border-radius: 8px;
-    background: var(--ir-panel-bg);
-    border: 1px solid var(--ir-panel-border);
-    color: var(--ir-text);
+    border-radius: var(--ir-r);
+    background: var(--ir-tag-bg);
+    color: var(--ir-ink);
     font-size: 12px;
     font-weight: bold;
     line-height: 1.4;
@@ -1165,25 +1185,27 @@ body::before {
     padding: 1px 3px;
     background: var(--ir-panel-bg);
     color: var(--ir-text);
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1.3;
     text-align: center;
 }
 
 /* プレイヤーパネル（009 §6・010 §4）: 2 行。幅 150 px まで 1 行に収める。アイコンの高さは 14 px、数字は変化時に 0.3 秒だけ強調する */
 .ir-pp {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 32px;
+    gap: 3px 2px;
+    align-items: center;
     margin-top: 4px;
     font-size: 12px;
 }
 
 .ir-pp-row {
+    grid-column: 1;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 2px 6px;
+    gap: 2px 3px;
 }
 
 .ir-pp-item {
@@ -1206,7 +1228,28 @@ body::before {
 .ir-pp-value {
     min-width: 1em;
     font-weight: bold;
-    color: var(--ir-text);
+}
+
+/* 領域へ移るボタン（011 §2.3）。2 行に縦に跨る 32 × 32px。盤面の外なので、色は BGA のパネルに従う（currentColor） */
+.ir-pp-nav {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid rgb(128 128 128 / 60%);
+    border-radius: var(--ir-r);
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+}
+
+.ir-pp-nav .ir-sym {
+    width: 16px;
+    height: 16px;
 }
 
 .ir-pp-value.ir-pop {
@@ -1444,7 +1487,7 @@ body::before {
     color: var(--ir-text-muted);
 }
 
-/* ---- 10. narrow の並びとジャンプリンク（010 §3.7。他の規則より後ろに置く） ---- */
+/* ---- 10. narrow の並び（010 §3.7。他の規則より後ろに置く） ---- */
 
 .ir-root[data-layout="narrow"] {
     display: flex;
@@ -1501,14 +1544,6 @@ body::before {
     width: var(--ir-wd);
     height: calc(var(--ir-wd) * 390 / 280);
 }
-
-/* ジャンプリンク（bga-jump-to。盤面の外に置かれる）は、全体が収まる xl・wide では出さない（010 §3.7） */
-/* stylelint-disable selector-class-pattern -- bga-jump-to のクラス名 */
-html[data-ir-layout="xl"] .bga-jump-to_controls,
-html[data-ir-layout="wide"] .bga-jump-to_controls {
-    display: none;
-}
-/* stylelint-enable selector-class-pattern */
 
 /* xl・wide の想起の案内パネルは共通の列の先頭（上の grid の規則）。列の幅に収め、画像は小さく、文字は横に置き、入らなければ下に回す。他の規則より後ろに置く */
 .ir-root[data-layout="xl"] .ir-recall-panel,

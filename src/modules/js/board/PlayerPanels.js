@@ -2,6 +2,7 @@
  * プレイヤーパネル（BGA 標準のパネルに足す 2 行。仕様書 010 §4。009 §6 の 3 行から、トークン・精神階層を外した）。
  *   1 行目: 自己構成スコア（N / 20）・手札の枚数
  *   2 行目: 鍵の本数（知恵・意志・感情・万能）
+ *   右端: そのプレイヤーの領域へ移るボタン（32 × 32px、2 行に縦に跨る。011 §2.3。bga-jump-to の代わり）
  * トークン・精神階層は領域・精神トラックが出す（1 つの値は 1 か所）。状態（`states`）には持ち続け、描画だけしない。
  * 値はすべて公開情報。更新は通知から `PlayerNotifications`・`CommonNotifications` のフックが呼ぶ（このクラスは通知名を知らない）。
  * 標準のスコア欄は使わない（終了時の勝者 1 / 他 0 になるため。`hideStandardScore`）。
@@ -9,6 +10,7 @@
  */
 import { paintUiSprite } from '../cards/card-face.js';
 import { el } from '../ui/dom.js';
+import { createSymbol } from '../ui/icons.js';
 import {
   KEY_KINDS, applyComposedChange, clampTier, exchangeChange, keyCounts, keyTable, panelState, scoreText, scoresFromArgs,
 } from './player-panel-model.js';
@@ -20,6 +22,7 @@ import { toInt } from './view-model.js';
  * @property {(playerId: number) => HTMLElement | null | undefined} getElement `bga.playerPanels.getElement`
  * @property {(file: string) => string} imgUrl
  * @property {() => boolean} animationsActive
+ * @property {(playerId: number) => string} [playerName] 移動ボタンの aria-label に使う名前
  */
 
 /** 値が変わったときの強調（CSS の `ir-pop`、0.3 秒）を付け直す時間 */
@@ -194,10 +197,27 @@ export class PlayerPanels {
         const root = el('div', { class: 'ir-pp', data: { player: playerId } }, [
             row(item('score', _('Construction score'), 'icon_score'), item('hand', _('Hand (cards)'), null, 'ir-hand-icon')),
             row(...keys),
+            this.navButton(playerId),
         ]);
         host.append(root);
         this.values.set(playerId, values);
         this.hideStandardScore(playerId);
+    }
+
+    /**
+     * そのプレイヤーの領域へスクロールするボタン（011 §2.3）。title は付けない（aria-label のみ。ツールチップは U-18）。
+     * @param {number} playerId
+     * @returns {HTMLElement}
+     */
+    navButton(playerId) {
+        const name = this.deps.playerName?.(playerId) ?? String(playerId);
+        const label = _('Go to ${player_name}\'s area').replace('${player_name}', name);
+        const button = el('button', { class: 'ir-pp-nav', attrs: { type: 'button', 'aria-label': label } }, [createSymbol('chevron-down')]);
+        button.addEventListener('click', () => {
+            const reduce = typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            document.getElementById(`ir-player-area-${playerId}`)?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+        });
+        return button;
     }
 
     /**

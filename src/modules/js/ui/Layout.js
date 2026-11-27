@@ -1,6 +1,6 @@
 /**
  * レイアウトの切り替え（仕様書 009 §2.1・§2.4）。`@media` ではなく、`#ir-root` の実際の幅を ResizeObserver で測り、
- * `data-layout`（xl / wide / medium / narrow。010 §3）を `#ir-root` と `<html>`（data-ir-layout）に、サイズの CSS 変数を `:root` に入れる。
+ * `data-layout`（xl / wide / medium / narrow。010 §3）を `#ir-root` に、サイズの CSS 変数を `:root` に入れる。
  * 幅 Wc は `#ir-root` の内容の幅（左右の余白 8px を除く）、見える高さ Hv は `window.innerHeight` から `#ir-root` の上端（ページの先頭からの位置）を引いた値。
  * `:root` に入れるのは、アニメーション中のカードが `body` 直下の animation-surface へ移されても大きさが変わらないようにするため（003 §6.2）。
  * © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
@@ -62,7 +62,6 @@ export class Layout {
         style.setProperty('--ir-c', `${sizes.landW}px`);
         style.setProperty('--ir-room-card-w', `${sizes.roomCardW}px`);
         this.root.dataset.layout = sizes.layout;
-        document.documentElement.dataset.irLayout = sizes.layout;
         if (this.layout !== sizes.layout) {
             this.layout = sizes.layout;
             this.onLayoutChange?.(sizes.layout);

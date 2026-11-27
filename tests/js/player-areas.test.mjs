@@ -74,26 +74,31 @@ test('setup: 手札・自己構成済み・横向き・下のカード・自我�
   assert.equal(stockOf(areas, P1).composed.getCardElement({ id: 51 }).hasClass('ir-tapped'), false);
   assert.deepEqual(keysIn(mine.under), ['M001']);
 
-  // 自我・目標（獲得済みは持ち主の領域）。手番の枠
+  // 自我・目標（獲得済みは持ち主の領域）。手番は data-turn だけ（太い枠・札は廃止。011 §4.1）
   assert.deepEqual(keysIn(mine.ego), ['I02']);
   assert.deepEqual(keysIn(mine.enhEgo), ['E01']);
   assert.deepEqual(keysIn(theirs.ownedGoals), ['O004']);
-  assert.equal(mine.area.hasClass('ir-turn'), true);
-  assert.equal(theirs.area.hasClass('ir-turn'), false);
+  assert.equal(mine.area.dataset.turn, '1');
+  assert.equal(theirs.area.dataset.turn, undefined);
+  assert.equal(mine.area.querySelector('.ir-turn-mark'), null, '「Your turn」の札は廃止');
 
-  // トークンのチップ: 4 種類を常に出し（万能移動鍵は表 + 使用済みで 1 つ）、0 は薄く
-  assert.equal(mine.tokens.querySelectorAll('.ir-token').length, 4);
-  assert.equal(mine.tokens.querySelector('.ir-token[data-kind="wildUsed"]'), null);
-  assert.equal(mine.tokens.querySelector('.ir-token[data-kind="wildUp"]')?.querySelector('.ir-token-count')?.textContent, '3 + 1 used');
-  assert.equal(mine.tokens.querySelector('.ir-token[data-kind="wildUp"]')?.getAttribute('aria-label'), 'Omni-Move Key: 3 + 1 used');
+  // トークン: 5 つを常に出し（万能移動鍵は表と使用済みの 2 つの画像）、0 は薄く（011 §1.3）
+  assert.equal(mine.tokens.querySelectorAll('.ir-token').length, 5);
+  assert.equal(mine.tokens.querySelector('.ir-token[data-kind="wildUp"]')?.querySelector('.ir-token-count')?.textContent, '3');
+  assert.equal(mine.tokens.querySelector('.ir-token[data-kind="wildUsed"]')?.querySelector('.ir-token-count')?.textContent, '1');
+  assert.equal(mine.tokens.querySelector('.ir-token[data-kind="wildUp"]')?.getAttribute('aria-label'), 'Omni-Move Key: 3');
+  assert.equal(mine.tokens.querySelector('.ir-token[data-kind="wildUsed"]')?.getAttribute('aria-label'), 'Omni-Move Key (used): 1');
+  assert.equal(mine.tokens.querySelector('.ir-token[data-kind="wildUsed"]')?.getAttribute('title'), null, '新しい要素に title は付けない');
+  assert.equal(theirs.tokens.querySelector('.ir-token[data-kind="wildUsed"]')?.hasClass('ir-zero'), true);
+  assert.equal(theirs.tokens.querySelector('.ir-token[data-kind="wildUp"]')?.hasClass('ir-zero'), false);
   assert.equal(mine.tokens.querySelector('.ir-token[data-kind="light"]')?.getAttribute('title'), 'Psychic Light: 2');
   assert.equal(theirs.tokens.querySelector('.ir-token[data-kind="light"]')?.hasClass('ir-zero'), true);
   assert.equal(theirs.tokens.querySelector('.ir-token[data-kind="light"]')?.getAttribute('aria-label'), 'Psychic Light: 0');
 
-  // 名前の行: 「N / 20」と手番の印（手番のときだけ）
+  // 名前の行: 「N / 20」。プレイヤー色は data-color（見出しの 3px の線・名前の文字色）
   assert.equal(mine.score.textContent, '0 / 20');
-  assert.equal(mine.turnMark.hidden, false);
-  assert.equal(theirs.turnMark.hidden, true);
+  assert.equal(mine.area.querySelector('.ir-player-header')?.dataset.color, 'red');
+  assert.equal(theirs.area.querySelector('.ir-player-header')?.dataset.color, 'blue');
 
   // 他人は手札のマットも枚数チップも持たない（枚数はパネルだけ。010 §4）。手札のマットは自分だけ
   assert.equal(theirs.hand, null);
@@ -101,7 +106,13 @@ test('setup: 手札・自己構成済み・横向き・下のカード・自我�
   assert.equal(theirs.area.querySelector('.ir-zone-hand'), null);
   assert.equal(theirs.area.querySelector('.ir-hand-count'), null);
   assert.notEqual(mine.area.querySelector('.ir-zone-hand'), null);
-  assert.equal(mine.area.querySelectorAll('.ir-zone-title').length + theirs.area.querySelectorAll('.ir-zone-title').length, 0, '見出しの行はタブに置き換えた');
+  // 手札と自己構成済みはレール（上端の線 + 線の上のラベル）。丸いタブはない
+  assert.equal(mine.area.querySelectorAll('.ir-zone-tab').length + theirs.area.querySelectorAll('.ir-zone-tab').length, 0, '丸いタブは廃止');
+  assert.equal(mine.area.querySelector('.ir-zone-hand')?.hasClass('ir-rail'), true);
+  assert.deepEqual(mine.area.querySelectorAll('.ir-rail-label').map((l) => l.textContent), ['Hand', 'Constructed']);
+  assert.deepEqual(theirs.area.querySelectorAll('.ir-rail-label').map((l) => l.textContent), ['Constructed'], '他プレイヤーは手札のレールを出さない');
+  assert.equal(mine.area.querySelector('.ir-rail-label')?.getAttribute('title'), null, 'ラベルに title は付けない');
+  assert.equal(mine.handWarn?.hidden, true, '上限以内なら警告の SVG も隠す');
 
   // 強化自我の枠・獲得した目標の欄は、持っているときだけ表示（持たなければ hidden）
   assert.equal(mine.enhEgo.hidden, false);
@@ -146,6 +157,8 @@ test('通知: 手札・自己構成・横向き・トークン・下のカード
   assert.equal(board.playerAreas.get(P1)?.handInfo?.textContent, '9 / 8 (over the limit)');
   assert.equal(board.playerAreas.get(P1)?.handInfo?.hasClass('ir-over-limit'), true);
   assert.equal(board.playerAreas.get(P1)?.handInfo?.hidden, false);
+  assert.equal(board.playerAreas.get(P1)?.handWarn?.hidden, false);
+  assert.equal(board.playerAreas.get(P1)?.handWarn?.querySelector('.ir-sym-warn') !== null, true, '警告の印は SVG（CSS の content の「!」ではない）');
 
   // N18 自己構成: 手札から自己構成済みへ
   await pn.notif_cardComposed({ player_id: P1, card: { id: 33, type: 7 }, hand_count: 8 });
@@ -190,8 +203,8 @@ test('通知: 手札・自己構成・横向き・トークン・下のカード
 
   // N04 手番
   await pn.notif_turnStarted({ player_id: P2, turn_no: 2 });
-  assert.equal(board.playerAreas.get(P2)?.area.hasClass('ir-turn'), true);
-  assert.equal(board.playerAreas.get(P1)?.area.hasClass('ir-turn'), false);
+  assert.equal(board.playerAreas.get(P2)?.area.dataset.turn, '1');
+  assert.equal(board.playerAreas.get(P1)?.area.dataset.turn, undefined);
 });
 
 test('通知: 場札・部屋・交換・目標・自我が手札と領域に届く', async () => {

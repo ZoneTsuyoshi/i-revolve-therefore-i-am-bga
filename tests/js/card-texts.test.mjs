@@ -118,3 +118,12 @@ test('レビュー用の対照表（docs/publishing/card-texts-review.md）が t
     assert.ok(doc.includes(str), `対照表に無い英語: ${str}`);
   }
 });
+
+test('SYMBOLS: 記号の SVG（check・chevron-down・warn）。英語テキストの {name} 記法とは別', async () => {
+  const { SYMBOLS } = await import('../../src/modules/js/ui/icon-names.js');
+  for (const name of ['check', 'chevron-down', 'warn']) {
+    assert.ok(SYMBOLS[name].paths.length > 0 && SYMBOLS[name].paths.every((d) => d.startsWith('M')), name);
+    assert.equal(Object.hasOwn(ICONS, name), false);
+  }
+  assert.deepEqual(tokenizeText('{check}'), [{ text: '{check}' }], '記号は {name} 記法に出てこない');
+});

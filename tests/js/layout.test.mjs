@@ -10,12 +10,12 @@ test('layoutOf: 高さで W を抑えた xl の条件と wide の下限（Wc ≥
   assert.equal(layoutOf(971, Infinity), 'wide');
   assert.equal(layoutOf(600), 'medium');
   assert.equal(layoutOf(599), 'narrow');
-  // xl: Wc ≥ 6.1 × W_x + 7g + P_w（W_x = min(213, max(W_h, 150))、P_w = 4 × 128 + 3 × 8 + 28 = 564）。Hv = 810 で W_x = 158、境目は 1583.8
-  assert.equal(layoutOf(1584, 810), 'xl');
-  assert.equal(layoutOf(1583, 810), 'wide');
-  // 高さが低いほど W_x が下限 150 に近づき、xl の境目が下がる（Hv = 700 → 150。境目 1535）
-  assert.equal(layoutOf(1535, 700), 'xl');
-  assert.equal(layoutOf(1534, 700), 'wide');
+  // xl: Wc ≥ 6.1 × W_x + 7g + P_w（W_x = min(213, max(W_h, 150))、P_w = 4 × 128 + 3 × 8 + 12 = 548。011 §4.1 で領域の箱をやめ 28 → 12）。Hv = 810 で W_x = 158、境目は 1567.8
+  assert.equal(layoutOf(1568, 810), 'xl');
+  assert.equal(layoutOf(1567, 810), 'wide');
+  // 高さが低いほど W_x が下限 150 に近づき、xl の境目が下がる（Hv = 700 → 150。境目 1519）
+  assert.equal(layoutOf(1519, 700), 'xl');
+  assert.equal(layoutOf(1518, 700), 'wide');
 });
 
 test('computeSizes: 高さを渡さないときは高さで抑えない（009 §2.4 の計算例）', () => {
@@ -52,14 +52,14 @@ test('computeSizes: 環と山札の行が Hv に収まる（xl・wide で W が�
 });
 
 test('resolveSizes: 大きい配置へ変えるのは幅が 24px 狭くても同じ結果になるときだけ（ヒステリシス）', () => {
-  // wide から: Hv = 810 の xl の境目は 1584。1584〜1607 は 24px 狭いと wide になるので wide のまま
-  assert.equal(resolveSizes(1596, 810, 'wide').layout, 'wide');
-  assert.equal(resolveSizes(1608, 810, 'wide').layout, 'xl');
+  // wide から: Hv = 810 の xl の境目は 1568。1568〜1591 は 24px 狭いと wide になるので wide のまま
+  assert.equal(resolveSizes(1580, 810, 'wide').layout, 'wide');
+  assert.equal(resolveSizes(1592, 810, 'wide').layout, 'xl');
   // 初回・xl のままなら素直に判定
-  assert.equal(resolveSizes(1596, 810, null).layout, 'xl');
-  assert.equal(resolveSizes(1596, 810, 'xl').layout, 'xl');
+  assert.equal(resolveSizes(1580, 810, null).layout, 'xl');
+  assert.equal(resolveSizes(1580, 810, 'xl').layout, 'xl');
   // 小さい配置へはすぐ変える（xl から、境目の 1 px 下で wide）
-  assert.equal(resolveSizes(1583, 810, 'xl').layout, 'wide');
+  assert.equal(resolveSizes(1567, 810, 'xl').layout, 'wide');
   // medium から wide（971）、narrow から medium（600）も同様
   assert.equal(resolveSizes(980, 520, 'medium').layout, 'medium');
   assert.equal(resolveSizes(995, 520, 'medium').layout, 'wide');
