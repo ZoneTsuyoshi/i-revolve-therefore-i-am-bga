@@ -1,0 +1,90 @@
+/* 英語版ルールブックの共通スタイル。使い方は README.md。
+   座標・大きさ・フォントサイズはすべて PDF のポイント（pt）。ページの左上が原点。原本の文字の位置（spans/pN.txt の bbox）がそのまま使える。
+   フォントの @font-face は build.mjs が先頭に足す（build/fonts/ の絶対パス）。 */
+
+:root {
+  /* 原本から拾った色（measure.mjs color で測った値。足すときも測る） */
+  --ink: #030000;      /* 本文の文字（原本の span の色。見出しは #221815 のこともある） */
+  --white: #fcfcfc;
+  --paper: #e1dcbd;    /* ページの地の色 */
+  --salmon: #cd9582;   /* 移動フェイズの帯・枠の地 */
+  --teal: #85bfc6;     /* 想起フェイズ */
+  --yellow: #e4dc84;   /* 床アクションフェイズ */
+  --lime: #c2d843;     /* 自己構成フェイズ */
+  --pink: #e9c9df;     /* クリーンアップフェイズ */
+  --alert: #e61c37;    /* 「重要：」の赤（枠も同じ色） */
+  --alert-bg: #f5eae6; /* 「重要」の箱の地 */
+}
+
+@page { size: 165mm 227mm; margin: 0; }
+html, body { margin: 0; padding: 0; background: #fff; }
+body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+/* ---- ページの入れ物（build.mjs が作る。原稿では触らない） ---- */
+.outer { position: relative; overflow: hidden; width: 165mm; height: 227mm; break-after: page; }
+.outer:last-child { break-after: auto; }
+.sheet { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; }
+.sheet > .bg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; }
+body.preview .outer { width: 467.739pt; height: 643.487pt; break-after: auto; }
+
+/* ---- 覆う四角 .e ----
+   文字でないもの（p1 の題字の絵、本文の途中のアイコンなど）を消すときだけ使う。文字は下地から抜いてあるので覆わない。
+   単色: <div class="e" style="--x:10;--y:10;--w:50;--h:20;--c:#e0dcbc;--r:2"></div> */
+.e { position: absolute; left: calc(var(--x) * 1pt); top: calc(var(--y) * 1pt); width: calc(var(--w) * 1pt); height: calc(var(--h) * 1pt);
+  background: var(--c, var(--paper)); border-radius: calc(var(--r, 0) * 1pt); }
+
+/* ---- 文字の箱 .t ---- */
+.t { position: absolute; left: calc(var(--x) * 1pt); top: calc(var(--y) * 1pt); width: calc(var(--w) * 1pt); height: calc(var(--h) * 1pt);
+  box-sizing: border-box; font-family: "Barlow Semi Condensed", sans-serif; font-weight: 500; color: var(--ink);
+  font-size: calc(var(--fs, 7) * 1pt); line-height: var(--lh, 1.4); letter-spacing: calc(var(--ls, 0) * 1em);
+  text-align: left; text-wrap: pretty; hyphens: manual; font-kerning: normal; }
+.t > .tin { width: 100%; }
+.t.c { text-align: center; }
+.t.r { text-align: right; }
+.t.j { text-align: justify; }
+.t.vm { display: grid; align-content: center; }
+.t.vb { display: grid; align-content: end; }
+.t.nw > .tin, span.nw { white-space: nowrap; }   /* 文中の <span class="nw"> でも折り返さない */
+.t p { margin: 0; }
+.t p + p { margin-top: var(--pg, 0.3em); }
+
+/* 太さ・書体 */
+.b5 { font-weight: 500; } .b6 { font-weight: 600; } .b7 { font-weight: 700; } .b8 { font-weight: 800; }
+.cond { font-family: "Barlow Condensed", "Barlow Semi Condensed", sans-serif; }   /* 狭い札用。500 / 700 */
+.title { font-family: "EB Garamond", serif; font-style: italic; font-weight: 600; }  /* p1 の題字（箱絵の英字に合わせたイタリック） */
+.up { text-transform: uppercase; }
+.it { font-style: italic; }
+
+/* 色（.t にも文中の <span> にも付けられる） */
+.ink { color: var(--ink); }
+.wh { color: var(--white); }
+.alert { color: var(--alert); }
+.ct { color: var(--c); }   /* style="--c:#xxxxxx" の任意色 */
+
+/* 箇条書き: <div class="li bu"><span class="n">…</span>本文</div>。折り返しが本文の頭にそろう。字下げは --ind（em） */
+.li { padding-left: calc(var(--ind, 1.1) * 1em); text-indent: calc(var(--ind, 1.1) * -1em); }
+/* 箇条書きの点（原本の ▪）は文字ではなく CSS で描く（同梱フォントに字形が無い） */
+.li.bu::before { content: ""; display: inline-block; box-sizing: border-box; width: 0.34em; height: 0.34em; margin-right: calc(var(--ind, 1.1) * 1em - 0.34em); background: currentColor; vertical-align: 0.16em; text-indent: 0; }
+/* 見出しの ◆ も同じく CSS: <span class="dia"></span> */
+.dia { display: inline-block; width: 0.62em; height: 0.62em; margin-right: 0.3em; background: currentColor; transform: rotate(45deg) scale(0.8); vertical-align: 0.02em; }
+.li > .n { display: inline-block; width: calc(var(--ind, 1.1) * 1em); text-indent: 0; }
+/* 内容物の見出しの ●（p1）も CSS: <span class="dot"></span> */
+.dot { display: inline-block; width: 0.56em; height: 0.56em; margin-right: 0.45em; border-radius: 50%; background: currentColor; vertical-align: 0.08em; }
+
+/* ---- 番号札（インライン部品。原本の画像で足りる所は画像を残す）: <span class="nt" style="--c:#2a9d8f">1</span> ---- */
+.nt { display: inline-block; min-width: 1.15em; padding: 0 0.1em; box-sizing: border-box; text-align: center; font-weight: 800; line-height: 1.15; color: #fff; background: var(--c, #555); vertical-align: 0.02em; }
+/* 丸数字（文中で ①②③ を指す）: <span class="cn">1</span>。①②③ の文字は同梱フォントに字形が無いので、文字を使わずに丸を CSS で描く */
+.cn { display: inline-block; box-sizing: border-box; width: 1.24em; height: 1.24em; border: 0.085em solid currentColor; border-radius: 50%;
+  text-align: center; line-height: 1.07em; font-size: 0.82em; font-weight: 800; vertical-align: 0.08em; margin: 0 0.04em; }
+
+/* ---- インラインのアイコン（assets.mjs から icons.css が作られ、build.mjs が埋め込む）----
+   <i class="ic key-wisdom"></i>。高さは --ich（既定 1.15em）、幅は原本の縦横比（--ar）から決まる。 */
+.ic { display: inline-block; height: var(--ich, 1.15em); width: calc(var(--ich, 1.15em) * var(--ar, 1)); vertical-align: -0.24em; font-style: normal;
+  /* --ich を大きくしても行の高さが変わらないよう、増えたぶんを上下の負の余白で打ち消す */
+  margin: calc((1.15em - var(--ich, 1.15em)) / 2) 0.06em;
+  background-repeat: no-repeat; background-position: center; background-size: contain; }
+
+/* ---- 確認用（--debug）---- */
+body.debug .t { outline: 0.4pt solid rgba(255, 0, 255, 0.9); }
+body.debug .e { outline: 0.4pt dashed rgba(0, 160, 0, 0.9); }
+.t[data-overflow="1"] { outline: 1.2pt solid #f00 !important; }

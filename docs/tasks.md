@@ -79,3 +79,4 @@
 | SSH 鍵の BGA Studio への登録、GitHub への Secrets / Variables の登録 | T-005 の導入時 | 鍵は姉妹プロジェクトと共通で接続確認済み（2026-10-20）。Secrets / Variables の登録は T-005 で |
 | GitHub リポジトリの設定（ブランチ自動削除、squash merge のみ許可。`main` の保護は任意） | T-004 の導入時 | 済（2026-10-20。エージェントが設定。`main` の保護はしない） |
 | BGA のライセンス確認（作者が権利者であることを BGA に示す。[Pre-release checklist](https://en.doc.boardgamearena.com/Pre-release_checklist)） | アルファ申請まで | 公式サイトに告知を公開（2026-10-22）。X への投稿と申請フォームの送信は作者（手順と記入例は [publishing/bga-license.md](publishing/bga-license.md)） |
+| 英語版ルールブック（PDF）の確認と公開。手元で `npm run prepare:rulebook-en`（初回だけ）→ `npm run build:rulebook-en` を実行すると `build/rulebook-en/I-Revolve-Therefore-I-Am-Rulebook-EN.pdf` ができる（原本の図版を含むため PDF はコミットしていない）。確認してほしい点は [publishing/rulebook-en.md](publishing/rulebook-en.md) の「作者に確認したい点」 | 公開するとき | 初版を作成（2026-11-27）。作者の確認待ち。公開（公式サイトの英語ページからのリンクなど）は作者が行う |

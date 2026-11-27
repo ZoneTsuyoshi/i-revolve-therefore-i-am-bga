@@ -66,6 +66,12 @@ export default defineConfig([
     languageOptions: { globals: globals.node },
   },
 
+  // 英語版ルールブックの fit.js（Chrome の中で動く。build.mjs が HTML に埋め込む）
+  {
+    files: ['scripts/rulebook-en/fit.js'],
+    languageOptions: { ecmaVersion: 'latest', sourceType: 'script', globals: globals.browser },
+  },
+
   // 撮影スクリプトは、page.evaluate に渡す関数の中でブラウザのグローバルも使う
   {
     files: ['scripts/preview/shoot.mjs'],

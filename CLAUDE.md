@@ -62,7 +62,7 @@ git fetch --prune && git pull --ff-only origin main
   4. 仕様書 `docs/specs/`
 - 仕様書と印刷物・FAQ が食い違う場合は印刷物・FAQ を正とする。どれにも書かれていない点は推測で埋めず作者に確認する。
 - 作者への質問と回答の記録は [docs/development/rule-questions.md](docs/development/rule-questions.md)。FAQ・カードデータの起票・改修の手順は [docs/development/faq-workflow.md](docs/development/faq-workflow.md)。
-- ルールブック PDF は日本語フォントが CID のまま埋め込まれており、`pypdf` ではテキストが化ける。テキストを抽出するときは `pdfminer.six`（`pdf2txt.py`）を使う。それでも `(cid:13673)`（廻）、`(cid:20276)`（鍵）などが残るので、前後の文脈やページ画像で補う。
+- ルールブック PDF は日本語フォントが CID のまま埋め込まれており、`pypdf` ではテキストが化ける。テキストを抽出するときは `pdfminer.six`（`pdf2txt.py`）を使う。それでも `(cid:13673)`（廻）、`(cid:20276)`（鍵）などが残るので、前後の文脈やページ画像で補う。PyMuPDF なら 廻・鍵 も含めて正しく読め、文字の位置も取れる（`npm run prepare:rulebook-en` が `build/rulebook-en/spans/pN.txt` に全ページの原文を位置つきで書き出す）。
 
 ## ゲームの用語
 
