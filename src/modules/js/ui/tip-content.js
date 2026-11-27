@@ -1,6 +1,5 @@
 /**
  * ツールチップの中身の DOM（仕様書 011 §6.1）。表示モデル（`card-info-model.js` の `describeCard`）を英語の名前・数値・効果文の部品にする。
- * 想起中の案内パネル（`recall-panel.js`。U-19 で廃止）も同じ部品を使う。
  * © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
  */
 import { renderText } from './icons.js';

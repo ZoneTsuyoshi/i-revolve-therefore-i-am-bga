@@ -154,3 +154,9 @@ test('composeAfterDiscard / composeSelectionWithout: 捨てた手札を外し、
   assert.equal(board.hand.size, 3);
   assert.deepEqual(composeSelectionWithout({ hand: [2, 1], tap: [9], light: 1, extra: [3, 1] }, [2, 3]), { hand: [1], tap: [9], light: 1, extra: [1] });
 });
+
+test('composeFromArgs: 手札の type は数値でも、サーバーが送る "M056" 形式でも数値になる', () => {
+  const board = composeFromArgs(args({ hand: [{ ...row(1, 1, 2), type: 'M056' }, { ...row(2, 1, 2), type: 7 }] }));
+  assert.equal(board.hand.get(1)?.type, 56);
+  assert.equal(board.hand.get(2)?.type, 7);
+});

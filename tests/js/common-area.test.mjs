@@ -10,6 +10,8 @@ import {
 test('キーの組み立て: 0 埋めと不正値', () => {
   assert.equal(memKey(14), 'M014');
   assert.equal(memKey('7'), 'M007');
+  assert.equal(memKey('M056'), 'M056', "サーバーが $definition->id で送る 'M056' 形式");
+  assert.equal(memKey(56), 'M056');
   assert.equal(floorKey(3), 'F03');
   assert.equal(objectiveKey('2'), 'O002');
   assert.equal(backSpriteKey('1B'), 'Rev1B');

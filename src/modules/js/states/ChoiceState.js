@@ -6,6 +6,8 @@
  */
 import { ActionState } from './ActionState.js';
 import { list, obj } from './args.js';
+import { cardNameHtml } from '../ui/log-format.js';
+import { setTitleHtml } from '../ui/status-title.js';
 import {
   KIND, answer, choiceFromArgs, costText, entrepreneurHand, entrepreneurRooms, firstRooms, pairHand, pairTableau, pickCount, pickReady,
   plainText, secondRooms, spiritParts, swapHandFieldReady, toIds,
@@ -63,7 +65,7 @@ export class ChoiceState extends ActionState {
       this.showCandidates(this.choice.egoCandidates, null, (key) => {
         this.ego = key;
         this.render();
-      });
+      }, _('Choose an Enhanced Ego'));
     }
   }
 
@@ -96,6 +98,22 @@ export class ChoiceState extends ActionState {
    */
   sourceName(source) {
     return this.getDeps().texts?.cards[source]?.name ?? source;
+  }
+
+  /**
+   * 想起効果の選択なら、文の先頭に「Recall カード名:」を付けた文で出す（011 §3.2）。カード名は `span.ir-log-card`（U-18 のツールチップが出る）。
+   * 想起効果かどうかは `spec` が `RC-` で始まるか。翻訳のため、2 つの文は呼び出し側が `_()` のリテラルで渡す。
+   * @param {string} recallTemplate 想起のときの文（`${card}` を含む）
+   * @param {string} template 想起でないときの文
+   * @param {Record<string, unknown>} [args]
+   */
+  title(recallTemplate, template, args = {}) {
+    const choice = this.choice;
+    if (choice !== null && choice.spec.startsWith('RC-')) {
+      setTitleHtml(this.bga, recallTemplate, { ...args, card: cardNameHtml(choice.source, this.getDeps().texts, choice.source) });
+    } else {
+      this.bga.statusBar.setTitle(template, args);
+    }
   }
 
   /**
@@ -142,25 +160,25 @@ export class ChoiceState extends ActionState {
     switch (choice.kind) {
       case KIND.PICK_FIELD_CARD: {
         const count = pickCount(choice).exact ?? 1;
-        bar.setTitle(_('${you} must take ${count} open card(s)'), { count });
+        this.title(_('Recall ${card}: ${you} must take ${count} open card(s)'), _('${you} must take ${count} open card(s)'), { count });
         this.chooseField(toIds(list(data.candidates)));
         this.confirmButton(pickReady(choice, this.field), () => answer.cards(this.field));
         break;
       }
       case KIND.PICK_DISCARD: {
         const count = pickCount(choice).exact ?? 1;
-        bar.setTitle(_('${you} must discard ${count} card(s) from your hand'), { count });
+        this.title(_('Recall ${card}: ${you} must discard ${count} card(s)'), _('${you} must discard ${count} card(s) from your hand'), { count });
         this.chooseHand(handIds(), 'multiple');
         this.confirmButton(pickReady(choice, this.hand), () => answer.cards(this.hand));
         break;
       }
       case KIND.SELECT_DISCARD_FOR_LIGHT:
-        bar.setTitle(_('${you} may discard Memory cards to gain Psychic Light (gain ${light})'), { light: this.hand.length });
+        this.title(_('Recall ${card}: ${you} may discard cards for Psychic Light (gain ${light})'), _('${you} may discard Memory cards to gain Psychic Light (gain ${light})'), { light: this.hand.length });
         this.chooseHand(handIds(), 'multiple');
         this.confirmButton(this.hand.length > 0, () => answer.cards(this.hand));
         break;
       case KIND.SELECT_SWAP_HAND_FIELD:
-        bar.setTitle(_('${you} may swap level 1 cards in your hand with open cards (choose the same number of each)'));
+        this.title(_('Recall ${card}: ${you} may swap level 1 cards in your hand with open cards'), _('${you} may swap level 1 cards in your hand with open cards (choose the same number of each)'));
         this.chooseHand(handIds().filter((id) => playerAreas?.handLevel(id) === 1), 'multiple');
         this.chooseField(toIds(list(data.field)));
         this.confirmButton(this.hand.length > 0 && swapHandFieldReady(this.hand, this.field), () => answer.swapHandField(this.hand, this.field));
@@ -169,12 +187,12 @@ export class ChoiceState extends ActionState {
         this.drawSwapSameCost(choice);
         break;
       case KIND.CONFIRM_USE:
-        bar.setTitle(_('${you} may use the effect of ${card}'), { card: this.sourceName(choice.source) });
+        setTitleHtml(this.bga, _('${you} may use the effect of ${card}'), { card: cardNameHtml(choice.source, this.getDeps().texts, choice.source) });
         this.button(_('Use'), () => this.reply(answer.use(true)));
         this.button(_('Do not use'), () => this.reply(answer.use(false)), { color: 'secondary' });
         break;
       case KIND.CONFIRM_MOVE:
-        bar.setTitle(_('${you} may move to the next room'));
+        this.title(_('Recall ${card}: ${you} may move to the next room'), _('${you} may move to the next room'));
         this.button(_('Move'), () => this.reply(answer.use(true)));
         this.button(_('Stay'), () => this.reply(answer.use(false)), { color: 'secondary' });
         break;
@@ -232,7 +250,7 @@ export class ChoiceState extends ActionState {
    */
   drawSwapSameCost(choice) {
     const { playerAreas, me } = this.getDeps();
-    this.bga.statusBar.setTitle(_('${you} may swap a constructed card with a Memory card of the same energy in your hand'));
+    this.title(_('Recall ${card}: ${you} may swap a constructed card with a hand card of the same energy'), _('${you} may swap a constructed card with a Memory card of the same energy in your hand'));
     if (me !== null) {
       playerAreas?.selectComposed(me, {
         ids: pairTableau(choice.pairs),

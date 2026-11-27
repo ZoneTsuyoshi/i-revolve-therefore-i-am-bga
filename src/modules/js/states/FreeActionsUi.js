@@ -5,6 +5,7 @@
  */
 import { claimableObjectives, canUseFreeActions, discardLightGain, toIds } from './choice-model.js';
 import { claimView } from './action-bar-model.js';
+import { setTip } from '../ui/dom.js';
 
 /**
  * @typedef {object} FreeActionsHost
@@ -28,17 +29,26 @@ export class FreeActionsUi {
     this.discardSelected = [];
     /** @type {string | null} 獲得するつもりで選んだ目標カードのキー（`O001`。010 §2.4） */
     this.claimSelected = null;
+    /** @type {HTMLElement | null} 手札のレールに置いた BGA 標準のボタン。`removeActionButtons()` で外れる保証がないので、自分で外す（011 §8） */
+    this.discardButton = null;
   }
 
-  /** 入場・離脱のとき: 変換モードと目標の選択を戻す */
+  /** 入場・離脱のとき: 変換モードと目標の選択を戻し、手札のレールのボタンを外す */
   reset() {
     this.discardMode = false;
     this.discardSelected = [];
     this.claimSelected = null;
+    this.clearDiscardButton();
+  }
+
+  /** 手札のレールのボタンを外す（保持した参照で remove する） */
+  clearDiscardButton() {
+    this.discardButton?.remove();
+    this.discardButton = null;
   }
 
   /**
-   * ターンプレイヤーだけに、フリーアクションを足す（010 §2.4）。手札を捨てて心光を得るのは手札の区画の見出しの小さなボタン、
+   * ターンプレイヤーだけに、フリーアクションを足す（010 §2.4）。手札を捨てて心光を得るのは手札のレールの右端の BGA 標準のボタン（`destination`。011 §8）、
    * 目標の獲得は共通の場の獲得できる目標カードを押して選び、青の「Claim goal」で確定する（獲得できる目標がなければ何も出さない）。
    */
   add() {
@@ -46,15 +56,17 @@ export class FreeActionsUi {
     if (!canUseFreeActions(host.getDeps().me, host.turnPlayer())) {
       return;
     }
-    host.getDeps().playerAreas?.showDiscardButton({
-      label: _('Discard 2 for Psychic Light'),
-      tooltip: _('Discard Memory cards from your hand. Every 2 cards\' worth gives 1 Psychic Light (a level 2 card counts as 2)'),
-      onClick: () => {
+    this.clearDiscardButton();
+    const destination = host.getDeps().playerAreas?.handActionsElement();
+    if (destination !== null && destination !== undefined) {
+      // 色は secondary（白）。title・tooltip は付けない（説明は U-18 の data-ir-tip。検査 4 に掛けない）
+      this.discardButton = host.bga.statusBar.addActionButton(_('Discard 2 for Psychic Light'), () => {
         this.discardMode = true;
         this.discardSelected = [];
         host.render();
-      },
-    });
+      }, { color: 'secondary', destination });
+      setTip(this.discardButton, _('Discard Memory cards from your hand. Every 2 cards\' worth gives 1 Psychic Light (a level 2 card counts as 2)'));
+    }
     this.setClaimListener(true);
     this.addClaimUi();
   }
@@ -102,9 +114,10 @@ export class FreeActionsUi {
   /** 「手札を捨てて心光を得る」の選択中の画面 */
   drawDiscard() {
     const host = this.host;
+    this.clearDiscardButton();
     const areas = host.getDeps().playerAreas;
     const gain = discardLightGain(this.discardSelected.map((id) => areas?.handLevel(id) ?? 1));
-    host.bga.statusBar.setTitle(_('Select Memory cards to discard for Psychic Light (gain ${light})'), { light: gain });
+    host.bga.statusBar.setTitle(_('Discard cards for Psychic Light (gain ${light})'), { light: gain });
     areas?.selectHand({
       ids: areas.handData.keys(),
       mode: 'multiple',

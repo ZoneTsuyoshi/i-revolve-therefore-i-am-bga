@@ -19,6 +19,7 @@ export class FakeElement {
     this.listeners = {};
     const self = this;
     this.classList = {
+      contains: (/** @type {string} */ name) => self.hasClass(name),
       add: (/** @type {string[]} */ ...names) => names.forEach((n) => { if (!self.hasClass(n)) { self.className = `${self.className} ${n}`.trim(); } }),
       remove: (/** @type {string[]} */ ...names) => { self.className = self.className.split(/\s+/).filter((n) => n !== '' && !names.includes(n)).join(' '); },
       toggle: (/** @type {string} */ name, /** @type {boolean} */ on) => {

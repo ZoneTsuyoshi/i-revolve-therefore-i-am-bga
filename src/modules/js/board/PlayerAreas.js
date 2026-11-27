@@ -13,7 +13,7 @@
  * © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
  */
 import { paintUiSprite } from '../cards/card-face.js';
-import { CLASS_SELECTABLE, CLASS_SELECTED, SelectionController, selectionClasses } from '../cards/selection.js';
+import { SelectionController, markElement, setSubject, unmarkElement } from '../cards/selection.js';
 import { el, setTip, tipAttrs } from '../ui/dom.js';
 import {
     TOKEN_KINDS, applyTotals, compareHand, composedModel, energyMap, handCard, handCountState, handModel, handWarning, memoryInfoTable,
@@ -58,9 +58,6 @@ export const CLASS_TOKEN_PICK = 'ir-token-pick';
  * @property {() => void} onAdd トークンを押したとき
  * @property {() => void} [onRemove] バッジを押したとき
  */
-
-/** 自己構成するカードとして選んだ手札の印（選択中の印とは別。手札を捨てる選択と重ねる） */
-export const CLASS_PENDING = 'ir-pending';
 
 /**
  * トークンのツールチップ（翻訳済み。`_()` は setup 以降に呼ぶ）。抽出のため文字列は `_()` のリテラルで書く。
@@ -109,12 +106,8 @@ export class PlayerAreas {
         /** @type {Map<string, number>} 獲得した目標カードのキー → 現在の得点 */
         this.goalPoints = new Map();
         this.selection = new SelectionController();
-        /** @type {HTMLElement[]} 「自己構成するカード」の印を付けた手札の要素 */
+        /** @type {HTMLElement[]} 「自己構成するカード」の印（`ir-subject`）を付けた手札の要素 */
         this.marked = [];
-        /** @type {HTMLElement | null} 手札のレールの右端に足した「Discard 2 for Psychic Light」ボタン */
-        this.discardButton = null;
-        /** @type {(() => void) | null} */
-        this.discardButtonHandler = null;
         /** @type {Array<() => void>} トークンを押せるようにした設定を元に戻す関数（`clearTokenPicks` で全部呼ぶ） */
         this.tokenPickCleanups = [];
         /** setup の非同期の追加がすべて終わったら解決する（テスト用） */
@@ -695,11 +688,12 @@ export class PlayerAreas {
     }
 
     /**
-     * 手札のカードに「自己構成するカード」の印（`ir-pending`）を付ける。前の印は外す。clearSelection で全部外れる。
+     * 手札のカードに「自己構成するカード」の印（`ir-subject`。問いの対象。選べないカードだが暗くしない）を付ける。前の印は外す。clearSelection で全部外れる。
+     * 印は選択の再描画（`ir-off` の付け直し）より先に付けること。
      * @param {Iterable<number>} ids
      */
-    markHand(ids) {
-        this.unmarkHand();
+    markHandSubject(ids) {
+        this.clearHandSubject();
         const hand = this.me === null ? null : this.stocks.get(this.me)?.hand;
         if (hand === null || hand === undefined) {
             return;
@@ -708,15 +702,15 @@ export class PlayerAreas {
         for (const card of hand.getCards()) {
             const element = hand.getCardElement(card);
             if (wanted.has(toInt(card.id)) && element instanceof HTMLElement) {
-                element.classList.add(CLASS_PENDING);
+                setSubject(element, true);
                 this.marked.push(element);
             }
         }
     }
 
-    unmarkHand() {
+    clearHandSubject() {
         for (const element of this.marked) {
-            element.classList.remove(CLASS_PENDING);
+            setSubject(element, false);
         }
         this.marked = [];
     }
@@ -733,47 +727,23 @@ export class PlayerAreas {
     /** 状態を出るとき: 選択モードと見た目を全部掃除する */
     clearSelection() {
         this.selection.clear();
-        this.unmarkHand();
+        this.clearHandSubject();
         this.clearTokenPicks();
-        this.clearDiscardButton();
     }
 
     /**
-     * 手札のレールの右端に、小さなボタン（手札を捨てて心光を得る。ターンプレイヤーだけ。010 §2.4）を出す。前のものは外す。
-     * 見た目は控えめな角丸 2px の形。BGA 標準のボタン（`destination`）への置き換えは U-19（011 §8）。
-     * @param {{ label: string, tooltip: string, onClick: () => void }} options
+     * 手札のレールの右端の置き場（BGA 標準のボタンの `destination`。手札を捨てて心光を得るボタンを置く。ターンプレイヤーだけ。011 §8）。
+     * @returns {HTMLElement | null} 自分の領域だけ。観戦者・他プレイヤーは null
      */
-    showDiscardButton({ label, tooltip, onClick }) {
-        this.clearDiscardButton();
-        const actions = this.me === null ? null : this.refs.playerAreas.get(this.me)?.handActions;
-        if (actions === null || actions === undefined) {
-            return;
-        }
-        const button = el('button', { class: 'ir-zone-button', attrs: { type: 'button' } }, [label]);
-        setTip(button, tooltip);
-        button.addEventListener('click', onClick);
-        this.discardButtonHandler = onClick;
-        actions.append(button);
-        this.discardButton = button;
-    }
-
-    /** レールの右端の小さなボタンを外す */
-    clearDiscardButton() {
-        if (this.discardButton !== null) {
-            if (this.discardButtonHandler !== null) {
-                this.discardButton.removeEventListener('click', this.discardButtonHandler);
-            }
-            this.discardButton.remove();
-        }
-        this.discardButton = null;
-        this.discardButtonHandler = null;
+    handActionsElement() {
+        return this.me === null ? null : (this.refs.playerAreas.get(this.me)?.handActions ?? null);
     }
 
     // ---- トークンを押す操作（010 §2.4。心光・万能移動鍵の数量、自己構成・精神分析トークンの使用） ----
 
     /**
-     * 自分のトークンを押せるようにする（種類ごと）。押せるもの（`canAdd`）に「選べる」の枠と「+」、選んだ個数（`count`）のバッジを出す。
-     * トークンを押すと `onAdd`、バッジを押すと `onRemove`。上限に達したもの（`canAdd` が偽）は枠を出さず、押しても何も起きない。
+     * 自分のトークンを押せるようにする（種類ごと）。押せるもの（`canAdd`）に `ir-can` と「+」、選んだ個数（`count`）に `ir-picked` とバッジを出す。
+     * トークンを押すと `onAdd`、バッジを押すと `onRemove`。上限に達したもの（`canAdd` が偽）は `ir-off`（押すと `tooltip` の理由を出す。持っていない 0 個のトークンは暗くしない）。
      * 前の設定は先に外す。状態を出るときは `clearSelection` が `clearTokenPicks` を呼ぶ。
      * @param {Partial<Record<'light' | 'wildUp' | 'compose' | 'analysis', TokenPick>>} picks
      */
@@ -808,10 +778,12 @@ export class PlayerAreas {
             target.addEventListener(type, handler);
             listeners.push([target, type, handler]);
         };
-        const classes = selectionClasses({ selectable: pick.canAdd, selected: pick.count > 0 });
-        for (const name of classes) {
-            root.classList.add(name);
-        }
+        markElement(root, {
+            selectable: pick.canAdd,
+            selected: pick.count > 0,
+            off: !pick.canAdd && !root.classList.contains('ir-zero'),
+            why: pick.tooltip,
+        });
         setTip(root, pick.tooltip);
         if (pick.canAdd) {
             root.classList.add(CLASS_TOKEN_PICK);
@@ -848,9 +820,8 @@ export class PlayerAreas {
             for (const node of added) {
                 node.remove();
             }
-            for (const name of [CLASS_SELECTABLE, CLASS_SELECTED, CLASS_TOKEN_PICK]) {
-                root.classList.toggle(name, false);
-            }
+            unmarkElement(root);
+            root.classList.toggle(CLASS_TOKEN_PICK, false);
             for (const name of ['role', 'tabindex', 'aria-label']) {
                 root.removeAttribute(name);
             }

@@ -4,7 +4,7 @@ import { chromium } from 'playwright-core';
 import { mkdir, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { locateTipTarget, measureTip, runChecks } from './checks.mjs';
+import { locateTipTarget, measureTip, runBlockedClickCheck, runChecks } from './checks.mjs';
 import { startServer } from './serve.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -46,10 +46,11 @@ function measureLayout() {
   const main = document.getElementById('ir-main');
   const hv = window.innerHeight;
   const roomW = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ir-room-w')) || 0;
-  // 初期自我などの候補の置き場（ir-pick-panel）は一時的に環の上に出るので、その高さは数えない。想起の案内パネルは xl・wide では共通の列の先頭（環は動かない）、medium・narrow では環の上
-  const wideLike = layout === 'xl' || layout === 'wide';
-  const pick = document.querySelector(wideLike ? '#ir-root > .ir-pick-panel' : '#ir-root > .ir-pick-panel, #ir-root > .ir-recall-panel:not([hidden])');
-  const pickHeight = pick === null ? 0 : pick.getBoundingClientRect().height + 16;
+  // 初期自我などの候補の置き場（ir-pick-panel。#ir-main の先頭）は一時的に環の上に出るので、その高さは数えない（想起の案内パネルは廃止。011 §3.1）
+  const pick = document.querySelector('#ir-main > .ir-pick-panel');
+  const pickHeight = pick === null || main === null
+    ? 0
+    : pick.getBoundingClientRect().height + (parseFloat(getComputedStyle(pick).marginTop) || 0) + (parseFloat(getComputedStyle(main).rowGap) || 0);
   const ringBottom = main === null ? 0 : Math.round(main.getBoundingClientRect().bottom + window.scrollY - pickHeight);
   const vw = document.documentElement.clientWidth;
   // 盤面の左右に 8px 以上の余白（環・共通の領域・プレイヤーの領域）
@@ -181,9 +182,9 @@ const layoutNotes = [];
 /** @type {string[]} */
 const layoutWarnings = [];
 /** 検査番号 → 警告（011 §9.2） */
-const CHECK_TITLES = { 2: '浮いた要素（fixed / sticky）', 3: '32px 未満の操作要素', 4: 'title 属性', 5: '12px 未満の文字', 6: '入れ子のスクロール', 7: 'ツールチップの位置・大きさ', 8: '角丸 3px 超（許可した部品以外）' };
+const CHECK_TITLES = { 2: '浮いた要素（fixed / sticky）', 3: '32px 未満の操作要素', 4: 'title 属性', 5: '12px 未満の文字', 6: '入れ子のスクロール', 7: 'ツールチップの位置・大きさ', 8: '角丸 3px 超（許可した部品以外）', 9: 'ir-off を押してもメッセージが出ない' };
 /** @type {Record<string, string[]>} */
-const checkWarnings = { 2: [], 3: [], 4: [], 5: [], 6: [], 7: [], 8: [] };
+const checkWarnings = { 2: [], 3: [], 4: [], 5: [], 6: [], 7: [], 8: [], 9: [] };
 let count = 0;
 try {
   for (const fixture of fixtures) {
@@ -244,7 +245,7 @@ try {
         if (!m.margins) {
           layoutWarnings.push(`[${label}] 盤面の左右に 8px の余白がありません`);
         }
-        // 自動検査（仕様書 011 §9.2）。検査 2・3・4・5・6・8（7 は撮影のあと）
+        // 自動検査（仕様書 011 §9.2）。検査 2・3・4・5・6・8（7・9 は撮影のあと）
         const checks = await page.evaluate(runChecks);
         for (const [no, list] of Object.entries(checks)) {
           for (const item of list) {
@@ -263,6 +264,18 @@ try {
           for (const w of await checkTips(page, context, mobile, args.tipShots ? base : null)) {
             checkWarnings[7].push(`[${label}] ${w}`);
           }
+        }
+        // 検査 9（ir-off を押すとメッセージが出る）。ツールチップの検査のあとに行う。メッセージが出ている間の画面も撮る
+        await page.keyboard.press('Escape');
+        await page.evaluate(() => window.scrollTo(0, 0));
+        const blocked = await page.evaluate(runBlockedClickCheck);
+        for (const w of blocked.warnings) {
+          checkWarnings[9].push(`[${label}] ${w}`);
+        }
+        if (blocked.tried > 0) {
+          await page.waitForTimeout(100);
+          await page.screenshot({ path: `${base}-blocked.png` });
+          count += 1;
         }
         await context.close();
       }

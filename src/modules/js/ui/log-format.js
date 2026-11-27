@@ -41,6 +41,28 @@ export function escapeHtml(value) {
 }
 
 /**
+ * カード名の `span.ir-log-card`（ホバー・タップで U-18 のツールチップが出る）。ログとステータスバーで同じ形にする（011 §3.2）。
+ * @param {string} key スプライトのキー（`M015` など）
+ * @param {string} name 表示する名前（翻訳済み）
+ * @returns {string}
+ */
+export function cardNameSpan(key, name) {
+  return `<span class="ir-log-card" data-ir-zoom-key="${key}">${escapeHtml(name)}</span>`;
+}
+
+/**
+ * ステータスバーに出すカード名の HTML（`span.ir-log-card`）。名前は `texts` の英語名（無ければ `fallback`）。キーが分からなければ名前だけ（HTML の特殊文字は避ける）。
+ * @param {string} key スプライトのキー
+ * @param {import('./texts.js').CardTexts | null | undefined} texts
+ * @param {string} [fallback] 名前が引けないときの文字
+ * @returns {string}
+ */
+export function cardNameHtml(key, texts, fallback = key) {
+  const name = texts === null || texts === undefined ? undefined : captionOf(key, texts);
+  return name !== undefined && keyKind(key) !== null ? cardNameSpan(key, name) : escapeHtml(name ?? fallback);
+}
+
+/**
  * 引数 → スプライトのキー（`M014` など）。分からなければ null。
  * @param {string} field
  * @param {Record<string, any>} args
@@ -90,7 +112,7 @@ export function formatLogArgs(log, args, ctx) {
     }
     const name = captionOf(key, ctx.texts) ?? (typeof out[field] === 'string' ? ctx.translate(out[field]) : undefined);
     if (name !== undefined) {
-      out[field] = `<span class="ir-log-card" data-ir-zoom-key="${key}">${escapeHtml(name)}</span>`;
+      out[field] = cardNameSpan(key, name);
       replaced.add(field);
     }
   }

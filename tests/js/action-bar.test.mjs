@@ -99,7 +99,7 @@ test('pickTokens: 押すと +1、バッジを押すと -1、掃除で枠・バ�
   });
   rebuild();
   const light = token('light');
-  assert.equal(light.hasClass('ir-selected'), true);
+  assert.equal(light.hasClass('ir-picked'), true);
   assert.equal(light.hasClass('ir-token-pick'), true);
   assert.equal(light.querySelector('.ir-token-plus')?.textContent, '+2');
   assert.equal(light.querySelector('.ir-token-badge')?.textContent, '1');
@@ -117,7 +117,7 @@ test('pickTokens: 押すと +1、バッジを押すと -1、掃除で枠・バ�
   areas.clearSelection();
   for (const kind of ['light', 'wildUp']) {
     const t = token(kind);
-    assert.equal(t.hasClass('ir-selected') || t.hasClass('ir-selectable') || t.hasClass('ir-token-pick'), false);
+    assert.equal(t.hasClass('ir-picked') || t.hasClass('ir-can') || t.hasClass('ir-off') || t.hasClass('ir-token-pick'), false);
     assert.equal(t.querySelector('.ir-token-badge'), null);
     assert.equal((t.listeners.click ?? []).length, 0);
   }
@@ -131,9 +131,9 @@ test('pickTokens: 使えないトークンは「選べる」の枠を出さな�
     compose: { canAdd: true, count: 0, plus: false, tooltip: 'use', onAdd: () => { used += 1; } },
     analysis: { canAdd: false, count: 0, plus: false, tooltip: 'You have no psychoanalysis token', onAdd: () => { used += 10; } },
   });
-  assert.equal(token('compose').hasClass('ir-selectable'), true);
+  assert.equal(token('compose').hasClass('ir-can'), true);
   assert.equal(token('compose').querySelector('.ir-token-plus'), null);
-  assert.equal(token('analysis').hasClass('ir-selectable'), false);
+  assert.equal(token('analysis').hasClass('ir-can'), false);
   token('compose').fire('click');
   token('analysis').fire('click');
   assert.equal(used, 1);

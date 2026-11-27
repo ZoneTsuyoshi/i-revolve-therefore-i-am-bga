@@ -7,6 +7,7 @@
  * © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
  */
 import { paintUiSprite } from '../cards/card-face.js';
+import { setSubject } from '../cards/selection.js';
 import { el, setTip, tipAttrs } from '../ui/dom.js';
 import {
     colorName, cubeSprite, decksModel, discardModel, faceUpMemory, faceUpRefs,
@@ -79,6 +80,10 @@ export class CommonArea {
         this.objectiveStatus = new Map();
         /** @type {(() => void) | null} 目標の現在値が変わったとき（獲得ボタンの更新。states/ActionState.js） */
         this.onObjectiveStatus = null;
+        /** 部屋のカードを置き終えたら解決する（再読み込みで想起中の印を付けるとき待つ） */
+        this.ready = Promise.resolve();
+        /** @type {HTMLElement | null} 想起中の部屋のカード（`ir-subject` を付けた要素） */
+        this.recallSubject = null;
         /** @type {number[]} 席順（ミープルのスロットとキューブの並び） */
         this.seatOrder = deps.refs.playerOrder;
     }
@@ -109,12 +114,14 @@ export class CommonArea {
         for (const [pos, cardEl] of this.refs.roomCards) {
             this.roomStocks.set(pos, new this.lib.LineStock(this.cards.mem, cardEl, { gap: '0' }));
         }
+        const adds = [];
         for (const room of rooms) {
-            this.floorStocks.get(room.pos)?.addCard(room.floor);
+            adds.push(this.floorStocks.get(room.pos)?.addCard(room.floor));
             if (room.card !== null) {
-                this.roomStocks.get(room.pos)?.addCard(room.card);
+                adds.push(this.roomStocks.get(room.pos)?.addCard(room.card));
             }
         }
+        this.ready = Promise.all(adds).then(() => undefined);
     }
 
     /** @param {{ slot: number, card: import('./view-model.js').CardView }[]} open */
@@ -491,6 +498,31 @@ export class CommonArea {
         const face = faceUpMemory(card);
         await Promise.all(stock.getCards().map((/** @type {any} */ c) => stock.removeCard(c)));
         await stock.addCard(face);
+        this.markRecallSubject(pos);
+    }
+
+    /**
+     * 想起中の部屋のカードに「対象」の印（`ir-subject`。011 §3.1）を付ける。前の印は外す。想起が終わるとき `clearRecallSubject` で外す。
+     * @param {number} pos
+     */
+    markRecallSubject(pos) {
+        this.clearRecallSubject();
+        const stock = this.roomStocks.get(pos);
+        for (const card of stock?.getCards() ?? []) {
+            const element = stock.getCardElement(card);
+            if (element instanceof HTMLElement) {
+                setSubject(element, true);
+                this.recallSubject = element;
+            }
+        }
+    }
+
+    /** 想起中の印を外す（想起フェイズを出るとき・部屋のカードを取ったとき・補充のとき） */
+    clearRecallSubject() {
+        if (this.recallSubject !== null) {
+            setSubject(this.recallSubject, false);
+        }
+        this.recallSubject = null;
     }
 
     /**

@@ -3,29 +3,24 @@
  * 規則は move-plan.js の純粋関数に任せ、ここは回廊の部屋・手札・自己構成済みカード・ステータスバーのボタンをつなぐだけ。
  *
  * 流れ:
- * 1. 入る部屋を順にクリックして経路を作る（入れる部屋が光る。「Undo last room」（赤・右端）か、経路の最後の部屋を押すと 1 つ戻す）
+ * 1. 入る部屋を順にクリックして経路を作る（入れる部屋は `ir-can`、入れない部屋は `ir-off`、経路の部屋は `ir-picked` と順番の札。「Undo last room」（赤・右端）か、経路の最後の部屋を押すと 1 つ戻す。011 §5.5）
  * 2. 払うものをまとめて選ぶ: 自己構成済みカード・手札をクリックで選択のオン・オフ（鍵は順不同）、心光・万能移動鍵は領域のトークンを押して数量
  * 3. 選んだ資源は規則を守って各部屋の錠前に自動で割り当てられる（`solveMovePayment`）。ステータスバーに充足・不足・余りが出る
  * 4. 全部の錠前が払えたら「Confirm move」（割り当ての結果を `{rooms, payments}` にして送る）。Reset はない（010 §2.3）
- * ターンプレイヤーには、手札のタブの「Discard 2 for Psychic Light」と、獲得できる目標（青の「Claim goal」）のフリーアクションも出す（006 §6.2。FreeActionsUi.js）。
+ * ターンプレイヤーには、手札のレールの「Discard 2 for Psychic Light」（BGA 標準のボタン）と、獲得できる目標（青の「Claim goal」）のフリーアクションも出す（006 §6.2。FreeActionsUi.js）。
  * 払える移動が無いときは「Stay」で空の経路を送る（Q-38）。
  * © だんじり協奏曲 (Danjiri Concerto) https://x.com/danjiriconcerto
  */
 import {
-  afterDiscard, boardFromArgs, keepReachableRoute, lightCostOf, lockTotal, reachableRooms, routeExtras, solveMovePayment, toInput, withoutDiscarded,
+  after, afterDiscard, boardFromArgs, keepReachableRoute, lightCostOf, lockTotal, reachableRooms, routeExtras, solveMovePayment, toInput, withoutDiscarded,
 } from './move-plan.js';
 import { cumulativeOf, lightLimit, sortButtons } from './action-bar-model.js';
 import { FreeActionsUi } from './FreeActionsUi.js';
+import { CLASS_UNDO, clearRooms, paintRooms } from '../cards/selection.js';
 import { int } from '../ui/dom.js';
+import { iconHtmlOf, setTitleHtml } from '../ui/status-title.js';
 import { Tips } from '../ui/Tips.js';
 import { cardLabel, neededText, quantityTokenPick, statusText } from './payment-ui.js';
-
-/** 入れる部屋の印 */
-export const CLASS_ROOM_SELECTABLE = 'ir-room-selectable';
-/** 経路に入った部屋の印（順番は data-order） */
-export const CLASS_ROOM_ROUTE = 'ir-room-route';
-/** 経路の最後の部屋の印（押すと 1 つ戻す。010 §2.4） */
-export const CLASS_ROOM_UNDO = 'ir-room-undo';
 
 /**
  * @typedef {object} MoveDeps
@@ -183,10 +178,9 @@ export class MoveState {
       element.removeEventListener('click', handler);
     }
     this.listeners = [];
-    const refs = this.getDeps().refs;
-    for (const room of refs?.rooms.values() ?? []) {
-      room.classList.remove(CLASS_ROOM_SELECTABLE, CLASS_ROOM_ROUTE, CLASS_ROOM_UNDO);
-      delete room.dataset.order;
+    const rooms = this.getDeps().refs?.rooms;
+    if (rooms !== undefined) {
+      clearRooms(rooms);
     }
   }
 
@@ -215,20 +209,16 @@ export class MoveState {
     this.solution = route.length === 0 ? null : solveMovePayment(board, route, this.selection);
     const solution = this.solution;
 
-    // 経路の印と、次に入れる部屋
-    route.forEach((pos, i) => {
-      const room = refs?.rooms.get(pos);
-      if (room !== undefined) {
-        room.classList.add(CLASS_ROOM_ROUTE);
-        room.dataset.order = String(i + 1);
-      }
-    });
+    // 部屋の印: 入れる部屋は ir-can、経路の部屋は ir-picked と順番の札、入れない部屋は ir-off（理由つき）。ミープルは暗くしない（CSS）
     const reachable = reachableRooms(board, route);
+    if (refs !== null) {
+      paintRooms(refs.rooms, { can: reachable, route, why: (pos) => this.whyBlocked(board, route, pos) });
+    }
     // 経路の最後の部屋を押すと 1 つ戻す（その部屋へ入り直せるときは、入る操作を優先する）
     const last = route.length > 0 ? route[route.length - 1] : null;
     const lastElement = last === null ? undefined : refs?.rooms.get(last);
     if (last !== null && lastElement !== undefined && !reachable.includes(last)) {
-      lastElement.classList.add(CLASS_ROOM_UNDO);
+      lastElement.classList.add(CLASS_UNDO);
       const undo = () => this.undoRoom();
       lastElement.addEventListener('click', undo);
       this.listeners.push([lastElement, undo]);
@@ -238,7 +228,6 @@ export class MoveState {
       if (element === undefined) {
         continue;
       }
-      element.classList.add(CLASS_ROOM_SELECTABLE);
       const handler = () => {
         this.route = [...this.route, pos];
         this.render();
@@ -248,15 +237,16 @@ export class MoveState {
     }
 
     if (route.length === 0) {
-      bar.setTitle(board.canMove ? _('${you} must choose the next room to enter') : _('${you} cannot afford to move'));
+      bar.setTitle(board.canMove ? _('${you} must choose the next room') : _('${you} cannot afford to move'));
     } else if (solution !== null) {
-      bar.setTitle(_('Route: ${route}. ${status}'), {
-        route: route.map((pos) => `${_('Room')} ${pos}`).join(' > '),
+      // 経路は盤面の順番の札で見えるので文に出さない（011 §3.4）。鍵はアイコン（HTML）
+      setTitleHtml(this.bga, '${status}', {
         status: statusText({
           paid: solution.paid,
           total: solution.total,
           needed: neededText(solution.needed),
           unused: this.unusedText(solution),
+          iconHtml: iconHtmlOf(this.bga),
         }),
       });
       this.drawResources(board, playerAreas, me);
@@ -276,6 +266,28 @@ export class MoveState {
     }
     this.free.add();
     this.flushButtons();
+  }
+
+  /**
+   * 入れない部屋を押したときの理由（`data-ir-why`。011 §5.7）。次の部屋（レベル 2 の次はそのスキップ先）なら払えない、それ以外は順番どおりにしか進めない。
+   * @param {import('./move-plan.js').MoveBoard} board
+   * @param {number[]} route
+   * @param {number} pos
+   * @returns {string | undefined} 経路に入っている部屋には付けない
+   */
+  whyBlocked(board, route, pos) {
+    if (route.includes(pos)) {
+      return undefined;
+    }
+    if (route.length >= board.maxRooms) {
+      return _('You cannot enter any more rooms this turn');
+    }
+    const from = route.length === 0 ? board.position : route[route.length - 1];
+    const next = after(from);
+    const candidates = board.rooms.get(next)?.level === 2 ? [next, after(next)] : [next];
+    return candidates.includes(pos)
+      ? _('You cannot pay for the lock of this room')
+      : _('You can only enter the next room (or the one after a level 2 room)');
   }
 
   /** 経路の最後の部屋を 1 つ戻す */

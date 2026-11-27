@@ -29,7 +29,7 @@ export class SetupEgoPickState extends ActionState {
     this.showCandidates(this.candidates, null, (key) => {
       this.selected = key;
       this.render();
-    });
+    }, _('Choose an Initial Ego'));
   }
 
   end() {

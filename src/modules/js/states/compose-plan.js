@@ -76,7 +76,7 @@ export function composeFromArgs(args) {
   for (const raw of list(priv.hand)) {
     const h = obj(raw);
     const id = int(h.id);
-    hand.set(id, { id, type: int(h.type), level: int(h.level) === 2 ? 2 : 1, need: Math.max(0, int(h.need)), composable: h.composable === true });
+    hand.set(id, { id, type: int(typeof h.type === 'string' ? h.type.replace(/^M/, '') : h.type), level: int(h.level) === 2 ? 2 : 1, need: Math.max(0, int(h.need)), composable: h.composable === true });
   }
   const context = typeof a.context === 'string' ? a.context : 'PHASE';
   /** @type {[number, number][]} */

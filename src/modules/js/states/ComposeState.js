@@ -16,6 +16,8 @@ import {
 } from './compose-plan.js';
 import { lightLimit } from './action-bar-model.js';
 import { cardLabel, quantityTokenPick } from './payment-ui.js';
+import { escapeHtml, cardNameHtml } from '../ui/log-format.js';
+import { setTitleHtml } from '../ui/status-title.js';
 
 /** @returns {{ hand: number[], tap: number[], light: number, extra: number[] }} */
 function emptySelection() {
@@ -81,12 +83,13 @@ export class ComposeState extends ActionState {
   }
 
   /**
+   * ステータスバーに出す、自己構成するカードの名前（`span.ir-log-card`。U-18 のツールチップが出る）。
    * @param {number | null} cardId
    * @returns {string}
    */
-  nameOf(cardId) {
+  nameHtml(cardId) {
     const type = cardId === null ? undefined : this.board?.hand.get(cardId)?.type;
-    return type === undefined ? '' : (this.getDeps().texts?.cards[memKey(type)]?.name ?? memKey(type));
+    return type === undefined ? '' : cardNameHtml(memKey(type), this.getDeps().texts, memKey(type));
   }
 
   draw() {
@@ -146,22 +149,14 @@ export class ComposeState extends ActionState {
     const cardId = this.payment.cardId;
     const sel = this.selection;
     const solution = solveComposePayment(board, cardId, sel);
-    const card = this.nameOf(cardId);
-    const status = [];
-    if (board.paysEnergy) {
-      status.push(_('Energy: paid ${paid} of ${need}').replace('${paid}', String(solution.paid)).replace('${need}', String(solution.need)));
-      if (solution.shortfall > 0) {
-        status.push(_('Still needed: ${keys}').replace('${keys}', _('${count} energy').replace('${count}', String(solution.shortfall))));
-      }
-    } else {
-      status.push(_('no energy is needed'));
-    }
+    // 011 §3.4: 足りないぶんは数字で分かる（`energy 1 / 3`）。余りがあるときだけ後ろに足す
     const unused = this.unusedText(solution);
-    if (unused !== '') {
-      status.push(_('Unused: ${items}').replace('${items}', unused));
-    }
-    this.bga.statusBar.setTitle(_('Compose ${card}. ${status}'), { card, status: status.join('. ') });
-    playerAreas?.markHand(cardId === null ? [] : [cardId]);
+    const rest = unused === '' ? '' : `. ${_('Unused: ${items}').replace('${items}', escapeHtml(unused))}`;
+    const head = board.paysEnergy
+      ? _('Compose ${card}: energy ${paid} / ${need}').replace('${paid}', String(solution.paid)).replace('${need}', String(solution.need))
+      : _('Compose ${card}: no energy needed');
+    setTitleHtml(this.bga, head + rest, { card: this.nameHtml(cardId) });
+    playerAreas?.markHandSubject(cardId === null ? [] : [cardId]);
 
     const editing = board.extraMax > 0 && this.editing === 'extra' ? 'extra' : 'discard';
     const ids = editing === 'extra' ? extraOptions(board, { ...this.payment, discard: sel.hand }) : discardOptions(board, { ...this.payment, extra: sel.extra });

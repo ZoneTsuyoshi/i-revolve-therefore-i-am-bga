@@ -8,12 +8,14 @@
  * - 4: `#ir-root` とパネルの中に `title` 属性がない
  * - 5: テキストを持つ要素の文字が 12px 以上（`#ir-root`・パネル・ツールチップ）
  * - 6: 実際にスクロールする入れ子の要素がない
- * - 8: 角丸が 3px を超える要素は、許可した部品（トークン・心光・キューブ・コマの画像）だけ
+ * - 8: 角丸が 3px を超える要素は、許可した部品（トークン・心光・キューブ・コマの画像、BGA 標準のボタン）だけ
+ * （検査 9 は `runBlockedClickCheck`。検査 7 は `locateTipTarget` / `measureTip`）
  * @returns {{ 2: string[], 3: string[], 4: string[], 5: string[], 6: string[], 8: string[] }}
  */
 export function runChecks() {
   /** 検査 8 で角丸を許す部品（物理的に丸い部品の画像の要素。仕様書 011 §1.1） */
-  const ROUND_ALLOWED = ['.ir-token-icon', '.ir-light', '.ir-cube', '.ir-meeple', '.ir-player-meeple', '.ir-pp-icon'];
+  // 手札のレールの BGA 標準のボタン（`destination` に置く。BGA の見た目のままなので、こちらでは角丸を変えない。011 §8）も許す
+  const ROUND_ALLOWED = ['.ir-token-icon', '.ir-light', '.ir-cube', '.ir-meeple', '.ir-player-meeple', '.ir-pp-icon', '.ir-rail-actions button'];
   const MIN_TAP = 32;
   const MIN_FONT = 12;
   const MAX_RADIUS = 3;
@@ -107,6 +109,47 @@ export function runChecks() {
 }
 
 /**
+ * 検査 9: `ir-off`（今は選べない）の要素を押すと、理由のメッセージが出る（`window.__irMessages` が増える。無反応にしない。011 §5.7）。
+ * `ir-off` がない場面では何もしない。押した要素を `ir-off` の種類（部屋・カード・トークン）ごとに 1 つずつ試す。
+ * メッセージは 2 秒以内に同じ文を繰り返さない仕様なので、押すたびに文が変わるものだけを数える（同じ文のときは「増えない」を警告にしない）。
+ * `page.evaluate` に渡す関数は自己完結（外の変数を使わない）。
+ * @returns {{ tried: number, warnings: string[] }}
+ */
+export function runBlockedClickCheck() {
+  const label = (/** @type {Element} */ e) => `${e.tagName.toLowerCase()}.${String(e.className).split(' ').filter((c) => c !== '').slice(0, 2).join('.')}`;
+  /** @type {{ message: string, type: string }[]} */
+  const messages = /** @type {any} */ (window).__irMessages ?? [];
+  /** @type {string[]} */
+  const warnings = [];
+  const seen = new Set();
+  let tried = 0;
+  for (const e of document.querySelectorAll('#ir-root .ir-off')) {
+    const r = e.getBoundingClientRect();
+    const kind = e.classList.contains('ir-room') ? 'room' : (e.classList.contains('ir-token') ? 'token' : 'card');
+    if (r.width < 4 || r.height < 4 || seen.has(kind)) {
+      continue;
+    }
+    seen.add(kind);
+    tried += 1;
+    const before = messages.length;
+    const lastMessage = messages.length > 0 ? messages[messages.length - 1].message : null;
+    /** @type {HTMLElement} */ (e).click();
+    const after = messages.length;
+    const message = after > before ? messages[after - 1].message : null;
+    if (after === before) {
+      // 同じ文を 2 秒以内に出さないための間引きなら、直前の文が同じ理由のはず
+      const why = e.getAttribute('data-ir-why');
+      if (lastMessage === null || (why !== null && why !== lastMessage)) {
+        warnings.push(`${label(e)} を押してもメッセージが出ない`);
+      }
+    } else if (message === null || message.trim() === '') {
+      warnings.push(`${label(e)} を押したメッセージが空`);
+    }
+  }
+  return { tried, warnings };
+}
+
+/**
  * 検査 7 のための、ページの中の部品。ツールチップの対象（代表）を探し、出ているツールチップを測る。
  * `page.evaluate` に渡す関数は自己完結（外の変数を使わない）。
  */
@@ -117,7 +160,7 @@ export function runChecks() {
  * @returns {{ name: string, x: number, y: number, selectable: boolean, width: number } | null}
  */
 export function locateTipTarget({ name, selector }) {
-  const SELECTABLE = '.ir-selectable, .ir-selected, .bga-cards_selectable-card, .bga-cards_selected-card, .ir-room-selectable, .ir-token-pick, .ir-can, .ir-picked, .ir-off';
+  const SELECTABLE = '.ir-can, .ir-picked, .ir-off, .ir-token-pick';
   for (const e of document.querySelectorAll(selector)) {
     if (!(e instanceof HTMLElement)) {
       continue;

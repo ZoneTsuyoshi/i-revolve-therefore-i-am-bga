@@ -582,6 +582,23 @@ BGA 標準のツールチップに近づける（ライト・ダークのテー�
 
 変更するファイル（U-19）: `board/PlayerAreas.js`、`states/FreeActionsUi.js`、`states/ActionState.js`、`irevolvethereforeiam.css`。
 
+（U-19 で変更・補足）
+
+- **`setTitle` の HTML（§3.2・§3.4 の【未確認】）**: `bgaFormatText` のフック（`Game.hookLogFormat`）が `setTitle` の `args` にも効く経路は、公式の文書にもこのリポジトリのコードにも見つからなかった。そこで、**HTML を `args` に直接渡す**形にした（カード名は `ui/log-format.js` の `cardNameHtml`、鍵は `ui/status-title.js` の `textToHtml` が `{wisdom}` の記法からアイコンの HTML にする）。BGA が `args` の HTML をエスケープして描く場合に備え、`setTitleHtml` が文を出したあと `#pagemaintitletext` に `&lt;span` が見えたら `span` / `img` のタグだけ HTML に戻す（BGA が HTML を描くなら何もしない）。プレビューの `setTitle` の代用は `args` を `innerHTML` に差し込むので HTML が描かれる（BGA の実物と同じかは Studio で確認。README に記載）。§3.2 の代案（`#page-title` を後から包む）は使っていない。
+- **想起の文（§3.2）**: `choice-model.js` の `Choice` に `spec` を足し、`ChoiceState.title(想起の文, 通常の文, args)` が `spec` の `RC-` で切り替える。想起の版を足したのは、場札を取る・手札を捨てる・心光のための捨て・手札と場札の交換・同コストの交換・移動の確認の 6 種（PHP の `RC-02`・`05`・`06`・`07`・`12`・`13` が出す種類。`RC-08`〜`11` は `CONFIRM_USE` で、元からカード名を持つ）。`PICK_DISCARD` の想起の版は `Recall ${card}: ${you} must discard ${count} card(s)`。想起の `args` の `activators` は使わなくなった（`recallFromGamedatas` の戻り値は `{ pos, key }`）。
+- **`ir-subject` の付け外し（§3.1）**: `CommonArea.markRecallSubject(pos)` / `clearRecallSubject()`。`revealRoomCard` が表向きのカードを置き直したあとに付け、`notif_phaseStarted`（想起以外）・`notif_roomCardAcquired`・`notif_cleanup` で外す。再読み込みは `CommonArea.ready`（部屋のカードを置き終えたら解決）のあとに付ける。
+- **選べない場札（§5.3）**: `ActionState.pickOpen` は、選べないカードだけの Stock も選択モード（`ids: []`）に入れて `ir-off` にする。選べる場札が 1 枚もない Stock も暗くなり、押すと理由を出す。`ir-subject` のカード（自己構成するカード）と、`ir-tapped`（使用済み。元から暗い）のカードは `ir-off` の暗さを重ねない。
+- **選べない理由（§5.7）**: 管理役は `Game.watchBlockedClicks`（`#ir-root` の 1 つの委譲のクリック）で、`ir-off` を押したら `data-ir-why`（無ければ `You cannot choose this now`）を `showMessage(…, 'info')` で出す。`ir-can` / `ir-picked` を持つ子を押したときは出さない。理由の文を付けたのは、移動で入れない部屋（`MoveState.whyBlocked`: 次の部屋は払えない、それ以外は順番どおり、これ以上入れない）と、押せないトークン（`quantityTokenPick` の `tooltip` を再利用）。カードの理由は `SelectionOptions.why`（未使用。一般の文）。`cards/selection.js` はコールバックを持たず、メッセージは `Game.js` だけが出す。
+- **部屋とトークンの付け外し（§5.1）**: 部屋は `selection.js` の `paintRooms` / `clearRooms`、トークンは `markElement` / `unmarkElement`、`ir-subject` は `setSubject`。経路の最後の部屋のフックは `ir-undo`（旧 `ir-room-undo`）。持っていない（`ir-zero`）トークンは、押せなくても `ir-off` にしない（元から薄い）。
+- **手札のボタン（§8）**: `FreeActionsUi` が `bga.statusBar.addActionButton(…, { color: 'secondary', destination: playerAreas.handActionsElement() })` で置き、返ったボタンを保持して自分で `remove()` する（`clearDiscardButton`。`reset()`・`add()`・`drawDiscard()` の先頭で呼ぶ）。`title` / `tooltip` の引数は使わず、説明は `data-ir-tip`（`setTip`）。`PlayerAreas.showDiscardButton` / `clearDiscardButton` は廃止。検査 8 は、このボタン（BGA 標準）の角丸を許す。
+- **候補の置き場（§3.3）**: `.ir-pick-panel` は `#ir-main` の先頭に `ir-rail` として入る（`ActionState.showCandidates(…, label)`。カードは中の `.ir-pick-cards`）。`:has(...)` の切り替えと `top` の grid の行は全廃した。ラベルは `Choose an Initial Ego` / `Choose an Enhanced Ego`。
+- **ステータスバーの文（§3.4）**: 移動は経路を出さず `Locks: ${paid} / ${total}. Need: …`、精神分析は `keys ${paid} / ${total}`（小文字）、自己構成は `Compose ${card}: energy ${paid} / ${need}`（余りは `. Unused: …`）。移動の「経路なし」は `${you} must choose the next room`、自己構成フェイズは `${you} may compose or analyze`、心光のための捨ては `Discard cards for Psychic Light (gain ${light})`。
+- **枠の置き方（§5.1・§5.5）**: `ir-can` / `ir-picked` の枠は、カード・トークン・部屋とも**外側**（`outline-offset: 2px`）に出す（内側だとカードの白い縁・bga-cards の面の子要素に隠れて見えなかった）。`--ir-can-glow` は不透明度 55%。
+- **部屋の暗さ（未確定 No.5）**: `brightness(0.75) saturate(0.8)`（床・カードの箱だけ。ミープルは暗くしない）。カードの暗さは §5.1 のとおり `brightness(0.6) saturate(0.7)`。
+- **目標の注記（§3.5）**: `.ir-goals` に `gap` の行間 +16px と下の余白 16px を足した（bga-cards の `.card-stock.line-stock` の `gap` に勝つため `!important`）。
+- **廃止した変数（§1.4）**: `--ir-text`・`--ir-text-muted`・`--ir-panel-bg`・`--ir-panel-border`・`--ir-slot-bg`・`--ir-turn-border`・`--ir-pending`・`--ir-mat-*` を CSS から削除した（`:root` と `html[data-theme="dark"]` はツールチップ用の `--ir-tip-*` だけ）。ツールチップ内の文字色は `--ir-tip-text` / `--ir-tip-muted`。`Tips.js` の `SELECTABLE_SELECTOR` は `.ir-can`・`.ir-picked`・`.ir-off`・`.ir-token-pick` だけ。
+- **プレビュー**: 検査 9 は `checks.mjs` の `runBlockedClickCheck`（部屋・カード・トークンの `ir-off` を種類ごとに 1 つ押す）。メッセージが出た画面を `<サイズ>-<テーマ>-blocked.png` に撮る。`4p-compose-pay` の固定データに `steps`（自己構成するカードと捨てる手札を選ぶ）を足した（`dump-fixtures.php` も同じ）。
+
 ### 9. 確認の道具（プレビュー）
 
 **目的**: Studio に上げなくても、審査が指摘する観点を機械で確かめる。CI には入れない（Chrome が要るため）。

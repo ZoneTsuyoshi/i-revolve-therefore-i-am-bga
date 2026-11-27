@@ -29,8 +29,15 @@ function pad(n, width) {
   return String(n).padStart(width, '0');
 }
 
-/** 想い出カードの種類（card_type）→ スプライトのキー `M014` */
-export const memKey = (/** @type {unknown} */ type) => `M${pad(toInt(type), 3)}`;
+/**
+ * 想い出カードの種類（card_type）→ スプライトのキー `M014`。数値（14・`'14'`）のほか、サーバーが `$definition->id` で送る `'M056'` 形式もそのまま受ける。
+ * @param {unknown} type
+ * @returns {string}
+ */
+export function memKey(type) {
+  const match = typeof type === 'string' ? /^M(\d+)$/.exec(type) : null;
+  return `M${pad(toInt(match === null ? type : match[1]), 3)}`;
+}
 /** 床カードの ID（1〜12）→ `F01` */
 export const floorKey = (/** @type {unknown} */ id) => `F${pad(toInt(id), 2)}`;
 /** 目標カードの ID（1〜7）→ `O001` */
@@ -205,9 +212,9 @@ export function roomsModel(rooms) {
 }
 
 /**
- * ページを開き直したとき（想起フェイズ中）に、想起中の案内パネルに出すカード。想起フェイズで、表向きの部屋のカードがあるときだけ。
+ * ページを開き直したとき（想起フェイズ中）に、「対象」の印（`ir-subject`。011 §3.1）を付ける部屋のカード。想起フェイズで、表向きの部屋のカードがあるときだけ。
  * @param {Record<string, any> | null | undefined} gamedatas
- * @returns {{ key: string, activators: number[] } | null}
+ * @returns {{ pos: number, key: string } | null}
  */
 export function recallFromGamedatas(gamedatas) {
   if (gamedatas?.phase !== 'RECALL') {
@@ -216,8 +223,7 @@ export function recallFromGamedatas(gamedatas) {
   for (const row of Array.isArray(gamedatas.rooms) ? gamedatas.rooms : []) {
     const raw = row?.card;
     if (raw !== null && raw !== undefined && typeof raw === 'object' && raw.faceUp === true && raw.type !== undefined) {
-      const activators = gamedatas.turn?.recall?.activators;
-      return { key: memKey(raw.type), activators: Array.isArray(activators) ? activators.map(toInt) : [] };
+      return { pos: toInt(row.pos), key: memKey(raw.type) };
     }
   }
   return null;

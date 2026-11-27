@@ -53,17 +53,7 @@
     --ir-r: 2px;
     --ir-pad: 6px;
 
-    /*
-     * 盤面の外・BGA のテーマに従う要素（ツールチップ・拡大表示・プレイヤーパネルの一部）が使う色。U-18（ツールチップ）・U-19（選択の見た目）まで残す。
-     * 盤面（.ir-root の中）は下の .ir-root で暗い卓用に固定する。
-     */
-    --ir-text: #222;
-    --ir-text-muted: #555;
-    --ir-panel-bg: rgb(255 255 255 / 70%);
-    --ir-panel-border: #b8b2a6;
-    --ir-slot-bg: rgb(0 0 0 / 4%);
-    --ir-turn-border: #c0392b;
-    --ir-pending: #1f5fd1;
+    /* 盤面の外・BGA のテーマに従う要素（ツールチップ）が使う色。盤面（.ir-root の中）は下の .ir-root で暗い卓用に固定する */
     --ir-tip-bg: #fffdf8;
     --ir-tip-border: #8a8478;
     --ir-tip-text: #222;
@@ -75,13 +65,6 @@
 
 /* BGA のダークモードは html の data-theme="dark"（@media (prefers-color-scheme) は BGA の切り替えを無視するので使わない。009 §12.2） */
 html[data-theme="dark"] {
-    --ir-text: #e8e6e1;
-    --ir-text-muted: #b5b1a8;
-    --ir-panel-bg: rgb(30 30 34 / 80%);
-    --ir-panel-border: #5c5a55;
-    --ir-slot-bg: rgb(255 255 255 / 6%);
-    --ir-turn-border: #ff7b6b;
-    --ir-pending: #6cb6ff;
     --ir-tip-bg: #25252a;
     --ir-tip-border: #7a776f;
     --ir-tip-text: #e8e6e1;
@@ -112,9 +95,9 @@ body::before {
 /* ---- 2. ルートと盤面の配置 ---- */
 
 /*
- * 配置（010 §3）。DOM の並びは ir-recall-panel（xl・wide は共通の列の先頭、medium・narrow は環の上。ir-pick-panel も先頭に入る）、ir-main（環と山札）、ir-common（精神トラック・強化自我の山・目標）、ir-players。
+ * 配置（010 §3）。DOM の並びは ir-main（候補の置き場 ir-pick-panel が先頭に入ることがある。環と山札）、ir-common（精神トラック・強化自我の山・目標）、ir-players。
  * xl: 左に環、中に共通の列、右にプレイヤーの列（grid）。wide: 環と共通の列の下にプレイヤーを内容の幅で折り返す。
- * medium: 環 → 共通 → プレイヤー（1 列）。narrow: flex の order で、想起 → 環 → 自分 → 共通 → 他プレイヤー（010 §3.7）。
+ * medium: 環 → 共通 → プレイヤー（1 列）。narrow: flex の order で、環 → 自分 → 共通 → 他プレイヤー（010 §3.7）。
  * 左右に 8px の余白を取り（padding）、最大幅 2000px で中央寄せ。Layout.js は padding を除いた幅を Wc とする。
  */
 .ir-root {
@@ -136,7 +119,7 @@ body::before {
     --ir-line: #8f8672;
     --ir-line-strong: #a89e88;
     --ir-can: #fff;
-    --ir-can-glow: rgb(255 255 255 / 35%);
+    --ir-can-glow: rgb(255 255 255 / 55%);
     --ir-pick: #ffd23f;
     --ir-on-pick: #1a1408;
     --ir-subject: #f0b84a;
@@ -156,18 +139,6 @@ body::before {
 
     /* 枚数・注記の札の地（卓に重ねた暗い面。文字は --ir-ink で 14 以上） */
     --ir-tag-bg: rgb(0 0 0 / 55%);
-
-    /* U-18（ツールチップ）・U-19（選択の見た目・想起の案内パネル・候補の置き場）まで残す変数。盤面の中では暗い卓用の値にする */
-    --ir-text: var(--ir-ink);
-    --ir-text-muted: var(--ir-ink-dim);
-    --ir-panel-bg: rgb(26 22 16 / 92%);
-    --ir-panel-border: var(--ir-line);
-    --ir-slot-bg: rgb(255 255 255 / 6%);
-    --ir-turn-border: #ff9c8b;
-    --ir-pending: #7cc0ff;
-    --ir-mat-bg: rgb(255 255 255 / 7%);
-    --ir-mat-border: rgb(255 255 255 / 22%);
-    --ir-mat-radius: 10px;
 }
 
 .ir-root *,
@@ -208,49 +179,6 @@ body::before {
         "players";
 }
 
-/*
- * 候補の置き場（ir-pick-panel。ドラフトなど）は環の上（top）。想起の案内パネル（ir-recall-panel。想起中だけ）は、medium・narrow では環の上（top）。
- * 同時には出ない。出ている間だけ先頭に top の行を足す（空の行の隙間を作らない）。
- */
-.ir-root[data-layout="xl"]:has(> .ir-pick-panel, > .ir-recall-panel:not([hidden])) {
-    grid-template:
-        "top top players" auto
-        "main common players" auto
-        ". . players" 1fr / max-content max-content max-content;
-}
-
-.ir-root[data-layout="wide"]:has(> .ir-pick-panel, > .ir-recall-panel:not([hidden])) {
-    grid-template-areas:
-        ". top top ."
-        ". main common ."
-        "players players players players";
-}
-
-.ir-root[data-layout="medium"]:has(> .ir-pick-panel, > .ir-recall-panel:not([hidden])) {
-    grid-template-areas:
-        "top"
-        "main"
-        "common"
-        "players";
-}
-
-/*
- * xl・wide の想起の案内パネルは、共通の列の先頭（精神トラックの上、環の右）に置く。想起効果で環の中の場札や部屋を選ぶので、環は動かさない。
- * 想起中は環が 2 行にまたがる。パネルの幅は共通の列の幅に合わせる（中身の幅で列を広げない）。
- */
-.ir-root[data-layout="xl"]:has(> .ir-recall-panel:not([hidden])) {
-    grid-template:
-        "main recall players" auto
-        "main common players" auto
-        ". . players" 1fr / max-content max-content max-content;
-}
-
-.ir-root[data-layout="wide"]:has(> .ir-recall-panel:not([hidden])) {
-    grid-template-areas:
-        ". main recall ."
-        ". main common ."
-        "players players players players";
-}
 
 .ir-slot-host:empty {
     display: none;
@@ -371,31 +299,50 @@ body::before {
     pointer-events: none;
 }
 
-/* 移動の計画（U-3。states/MoveState.js）: 入れる部屋は枠で光らせ、経路に入れた部屋は順番の丸を出す */
-.ir-room.ir-room-selectable {
-    outline: 3px solid var(--ir-turn-border);
-    outline-offset: -3px;
+/*
+ * 部屋の操作の見た目（011 §5.5）。入れる部屋 = ir-can、経路・選択済みの部屋 = ir-picked と金の四角い札の順番、入れない部屋 = ir-off（弱く暗くする）。
+ * 暗くするのは床とカードだけ（ミープル .ir-room-meeples は暗くしない）。
+ */
+.ir-room.ir-can,
+.ir-room.ir-picked {
+    outline-offset: 2px;
     cursor: pointer;
 }
 
-.ir-room.ir-room-undo {
-    cursor: pointer;
+.ir-room.ir-can {
+    outline: 2px solid var(--ir-can);
+    box-shadow: 0 0 8px 2px var(--ir-can-glow);
 }
 
-.ir-room.ir-room-route::after {
+.ir-room.ir-picked {
+    outline: 3px solid var(--ir-pick);
+}
+
+.ir-room.ir-picked::after {
     content: attr(data-order);
     position: absolute;
-    top: 2px;
-    left: 2px;
+    top: 3px;
+    left: 3px;
     z-index: 3;
-    min-width: 1.6em;
-    border-radius: 50%;
-    background: var(--ir-turn-border);
-    color: #fff;
+    min-width: 20px;
+    padding: 1px 4px;
+    border-radius: var(--ir-r);
+    background: var(--ir-pick);
+    color: var(--ir-on-pick);
     font-size: 14px;
     font-weight: bold;
+    line-height: 1.3;
     text-align: center;
     pointer-events: none;
+}
+
+.ir-room.ir-undo {
+    cursor: pointer;
+}
+
+.ir-room.ir-off .ir-room-floor-box,
+.ir-room.ir-off .ir-room-card-box {
+    filter: brightness(0.75) saturate(0.8);
 }
 
 /* ---- 5. 共通の領域 ---- */
@@ -443,23 +390,12 @@ body::before {
 .ir-goals {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--ir-gap);
+
+    /* 行の間と下に、現在値の注記（.ir-goal-badge。カードの下）の行を空ける。bga-cards の .card-stock.line-stock の gap に勝つよう !important */
+    gap: calc(var(--ir-gap) + 16px) var(--ir-gap) !important;
+    padding-bottom: 16px;
     min-height: var(--ir-ch);
     min-width: var(--ir-c);
-}
-
-/* 想起中だけ表示（U-7）。hidden 属性で隠す */
-.ir-recall-panel[hidden] {
-    display: none;
-}
-
-.ir-recall-panel {
-    grid-area: top;
-    padding: var(--ir-gap);
-    border: 1px solid var(--ir-mat-border);
-    border-radius: var(--ir-mat-radius);
-    background: var(--ir-mat-bg);
-    color: var(--ir-text);
 }
 
 /* ---- 6. プレイヤーの領域 ---- */
@@ -627,7 +563,7 @@ body::before {
     color: var(--ir-composed-label);
 }
 
-/* レールの右端の操作（手札を捨てて心光を得る。ターンプレイヤーだけ。U-19 で BGA 標準のボタンに置き換える。010 §2.4） */
+/* レールの右端の操作（手札を捨てて心光を得る BGA 標準のボタンの destination。ターンプレイヤーだけ。010 §2.4、011 §8） */
 .ir-rail-actions {
     display: flex;
     justify-content: flex-end;
@@ -636,19 +572,6 @@ body::before {
 
 .ir-rail-actions:empty {
     display: none;
-}
-
-.ir-zone-button {
-    min-width: 32px;
-    min-height: 32px;
-    padding: 2px 12px;
-    border: 1px solid var(--ir-hand-line);
-    border-radius: var(--ir-r);
-    background: rgb(96 150 240 / 22%);
-    color: var(--ir-ink);
-    font-size: 13px;
-    font-weight: bold;
-    cursor: pointer;
 }
 
 /* 手札が上限を超えたときだけ、手札のラベルの横に出す警告（SVG の「!」と N / 8。色だけにしない） */
@@ -706,20 +629,9 @@ body::before {
     color: var(--ir-ink);
 }
 
-/* 押せるトークン（010 §2.4）: 「選べる」の枠、選んだ個数のバッジ（押すと 1 つ外す）、「+」。見た目は U-19（011 §5.4）で整える */
+/* 押せるトークン（010 §2.4、011 §5.4）: ir-can / ir-picked / ir-off は共通の規則（下の「操作の見た目」）。ここは押せることの cursor だけ */
 .ir-token.ir-token-pick {
     cursor: pointer;
-}
-
-.ir-token.ir-selectable,
-.ir-token.ir-selected {
-    border-radius: var(--ir-r);
-    outline: 2px solid var(--ir-ink);
-    outline-offset: 2px;
-}
-
-.ir-token.ir-selected {
-    outline: 3px solid var(--ir-turn-border);
 }
 
 .ir-token-plus {
@@ -860,84 +772,93 @@ body::before {
 }
 
 /*
- * 選択（009 §4.3、003 §6.2）: 選べる = 枠 2px + 左上の印、選択中 = 枠 3px + 右上のチェック。選べないカードは暗くしない（クラスを付けない）。
- * クラスは cards/selection.js が 1 か所で付け外しし、状態を出るときに clear() で全部外す。
+ * 操作の見た目（011 §5.1）。カード・部屋・トークンで同じ 4 つのクラスを同じ意味で使う。クラスは cards/selection.js が 1 か所で付け外しし、
+ * 状態を出るときに全部外す。bga-cards の既定の見た目（オレンジの破線・紫の実線・contrast）は cards/managers.js で無効にしてある。
+ *   ir-can     選べる: 白の輪郭 2px + 外側の柔らかい光。ホバー（マウスだけ）で光を少し強くする
+ *   ir-picked  選択中: 金の輪郭 3px + 角にチェックの印（金の四角い地。SVG の背景）
+ *   ir-off     今は選べない: 暗くする（押すと理由をメッセージで出す。Game.js）。使用済み（ir-tapped）は元から暗いので重ねない
+ *   ir-subject 効果の発生源・問いの対象: 金の破線の輪郭 2px
+ * 点滅・持ち上げはしない。
  */
-.ir-card.ir-selectable {
-    outline: 2px solid var(--ir-text);
-    outline-offset: -2px;
+.ir-card.ir-can,
+.ir-token.ir-can {
+    outline: 2px solid var(--ir-can);
+    outline-offset: 2px;
     cursor: pointer;
 }
 
-.ir-card.ir-selectable::before {
-    content: "\25CB";
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    z-index: 2;
-    width: 1.4em;
-    border-radius: 50%;
-    background: var(--ir-panel-bg);
-    color: var(--ir-text);
-    font-size: 12px;
-    text-align: center;
+.ir-card.ir-can {
+    box-shadow: 0 0 0 1px rgb(255 255 255 / 20%), 0 2px 5px rgb(0 0 0 / 55%), 0 0 8px 2px var(--ir-can-glow);
 }
 
-.ir-card.ir-selected {
-    outline: 3px solid var(--ir-turn-border);
-    outline-offset: -3px;
+.ir-token.ir-can {
+    border-radius: var(--ir-r);
+    box-shadow: 0 0 8px 2px var(--ir-can-glow);
+}
+
+.notouch-device .ir-card.ir-can:hover {
+    box-shadow: 0 0 0 1px rgb(255 255 255 / 20%), 0 2px 5px rgb(0 0 0 / 55%), 0 0 12px 4px var(--ir-can);
+}
+
+.notouch-device .ir-token.ir-can:hover {
+    box-shadow: 0 0 12px 4px var(--ir-can);
+}
+
+.ir-card.ir-picked,
+.ir-token.ir-picked {
+    outline: 3px solid var(--ir-pick);
+    outline-offset: 2px;
     cursor: pointer;
 }
 
-.ir-card.ir-selected::after {
-    content: "\2713";
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    z-index: 2;
-    width: 1.4em;
-    border-radius: 50%;
-    background: var(--ir-turn-border);
-    color: #fff;
-    font-size: 12px;
-    font-weight: bold;
-    text-align: center;
+.ir-token.ir-picked {
+    border-radius: var(--ir-r);
 }
 
-/* 操作 UI（U-10。states/ActionState.js）: 自己構成するカードとして選んだ手札の印、一時的な候補のカード置き場（初期自我のドラフト、強化自我の選択） */
-.ir-card.ir-pending {
-    z-index: 2;
-    outline: 5px solid var(--ir-pending);
-    outline-offset: -5px;
-    box-shadow: 0 0 0 2px var(--ir-panel-bg), 0 0 10px 3px var(--ir-pending);
-}
-
-.ir-card.ir-pending::after {
-    content: "\2605";
+/* チェックの印: 金の小さな四角に、インライン SVG のチェック（stroke は --ir-on-pick の #1a1408）。content の文字は使わない */
+.ir-card.ir-picked::after {
+    content: "";
     position: absolute;
-    top: 2px;
-    right: 2px;
+    top: 3px;
+    right: 3px;
     z-index: 4;
-    width: 1.4em;
-    border-radius: 50%;
-    background: var(--ir-pending);
-    color: #fff;
-    font-size: 12px;
-    text-align: center;
+    width: 20px;
+    height: 20px;
+    border-radius: var(--ir-r);
+    background: var(--ir-pick) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%231a1408' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 8.5l3.2 3.2L13 4.8'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
+    pointer-events: none;
 }
 
+.ir-card.ir-off:not(.ir-tapped) [class*="card-sides"],
+.ir-card.ir-off:not(.ir-tapped) [data-ir-key] {
+    filter: brightness(0.6) saturate(0.7);
+}
+
+.ir-card.ir-off,
+.ir-token.ir-off {
+    cursor: not-allowed;
+}
+
+.ir-token.ir-off {
+    filter: brightness(0.6) saturate(0.7);
+}
+
+.ir-card.ir-subject {
+    z-index: 2;
+    outline: 2px dashed var(--ir-subject);
+    outline-offset: 2px;
+}
+
+/* 一時的な候補のカード置き場（初期自我のドラフト、強化自我の選択。011 §3.3）: 箱ではなくレール（上端の線とラベル）。環の上（#ir-main の先頭） */
 .ir-pick-panel {
-    grid-area: top;
+    margin-top: 18px;
+}
+
+.ir-pick-cards {
     display: flex;
     flex-wrap: wrap;
     gap: var(--ir-gap);
     justify-content: center;
-    margin-bottom: var(--ir-gap);
-    padding: var(--ir-gap);
-    border: 1px solid var(--ir-mat-border);
-    border-radius: var(--ir-mat-radius);
-    background: var(--ir-mat-bg);
-    color: var(--ir-text);
 }
 
 /* ---- 7. カード ---- */
@@ -1180,15 +1101,14 @@ body::before {
     line-height: 1.4;
 }
 
-/* 目標カードの「現在の X と得点」（自分の分。009 §3.6） */
+/* 目標カードの「現在の X と得点」（自分の分。009 §3.6、011 §3.5）: カードの下の 12px の控えめな注記（背景なし。2 行に折り返してよい） */
 .ir-goal-badge {
     position: absolute;
+    top: 100%;
     right: 0;
-    bottom: 0;
     left: 0;
-    padding: 1px 3px;
-    background: var(--ir-panel-bg);
-    color: var(--ir-text);
+    padding-top: 2px;
+    color: var(--ir-ink-dim);
     font-size: 12px;
     line-height: 1.3;
     text-align: center;
@@ -1275,7 +1195,7 @@ body::before {
     display: none;
 }
 
-/* ---- 9. ツールチップ・拡大表示・想起中の案内パネル（U-7。009 §3.9・§7・§8） ---- */
+/* ---- 9. ツールチップ（011 §6。009 §7・§8） ---- */
 
 /* 長押しでメニューや文字選択が出ないようにする（スマホの長押しは拡大表示）。暗い卓の上で沈まないよう、細い明るい縁と影（box-shadow。drop-shadow は Safari で重い。010 §6） */
 .ir-card {
@@ -1325,7 +1245,7 @@ body::before {
     overflow-wrap: anywhere;
     font-size: 14px;
     line-height: 1.45;
-    color: var(--ir-text);
+    color: var(--ir-tip-text);
 }
 
 .ir-info-title {
@@ -1335,7 +1255,7 @@ body::before {
 
 .ir-info-sub {
     margin-bottom: 4px;
-    color: var(--ir-text-muted);
+    color: var(--ir-tip-muted);
 }
 
 .ir-info-section {
@@ -1407,40 +1327,6 @@ body::before {
     pointer-events: auto;
 }
 
-/* 想起中の案内パネル: 左に部屋のカードの拡大画像（幅は標準カードの 2 倍まで）、右に英語の想起効果 */
-.ir-recall-panel:not([hidden]) {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--ir-gap);
-}
-
-.ir-recall-image.ir-face {
-    flex: none;
-    width: min(calc(var(--ir-w) * 2), 40%);
-    height: auto;
-    aspect-ratio: 280 / 390;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.ir-recall-body {
-    min-width: 0;
-}
-
-.ir-recall-heading {
-    font-size: 12px;
-    font-weight: bold;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--ir-turn-border);
-}
-
-.ir-recall-who {
-    margin-top: 6px;
-    font-size: 12px;
-    color: var(--ir-text-muted);
-}
-
 /* ---- 10. narrow の並び（010 §3.7。他の規則より後ろに置く） ---- */
 
 .ir-root[data-layout="narrow"] {
@@ -1452,10 +1338,6 @@ body::before {
 .ir-root[data-layout="narrow"] .ir-main {
     order: 1;
     align-self: center;
-}
-
-.ir-root[data-layout="narrow"] .ir-recall-panel {
-    order: 0;
 }
 
 /* 自分の領域は共通の領域より先、他プレイヤーはその後（#ir-players は箱を作らず、領域を root の直下に並べる） */
@@ -1498,27 +1380,3 @@ body::before {
     width: var(--ir-wd);
     height: calc(var(--ir-wd) * 390 / 280);
 }
-
-/* xl・wide の想起の案内パネルは共通の列の先頭（上の grid の規則）。列の幅に収め、画像は小さく、文字は横に置き、入らなければ下に回す。他の規則より後ろに置く */
-.ir-root[data-layout="xl"] .ir-recall-panel,
-.ir-root[data-layout="wide"] .ir-recall-panel {
-    grid-area: recall;
-    width: 0;
-    min-width: 100%;
-}
-
-.ir-root[data-layout="xl"] .ir-recall-panel:not([hidden]),
-.ir-root[data-layout="wide"] .ir-recall-panel:not([hidden]) {
-    flex-wrap: wrap;
-}
-
-.ir-root[data-layout="xl"] .ir-recall-image.ir-face,
-.ir-root[data-layout="wide"] .ir-recall-image.ir-face {
-    width: min(calc(var(--ir-w) * 1.2), 120px);
-}
-
-.ir-root[data-layout="xl"] .ir-recall-body,
-.ir-root[data-layout="wide"] .ir-recall-body {
-    flex: 1 1 140px;
-}
-

@@ -3,8 +3,8 @@
  * 器の id とクラスは 009 §15 に従う。後続のタスクは `refs` から器を取り、そこに Stock を作る。
  *
  * #ir-root（xl・wide・medium は CSS の grid、narrow は flex の order で並べる。narrow は自分の領域を共通の領域より先に出す。010 §3）
- *   #ir-recall-panel            … 想起中だけ表示（U-7）。環の上（候補の置き場 ir-pick-panel も先頭に入り、同じ位置に出る）
  *   #ir-main
+ *     .ir-pick-panel            … 候補の置き場（初期自我のドラフト・強化自我の選択の間だけ。states/ActionState.js が先頭に足す。011 §2.1・§3.3）
  *     #ir-slot-piles-top        … xl・wide・medium では ir-piles がここ
  *     #ir-cloister              … 4 × 4 グリッドの環（12 部屋 ir-room[data-pos]）
  *       #ir-cloister-center     … xl・wide・medium は ir-open、narrow は ir-piles
@@ -44,7 +44,6 @@ const OPEN_SLOTS = 6;
  * @property {HTMLElement} spiritTrack
  * @property {HTMLElement} enhPile
  * @property {HTMLElement} goals
- * @property {HTMLElement} recallPanel
  * @property {HTMLElement} players
  * @property {Map<number, PlayerAreaRefs>} playerAreas プレイヤー ID → 領域
  * @property {number[]} playerOrder 表示順
@@ -142,8 +141,6 @@ export function buildBoard(host, { players = {}, playerOrder = [], me = null } =
     const slotOpenBelow = el('div', { id: 'ir-slot-open-below', class: 'ir-slot-host' });
     const main = el('div', { id: 'ir-main', class: 'ir-main' }, [slotPilesTop, cloister, slotOpenBelow]);
 
-    const recallPanel = el('div', { id: 'ir-recall-panel', class: 'ir-recall-panel', attrs: { hidden: '' } });
-
     const order = orderPlayers(playerOrder, players, me);
     const playersEl = el('div', { id: 'ir-players', class: 'ir-players' });
     const playerAreas = new Map();
@@ -154,7 +151,6 @@ export function buildBoard(host, { players = {}, playerOrder = [], me = null } =
     }
 
     const root = el('div', { id: 'ir-root', class: 'ir-root', data: { layout: 'wide' } }, [
-        recallPanel,
         main,
         common,
         playersEl,
@@ -164,7 +160,7 @@ export function buildBoard(host, { players = {}, playerOrder = [], me = null } =
     /** @type {BoardRefs} */
     const refs = {
         root, cloister, center, slotPilesTop, slotOpenBelow, rooms, roomFloors, roomCards, piles, pileSlots, open, openSlots,
-        spiritTrack, enhPile, goals, recallPanel, players: playersEl, playerAreas, playerOrder: order,
+        spiritTrack, enhPile, goals, players: playersEl, playerAreas, playerOrder: order,
     };
     // bga-cards の Stock は置き場が document に付いていないと例外を出す。Layout が付け替えるより前に Stock を作るので、先に既定の置き場所へ付ける。
     placeFloating(refs, 'wide');
